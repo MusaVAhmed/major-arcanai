@@ -47,7 +47,10 @@
     font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.22em; color:var(--dim);
     text-transform:uppercase; margin-bottom:.6rem; min-height:1em;
   }
-  .card { aspect-ratio: 5/8; position:relative; transform-style:preserve-3d;
+  .t3d { transform: perspective(900px) rotateY(var(--tiltY, 0deg)); }
+  .scard .t3d, .deck .t3d { width:100%; height:100%; }
+  .deck .t3d { position:relative; z-index:2; }
+  .card { aspect-ratio: 5/8; position:relative; transform-style:preserve-3d; height:100%;
           transition: transform .7s cubic-bezier(.4,.1,.2,1); cursor:pointer; }
   .card.flipped { transform: rotateY(180deg); }
   .face { position:absolute; inset:0; backface-visibility:hidden; border-radius:10px; overflow:hidden;
@@ -75,7 +78,6 @@
   body.foil .deck .pile { background:#161119; border-color:#31281a; }
   .deck .p1 { transform:translate(5px,6px) rotate(1.6deg); }
   .deck .p2 { transform:translate(10px,12px) rotate(3.2deg); }
-  .deck .card { z-index:2; }
   @keyframes breathe { from { transform:translateY(0); } to { transform:translateY(-7px); } }
   @keyframes dealIn { from { transform:translateY(34px) scale(.92); opacity:0; } }
   .card.deal { animation:dealIn .45s cubic-bezier(.2,.8,.3,1) backwards; }
@@ -159,8 +161,8 @@ for (const n of [1,3,5]) {
 
 function cardHTML(frontImg, alt) {
   const front = frontImg ? `<img data-src="${frontImg}" alt="${alt}">` : '';
-  return `<div class="card"><div class="face back"><img data-src="cards-web/back.png" alt="card back"><span class="sheen"><span class="glint"></span></span></div>
-    <div class="face front">${front}<span class="sheen"><span class="glint"></span></span></div></div>`;
+  return `<div class="t3d"><div class="card"><div class="face back"><img data-src="cards-web/back.png" alt="card back"><span class="sheen"><span class="glint"></span></span></div>
+    <div class="face front">${front}<span class="sheen"><span class="glint"></span></span></div></div></div>`;
 }
 const capHTML = c => `<div class="cname">${c.name}</div><div class="cnum">${c.n}</div><div class="cmean">${c.meaning}</div>`;
 
@@ -386,6 +388,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + g / 55)),
                innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
       TILT = TILT * 0.8 + Math.max(-0.7, Math.min(0.7, g / 45)) * 0.2;   // low-pass: ignore hand tremor
+      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * 8).toFixed(2) + 'deg');
       if (table.classList.contains('stackmode') && !S.dragging) layoutStack();
     });
   };

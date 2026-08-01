@@ -10,16 +10,11 @@ GLOW_STRENGTH = 0.45
 
 
 def palette_luts():
-    """Gold foil: luster bands sweep bronze -> bright gold -> pale glint."""
+    """Flat metallic gold — no baked-in lighting; the page's dynamic sheen
+    is the only light source."""
     r, g, b = [], [], []
     for i in range(256):
-        t = i / 255.0
-        s = (math.sin(math.pi * 2 * 2.5 * t - 1.2) + 1) / 2
-        s = s ** 1.4
-        val = 0.54 + 0.46 * s
-        sat = 0.85 - 0.52 * (s ** 3)
-        hue = 0.108 + 0.022 * math.sin(2 * math.pi * 1.3 * t + 1.0)
-        cr, cg, cb = colorsys.hsv_to_rgb(hue, sat, val)
+        cr, cg, cb = colorsys.hsv_to_rgb(0.106, 0.72, 0.80)
         r.append(int(cr * 255)); g.append(int(cg * 255)); b.append(int(cb * 255))
     return r, g, b
 
