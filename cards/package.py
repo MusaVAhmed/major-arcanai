@@ -73,7 +73,7 @@ def main():
     manifest = json.load(open(os.path.join(CARDS, 'manifest.json')))
     deck = {
         "name": "The Major ArcanAI",
-        "version": "1.0",
+        "version": "1.3",
         "description": "A 40-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Twelve classic major arcana anchor a deck of cards life actually deals you.",
         "card_size_px": {"full": FULL, "web": WEB},
         "back": {"full": "cards/back.png", "web": "cards-web/back.png"},

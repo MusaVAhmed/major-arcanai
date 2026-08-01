@@ -107,6 +107,20 @@ html = """<!doctype html>
   .dot.active { background:var(--bone); border-color:var(--bone); }
   body.foil .dot.active { background:var(--gold2); border-color:var(--gold2); }
   .stackwrap .caption { min-height:5.6rem; }
+  #galleryview { display:none; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:1.1rem;
+                 max-width:72rem; margin:0 auto; }
+  body.gallery #galleryview { display:grid; }
+  body.gallery #table, body.gallery .hint, body.gallery #again { display:none !important; }
+  .gcell { cursor:pointer; }
+  .gcell img { width:100%; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.5); display:block; }
+  .gcell .gname { font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.1em;
+                  text-transform:uppercase; margin-top:.5rem; }
+  .gcell .gnum { color:var(--dim); font-style:italic; font-size:.7rem; }
+  #lightbox { display:none; position:fixed; inset:0; background:rgba(8,7,5,.94); z-index:50;
+              padding:2rem 1rem; overflow-y:auto; cursor:pointer; }
+  #lightbox.open { display:block; }
+  #lightbox img { max-width:min(88vw, 380px); border-radius:12px; box-shadow:0 12px 50px rgba(0,0,0,.8); }
+  #lightbox .caption { opacity:1; max-width:34rem; margin:1rem auto 0; }
   #again { margin-top:2.2rem; display:none; }
   .hint { color:var(--dim); font-size:.85rem; font-style:italic; margin-top:1.4rem; }
   @media (max-width: 700px) {
@@ -133,8 +147,11 @@ html = """<!doctype html>
     <button id="m3">Three</button>
     <button id="m5">Five</button>
     <button id="foil" aria-pressed="false">&#10022; Foil</button>
+    <button id="gallery">All cards</button>
   </div>
   <div id="table" aria-live="polite"></div>
+  <div id="galleryview"></div>
+  <div id="lightbox" role="dialog" aria-label="Card detail"></div>
   <p class="hint" id="hint">Tap the deck to draw.</p>
   <button id="again">Shuffle &amp; draw again</button>
 
@@ -167,13 +184,46 @@ function applyFoil() {
 }
 foilBtn.addEventListener('click', () => { foil = !foil; applyFoil(); buzz(8); });
 
+const galleryBtn = document.getElementById('gallery');
+const galleryView = document.getElementById('galleryview');
+const lightbox = document.getElementById('lightbox');
+
 for (const n of [1,3,5]) {
   document.getElementById('m'+n).addEventListener('click', () => {
     mode = n;
     for (const k of [1,3,5]) document.getElementById('m'+k).classList.toggle('active', k === n);
+    closeGallery();
     idle();
   });
 }
+
+function closeGallery() {
+  document.body.classList.remove('gallery');
+  galleryBtn.classList.remove('active');
+}
+galleryBtn.addEventListener('click', () => {
+  const on = !document.body.classList.contains('gallery');
+  document.body.classList.toggle('gallery', on);
+  galleryBtn.classList.toggle('active', on);
+  if (on && !galleryView.childElementCount) {
+    DECK.forEach(c => {
+      const cell = document.createElement('div');
+      cell.className = 'gcell';
+      cell.innerHTML = `<img data-src="${c.img}" alt="${c.name}" loading="lazy">
+        <div class="gname">${c.name}</div><div class="gnum">${c.n}</div>`;
+      cell.addEventListener('click', () => {
+        lightbox.innerHTML = `<img data-src="${c.img}" alt="${c.name}">
+          <div class="caption"><div class="cname">${c.name}</div><div class="cnum">${c.n}</div>
+          <div class="cmean">${c.meaning}</div></div>`;
+        lightbox.classList.add('open');
+        applyFoil();
+      });
+      galleryView.appendChild(cell);
+    });
+  }
+  if (on) applyFoil();
+});
+lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
 
 function cardHTML(frontImg, alt) {
   const front = frontImg ? `<img data-src="${frontImg}" alt="${alt}">` : '';
