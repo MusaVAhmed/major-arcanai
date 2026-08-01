@@ -404,7 +404,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + g / 55)),
                innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
       TILT = TILT * 0.8 + Math.max(-0.7, Math.min(0.7, g / 45)) * 0.2;   // low-pass: ignore hand tremor
-      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * 8).toFixed(2) + 'deg');
+      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * 15).toFixed(2) + 'deg');
       if (table.classList.contains('stackmode') && !S.dragging) layoutStack();
     });
   };
