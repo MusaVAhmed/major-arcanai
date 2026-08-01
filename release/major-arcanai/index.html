@@ -278,7 +278,7 @@ function updateStackUI() {
   S.wrap.querySelector('#scap').innerHTML = seen ? capHTML(S.picks[i]) : '';
   S.wrap.querySelector('#shint').textContent = seen
     ? (S.revealed.size === S.picks.length ? 'swipe to fidget' : 'swipe for next')
-    : 'tap to reveal · swipe to shuffle through';
+    : 'tap or flick your wrist to reveal · swipe for next';
   again.style.display = S.revealed.size === S.picks.length ? 'inline-block' : 'none';
 }
 
@@ -380,7 +380,8 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       ' gamma=' + (e.gamma === null ? 'null' : e.gamma.toFixed(1)) +
       ' live=' + document.body.classList.contains('sheen-live') +
       ' reduced=' + REDUCED +
-      ' tiltY=' + document.documentElement.style.getPropertyValue('--tiltY');
+      ' tiltY=' + document.documentElement.style.getPropertyValue('--tiltY') +
+      ' rate=' + (window.__rate || '0');
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = null;
@@ -398,6 +399,24 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
   };
   addEventListener('deviceorientation', onOri);
   addEventListener('deviceorientationabsolute', onOri);
+  // wrist flick = rotation-rate spike far above normal tilt play
+  let lastFlick = 0;
+  addEventListener('devicemotion', e => {
+    const rate = (e.rotationRate && e.rotationRate.gamma) || 0;
+    if (DEBUG) window.__rate = Math.abs(rate).toFixed(0);
+    const now = e.timeStamp;
+    if (Math.abs(rate) > 280 && now - lastFlick > 700) {
+      lastFlick = now;
+      if (table.classList.contains('stackmode')) {
+        if (!S.dragging && !S.revealed.has(topIdx())) tapTop();
+      } else {
+        const card = [...table.querySelectorAll('.slot')]
+          .find(s => !s.classList.contains('revealed') && s.querySelector('.face.front img'))
+          ?.querySelector('.card');
+        if (card) card.click();
+      }
+    }
+  });
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     const ask = () => { DeviceOrientationEvent.requestPermission().catch(() => {}); removeEventListener('click', ask); };
     addEventListener('click', ask);
