@@ -405,7 +405,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
     const rate = (e.rotationRate && e.rotationRate.gamma) || 0;
     if (DEBUG) window.__rate = Math.abs(rate).toFixed(0);
     const now = e.timeStamp;
-    if (Math.abs(rate) > 280 && now - lastFlick > 700) {
+    if (Math.abs(rate) > 170 && now - lastFlick > 700) {
       lastFlick = now;
       if (table.classList.contains('stackmode')) {
         if (S.dragging) return;
