@@ -1,3 +1,5 @@
 release/*.zip
 nohup.out
 __pycache__/
+audacity_*.png
+samples/
