@@ -63,7 +63,7 @@ html = """<!doctype html>
     font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.22em; color:var(--dim);
     text-transform:uppercase; margin-bottom:.6rem; min-height:1em;
   }
-  .t3d { transform: perspective(900px) rotateY(var(--tiltY, 0deg)); }
+  .t3d { transform: perspective(900px) rotateY(var(--tiltY, 0deg)) translateX(var(--tiltX, 0px)); }
   .scard .t3d, .deck .t3d { width:100%; height:100%; }
   .deck .t3d { position:relative; z-index:2; }
   .card { aspect-ratio: 5/8; position:relative; transform-style:preserve-3d; height:100%;
@@ -405,7 +405,10 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       // sheen wants a deliberate lean: quadratic response on the smoothed tilt
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + TILT * Math.abs(TILT) * 1.4)),
                innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
-      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * 8).toFixed(2) + 'deg');
+      if (!REDUCED) {
+        document.documentElement.style.setProperty('--tiltY', (TILT * 12).toFixed(2) + 'deg');
+        document.documentElement.style.setProperty('--tiltX', (TILT * 14).toFixed(1) + 'px');
+      }
       if (table.classList.contains('stackmode') && !S.dragging) layoutStack();
     });
   };
