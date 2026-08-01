@@ -401,10 +401,11 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       if (e.gamma === null && e.beta === null) return;   // no sensor data: keep sheen off
       document.body.classList.add('sheen-live');
       const g = e.gamma || 0;
-      setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + g / 55)),
-               innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
       TILT = TILT * 0.8 + Math.max(-0.7, Math.min(0.7, g / 45)) * 0.2;   // low-pass: ignore hand tremor
-      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * Math.abs(TILT) * 26).toFixed(2) + 'deg');
+      // sheen wants a deliberate lean: quadratic response on the smoothed tilt
+      setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + TILT * Math.abs(TILT) * 1.4)),
+               innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
+      if (!REDUCED) document.documentElement.style.setProperty('--tiltY', (TILT * 8).toFixed(2) + 'deg');
       if (table.classList.contains('stackmode') && !S.dragging) layoutStack();
     });
   };
