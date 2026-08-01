@@ -1,0 +1,285 @@
+{
+  "style_prompt": "Generate a black and white tarot card illustration, bold clean vector line art in a humorous gothic style: {SCENE}. Ornate decorative frame with a double-rule border and corner rose motifs, scattered stars, sparkles and crescent moons in the background, high contrast pure black ink on plain white background, no grayscale, no shading, no gradients, thick sticker-style outlines, whimsical sarcastic mood, centered composition, tall portrait orientation. Important: absolutely no text, no lettering, no numbers, no words anywhere in the image.",
+  "cards": [
+    {
+      "num": "0",
+      "slug": "zero_of_fucks",
+      "name": "The Zero of Fucks",
+      "scene": "carefree skeleton lounging in an armchair, arms behind its skull, feet up, an upturned empty coin purse on the floor",
+      "status": "generated"
+    },
+    {
+      "num": "I",
+      "slug": "burned_bridge",
+      "name": "The Burned Bridge",
+      "scene": "skeleton strolling away from a burning rope bridge, lit match still in hand, not looking back",
+      "status": "generated"
+    },
+    {
+      "num": "II",
+      "slug": "two_of_deez",
+      "name": "The Two of Deez",
+      "scene": "smug skeleton triumphantly holding up two large acorns, one in each hand",
+      "status": "generated"
+    },
+    {
+      "num": "III",
+      "slug": "lovers",
+      "name": "The Lovers",
+      "scene": "two skulls nose-to-nose about to kiss, a single rose held between them",
+      "status": "generated"
+    },
+    {
+      "num": "IV",
+      "slug": "coffee",
+      "name": "The Coffee",
+      "scene": "skeletal hand rising from roses, gripping a to-go coffee cup like a holy relic, crystals floating around",
+      "status": "generated"
+    },
+    {
+      "num": "V",
+      "slug": "death",
+      "name": "Death",
+      "scene": "serene hooded skeleton leaning on a scythe with tiny flowers blooming along the blade",
+      "status": "generated"
+    },
+    {
+      "num": "VI",
+      "slug": "moon",
+      "name": "The Moon",
+      "scene": "skeleton gazing up at a huge full moon with a face, flanked by crescents, skeletal dog howling at its side",
+      "status": "generated"
+    },
+    {
+      "num": "VII",
+      "slug": "strength",
+      "name": "Strength",
+      "scene": "skeleton calmly petting a skeletal lion, gently closing its jaw with one finger",
+      "status": "generated"
+    },
+    {
+      "num": "VIII",
+      "slug": "perseverance",
+      "name": "Perseverance",
+      "scene": "skeleton dragging itself up a staircase with one arm while the other gives a thumbs-up, a few bones left behind on the steps",
+      "status": "generated"
+    },
+    {
+      "num": "IX",
+      "slug": "tea",
+      "name": "The Tea",
+      "scene": "skeleton sipping from a dainty teacup, pinky raised, steam curling into a whisper spiral",
+      "status": "generated"
+    },
+    {
+      "num": "X",
+      "slug": "last_straw",
+      "name": "The Last Straw",
+      "scene": "exasperated skeleton holding a single snapped drinking straw, eye sockets twitching",
+      "status": "generated"
+    },
+    {
+      "num": "XI",
+      "slug": "audacity",
+      "name": "The Audacity",
+      "scene": "scandalized skeleton clutching a pearl necklace, other hand on chest, jaw dropped wide open",
+      "status": "generated"
+    },
+    {
+      "num": "XII",
+      "slug": "breast_pump",
+      "name": "The Breast Pump",
+      "scene": "tired but serene skeleton mother in a robe hooked up to a breast pump, coffee mug in hand, halo of little stars",
+      "status": "generated"
+    },
+    {
+      "num": "XIII",
+      "slug": "bottle",
+      "name": "The Bottle",
+      "scene": "skeleton holding a corked bottle at arm's length, the bottle crammed full of tiny hearts and lightning bolts about to burst",
+      "status": "generated"
+    },
+    {
+      "num": "XIV",
+      "slug": "taco",
+      "name": "The Taco",
+      "scene": "skeletal hands raising a taco to the sky like a sacred chalice, sparkles raining down, crescent moon above",
+      "status": "generated"
+    },
+    {
+      "num": "XV",
+      "slug": "gold_shoulder",
+      "name": "The Gold Shoulder",
+      "scene": "glamorous skeleton in a fur coat glancing over one ornately decorated shoulder into a hand mirror",
+      "status": "generated"
+    },
+    {
+      "num": "XVI",
+      "slug": "child",
+      "name": "The Child",
+      "scene": "small skeleton in a party hat holding a balloon, hand-in-hand with an adult skeleton",
+      "status": "generated"
+    },
+    {
+      "num": "XVII",
+      "slug": "mother",
+      "name": "The Mother",
+      "scene": "skeleton cradling a swaddled baby bundle, flowers blooming out through its ribcage",
+      "status": "generated"
+    },
+    {
+      "num": "XVIII",
+      "slug": "mom_boss",
+      "name": "The Mom Boss",
+      "scene": "six-armed skeleton like a deity: baby on hip, phone at shoulder, laptop, coffee, laundry basket, calendar",
+      "status": "generated"
+    },
+    {
+      "num": "XIX",
+      "slug": "hermit",
+      "name": "The Hermit",
+      "scene": "cloaked skeleton holding a lantern, skeletal cat at its feet, a small blank sign hanging from one finger",
+      "status": "generated"
+    },
+    {
+      "num": "XX",
+      "slug": "gardener",
+      "name": "The Gardener",
+      "scene": "skeleton in a sun hat watering a potted plant whose vine grows up through its own ribcage and blooms",
+      "status": "generated"
+    },
+    {
+      "num": "XXI",
+      "slug": "cheese_fries",
+      "name": "The Cheese Fries",
+      "scene": "blissful skeleton reclining in a giant basket of french fries, holding one dripping with cheese aloft",
+      "status": "generated"
+    },
+    {
+      "num": "XXII",
+      "slug": "slice",
+      "name": "The Slice",
+      "scene": "skeleton with ornate scissors slicing a thread tied to its own ribcage, looking relieved",
+      "status": "generated"
+    },
+    {
+      "num": "XXIII",
+      "slug": "empress",
+      "name": "The Empress",
+      "scene": "skeleton empress on a rose-covered throne, crown of stars, scepter topped with a blooming rose",
+      "status": "generated"
+    },
+    {
+      "num": "XXIV",
+      "slug": "chicken_nugget",
+      "name": "The Chicken Nugget",
+      "scene": "reverent skeletal hand dipping a chicken nugget into a heart-shaped sauce cup, holy rays radiating from it",
+      "status": "generated"
+    },
+    {
+      "num": "XXV",
+      "slug": "sun",
+      "name": "The Sun",
+      "scene": "skeleton in sunglasses sunbathing on a towel beneath a classic sun with a face, drink with a tiny umbrella in hand",
+      "status": "generated"
+    },
+    {
+      "num": "XXVI",
+      "slug": "high_priestess",
+      "name": "The High Priestess",
+      "scene": "veiled skeleton seated between two pillars, crescent moon crown, closed book on her lap, one finger raised to her teeth in a shh gesture",
+      "status": "generated"
+    },
+    {
+      "num": "XXVII",
+      "slug": "zoom_meeting",
+      "name": "The Zoom Meeting",
+      "scene": "skeleton in a collared shirt with bare bones below the desk, sitting at a laptop, ring light halo behind the skull",
+      "status": "generated"
+    },
+    {
+      "num": "XXVIII",
+      "slug": "influencer",
+      "name": "The Influencer",
+      "scene": "skeleton pouting for a selfie with a phone on a ring light, roses arranged around it, tiny hearts floating up from the screen",
+      "status": "generated"
+    },
+    {
+      "num": "XXIX",
+      "slug": "life_of_the_party",
+      "name": "The Life of the Party",
+      "scene": "skeleton in a party hat mid confetti toss, lampshade slightly askew on its head, one single tear below the eye socket",
+      "status": "generated"
+    },
+    {
+      "num": "XXX",
+      "slug": "last_hurrah",
+      "name": "The Last Hurrah",
+      "scene": "skeleton popping a champagne bottle, cork flying past star fireworks, a wilting bouquet in the other hand",
+      "status": "generated"
+    },
+    {
+      "num": "XXXI",
+      "slug": "dead_end_job",
+      "name": "The Dead End Job",
+      "scene": "skeleton slumped at a cobweb-covered desk, dead potted plant, wall clock with no hands",
+      "status": "generated"
+    },
+    {
+      "num": "XXXII",
+      "slug": "fiddle_leaf_fig",
+      "name": "The Fiddle-Leaf Fig",
+      "scene": "skeleton proudly watering a lush fiddle-leaf fig plant in an ornate pot, one branch revealing a plastic price tag",
+      "status": "generated"
+    },
+    {
+      "num": "XXXIII",
+      "slug": "star",
+      "name": "The Star",
+      "scene": "kneeling skeleton pouring water from two jugs beneath one huge eight-pointed star",
+      "status": "generated"
+    },
+    {
+      "num": "XXXIV",
+      "slug": "devil",
+      "name": "The Devil",
+      "scene": "horned goat skull devil holding chains that hang open and empty, a skeleton walking away slipping out of the last cuff",
+      "status": "generated"
+    },
+    {
+      "num": "XXXV",
+      "slug": "fair_weather_friend",
+      "name": "The Fair Weather Friend",
+      "scene": "two skeletons in the rain, one holding an umbrella over itself only, the other soaked with a deadpan expression",
+      "status": "generated"
+    },
+    {
+      "num": "XXXVI",
+      "slug": "tower",
+      "name": "The Tower",
+      "scene": "lightning-struck crumbling tower, a skeleton falling from it while calmly sipping a cup of coffee",
+      "status": "generated"
+    },
+    {
+      "num": "XXXVII",
+      "slug": "drama_queen",
+      "name": "The Drama Queen",
+      "scene": "crowned skeleton queen with long flowing hair, back of hand pressed to forehead in a theatrical faint",
+      "status": "generated"
+    },
+    {
+      "num": "XXXVIII",
+      "slug": "last_flying_fuck",
+      "name": "The Last Flying Fuck",
+      "scene": "skeleton with a messy hair bun and a flower, waving goodbye to a butterfly fluttering away",
+      "status": "generated"
+    },
+    {
+      "num": "XXXIX",
+      "slug": "nap",
+      "name": "The Nap",
+      "scene": "skeleton tucked snugly into a bed, sleep mask pushed up on its skull, a small blank sign hanging on the bedpost",
+      "status": "generated"
+    }
+  ]
+}

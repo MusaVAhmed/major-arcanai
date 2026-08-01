@@ -1,0 +1,503 @@
+{
+  "name": "The Major ArcanAI",
+  "version": "1.3",
+  "description": "A 40-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Twelve classic major arcana anchor a deck of cards life actually deals you.",
+  "card_size_px": {
+    "full": [
+      800,
+      1280
+    ],
+    "web": [
+      500,
+      800
+    ]
+  },
+  "back": {
+    "full": "cards/back.png",
+    "web": "cards-web/back.png",
+    "foil_full": "cards-foil/back.png",
+    "foil_web": "cards-foil-web/back.png"
+  },
+  "cards": [
+    {
+      "index": 0,
+      "numeral": "0",
+      "name": "The Zero of Fucks",
+      "meaning": "Let go of expectations and pressure. Step into freedom and a fresh start.",
+      "image": {
+        "full": "cards/00_zero_of_fucks.png",
+        "web": "cards-web/00_zero_of_fucks.png",
+        "foil_full": "cards-foil/00_zero_of_fucks.png",
+        "foil_web": "cards-foil-web/00_zero_of_fucks.png"
+      }
+    },
+    {
+      "index": 1,
+      "numeral": "I",
+      "name": "The Burned Bridge",
+      "meaning": "Not everything is meant to be saved. Some endings are necessary.",
+      "image": {
+        "full": "cards/01_burned_bridge.png",
+        "web": "cards-web/01_burned_bridge.png",
+        "foil_full": "cards-foil/01_burned_bridge.png",
+        "foil_web": "cards-foil-web/01_burned_bridge.png"
+      }
+    },
+    {
+      "index": 2,
+      "numeral": "II",
+      "name": "The Two of Deez",
+      "meaning": "Stand confidently on your own. You don't need validation.",
+      "image": {
+        "full": "cards/02_two_of_deez.png",
+        "web": "cards-web/02_two_of_deez.png",
+        "foil_full": "cards-foil/02_two_of_deez.png",
+        "foil_web": "cards-foil-web/02_two_of_deez.png"
+      }
+    },
+    {
+      "index": 3,
+      "numeral": "III",
+      "name": "The Lovers",
+      "meaning": "Deep connection \u2014 romantic, platonic, or with yourself.",
+      "image": {
+        "full": "cards/03_lovers.png",
+        "web": "cards-web/03_lovers.png",
+        "foil_full": "cards-foil/03_lovers.png",
+        "foil_web": "cards-foil-web/03_lovers.png"
+      }
+    },
+    {
+      "index": 4,
+      "numeral": "IV",
+      "name": "The Coffee",
+      "meaning": "Wake up. Face reality. Do what needs to be done.",
+      "image": {
+        "full": "cards/04_coffee.png",
+        "web": "cards-web/04_coffee.png",
+        "foil_full": "cards-foil/04_coffee.png",
+        "foil_web": "cards-foil-web/04_coffee.png"
+      }
+    },
+    {
+      "index": 5,
+      "numeral": "V",
+      "name": "Death",
+      "meaning": "Transformation through endings. Let the old version of you go.",
+      "image": {
+        "full": "cards/05_death.png",
+        "web": "cards-web/05_death.png",
+        "foil_full": "cards-foil/05_death.png",
+        "foil_web": "cards-foil-web/05_death.png"
+      }
+    },
+    {
+      "index": 6,
+      "numeral": "VI",
+      "name": "The Moon",
+      "meaning": "Things are unclear. Trust your intuition and wait.",
+      "image": {
+        "full": "cards/06_moon.png",
+        "web": "cards-web/06_moon.png",
+        "foil_full": "cards-foil/06_moon.png",
+        "foil_web": "cards-foil-web/06_moon.png"
+      }
+    },
+    {
+      "index": 7,
+      "numeral": "VII",
+      "name": "Strength",
+      "meaning": "Inner calm and patience will carry you through.",
+      "image": {
+        "full": "cards/07_strength.png",
+        "web": "cards-web/07_strength.png",
+        "foil_full": "cards-foil/07_strength.png",
+        "foil_web": "cards-foil-web/07_strength.png"
+      }
+    },
+    {
+      "index": 8,
+      "numeral": "VIII",
+      "name": "Perseverance",
+      "meaning": "Keep going. You're closer than you think.",
+      "image": {
+        "full": "cards/08_perseverance.png",
+        "web": "cards-web/08_perseverance.png",
+        "foil_full": "cards-foil/08_perseverance.png",
+        "foil_web": "cards-foil-web/08_perseverance.png"
+      }
+    },
+    {
+      "index": 9,
+      "numeral": "IX",
+      "name": "The Tea",
+      "meaning": "Truth is being revealed. Stay grounded.",
+      "image": {
+        "full": "cards/09_tea.png",
+        "web": "cards-web/09_tea.png",
+        "foil_full": "cards-foil/09_tea.png",
+        "foil_web": "cards-foil-web/09_tea.png"
+      }
+    },
+    {
+      "index": 10,
+      "numeral": "X",
+      "name": "The Last Straw",
+      "meaning": "You've reached your limit. Change is inevitable.",
+      "image": {
+        "full": "cards/10_last_straw.png",
+        "web": "cards-web/10_last_straw.png",
+        "foil_full": "cards-foil/10_last_straw.png",
+        "foil_web": "cards-foil-web/10_last_straw.png"
+      }
+    },
+    {
+      "index": 11,
+      "numeral": "XI",
+      "name": "The Audacity",
+      "meaning": "Be bold. Take the risk.",
+      "image": {
+        "full": "cards/11_audacity.png",
+        "web": "cards-web/11_audacity.png",
+        "foil_full": "cards-foil/11_audacity.png",
+        "foil_web": "cards-foil-web/11_audacity.png"
+      }
+    },
+    {
+      "index": 12,
+      "numeral": "XII",
+      "name": "The Breast Pump",
+      "meaning": "You're overgiving. Rest and refill yourself.",
+      "image": {
+        "full": "cards/12_breast_pump.png",
+        "web": "cards-web/12_breast_pump.png",
+        "foil_full": "cards-foil/12_breast_pump.png",
+        "foil_web": "cards-foil-web/12_breast_pump.png"
+      }
+    },
+    {
+      "index": 13,
+      "numeral": "XIII",
+      "name": "The Bottle",
+      "meaning": "Unexpressed emotions will surface eventually.",
+      "image": {
+        "full": "cards/13_bottle.png",
+        "web": "cards-web/13_bottle.png",
+        "foil_full": "cards-foil/13_bottle.png",
+        "foil_web": "cards-foil-web/13_bottle.png"
+      }
+    },
+    {
+      "index": 14,
+      "numeral": "XIV",
+      "name": "The Taco",
+      "meaning": "Find joy in small pleasures.",
+      "image": {
+        "full": "cards/14_taco.png",
+        "web": "cards-web/14_taco.png",
+        "foil_full": "cards-foil/14_taco.png",
+        "foil_web": "cards-foil-web/14_taco.png"
+      }
+    },
+    {
+      "index": 15,
+      "numeral": "XV",
+      "name": "The Gold Shoulder",
+      "meaning": "Beware of ego and image obsession.",
+      "image": {
+        "full": "cards/15_gold_shoulder.png",
+        "web": "cards-web/15_gold_shoulder.png",
+        "foil_full": "cards-foil/15_gold_shoulder.png",
+        "foil_web": "cards-foil-web/15_gold_shoulder.png"
+      }
+    },
+    {
+      "index": 16,
+      "numeral": "XVI",
+      "name": "The Child",
+      "meaning": "Nurture your inner child.",
+      "image": {
+        "full": "cards/16_child.png",
+        "web": "cards-web/16_child.png",
+        "foil_full": "cards-foil/16_child.png",
+        "foil_web": "cards-foil-web/16_child.png"
+      }
+    },
+    {
+      "index": 17,
+      "numeral": "XVII",
+      "name": "The Mother",
+      "meaning": "You also deserve care, not just others.",
+      "image": {
+        "full": "cards/17_mother.png",
+        "web": "cards-web/17_mother.png",
+        "foil_full": "cards-foil/17_mother.png",
+        "foil_web": "cards-foil-web/17_mother.png"
+      }
+    },
+    {
+      "index": 18,
+      "numeral": "XVIII",
+      "name": "The Mom Boss",
+      "meaning": "You're doing too much. Let go of control.",
+      "image": {
+        "full": "cards/18_mom_boss.png",
+        "web": "cards-web/18_mom_boss.png",
+        "foil_full": "cards-foil/18_mom_boss.png",
+        "foil_web": "cards-foil-web/18_mom_boss.png"
+      }
+    },
+    {
+      "index": 19,
+      "numeral": "XIX",
+      "name": "The Hermit",
+      "meaning": "Withdraw and reflect.",
+      "image": {
+        "full": "cards/19_hermit.png",
+        "web": "cards-web/19_hermit.png",
+        "foil_full": "cards-foil/19_hermit.png",
+        "foil_web": "cards-foil-web/19_hermit.png"
+      }
+    },
+    {
+      "index": 20,
+      "numeral": "XX",
+      "name": "The Gardener",
+      "meaning": "Growth takes time. Keep nurturing.",
+      "image": {
+        "full": "cards/20_gardener.png",
+        "web": "cards-web/20_gardener.png",
+        "foil_full": "cards-foil/20_gardener.png",
+        "foil_web": "cards-foil-web/20_gardener.png"
+      }
+    },
+    {
+      "index": 21,
+      "numeral": "XXI",
+      "name": "The Cheese Fries",
+      "meaning": "You deserve enjoyment.",
+      "image": {
+        "full": "cards/21_cheese_fries.png",
+        "web": "cards-web/21_cheese_fries.png",
+        "foil_full": "cards-foil/21_cheese_fries.png",
+        "foil_web": "cards-foil-web/21_cheese_fries.png"
+      }
+    },
+    {
+      "index": 22,
+      "numeral": "XXII",
+      "name": "The Slice",
+      "meaning": "Release toxic attachments.",
+      "image": {
+        "full": "cards/22_slice.png",
+        "web": "cards-web/22_slice.png",
+        "foil_full": "cards-foil/22_slice.png",
+        "foil_web": "cards-foil-web/22_slice.png"
+      }
+    },
+    {
+      "index": 23,
+      "numeral": "XXIII",
+      "name": "The Empress",
+      "meaning": "You are creative and abundant.",
+      "image": {
+        "full": "cards/23_empress.png",
+        "web": "cards-web/23_empress.png",
+        "foil_full": "cards-foil/23_empress.png",
+        "foil_web": "cards-foil-web/23_empress.png"
+      }
+    },
+    {
+      "index": 24,
+      "numeral": "XXIV",
+      "name": "The Chicken Nugget",
+      "meaning": "Comfort and simplicity heal.",
+      "image": {
+        "full": "cards/24_chicken_nugget.png",
+        "web": "cards-web/24_chicken_nugget.png",
+        "foil_full": "cards-foil/24_chicken_nugget.png",
+        "foil_web": "cards-foil-web/24_chicken_nugget.png"
+      }
+    },
+    {
+      "index": 25,
+      "numeral": "XXV",
+      "name": "The Sun",
+      "meaning": "Joy and truth are coming to light.",
+      "image": {
+        "full": "cards/25_sun.png",
+        "web": "cards-web/25_sun.png",
+        "foil_full": "cards-foil/25_sun.png",
+        "foil_web": "cards-foil-web/25_sun.png"
+      }
+    },
+    {
+      "index": 26,
+      "numeral": "XXVI",
+      "name": "The High Priestess",
+      "meaning": "Trust your inner wisdom.",
+      "image": {
+        "full": "cards/26_high_priestess.png",
+        "web": "cards-web/26_high_priestess.png",
+        "foil_full": "cards-foil/26_high_priestess.png",
+        "foil_web": "cards-foil-web/26_high_priestess.png"
+      }
+    },
+    {
+      "index": 27,
+      "numeral": "XXVII",
+      "name": "The Zoom Meeting",
+      "meaning": "Disconnect from the fake, reconnect with real life.",
+      "image": {
+        "full": "cards/27_zoom_meeting.png",
+        "web": "cards-web/27_zoom_meeting.png",
+        "foil_full": "cards-foil/27_zoom_meeting.png",
+        "foil_web": "cards-foil-web/27_zoom_meeting.png"
+      }
+    },
+    {
+      "index": 28,
+      "numeral": "XXVIII",
+      "name": "The Influencer",
+      "meaning": "Be authentic \u2014 image isn't everything.",
+      "image": {
+        "full": "cards/28_influencer.png",
+        "web": "cards-web/28_influencer.png",
+        "foil_full": "cards-foil/28_influencer.png",
+        "foil_web": "cards-foil-web/28_influencer.png"
+      }
+    },
+    {
+      "index": 29,
+      "numeral": "XXIX",
+      "name": "The Life of the Party",
+      "meaning": "Outward shine can hide inner loneliness.",
+      "image": {
+        "full": "cards/29_life_of_the_party.png",
+        "web": "cards-web/29_life_of_the_party.png",
+        "foil_full": "cards-foil/29_life_of_the_party.png",
+        "foil_web": "cards-foil-web/29_life_of_the_party.png"
+      }
+    },
+    {
+      "index": 30,
+      "numeral": "XXX",
+      "name": "The Last Hurrah",
+      "meaning": "A final celebration before an ending.",
+      "image": {
+        "full": "cards/30_last_hurrah.png",
+        "web": "cards-web/30_last_hurrah.png",
+        "foil_full": "cards-foil/30_last_hurrah.png",
+        "foil_web": "cards-foil-web/30_last_hurrah.png"
+      }
+    },
+    {
+      "index": 31,
+      "numeral": "XXXI",
+      "name": "The Dead End Job",
+      "meaning": "Don't stay stuck in something meaningless.",
+      "image": {
+        "full": "cards/31_dead_end_job.png",
+        "web": "cards-web/31_dead_end_job.png",
+        "foil_full": "cards-foil/31_dead_end_job.png",
+        "foil_web": "cards-foil-web/31_dead_end_job.png"
+      }
+    },
+    {
+      "index": 32,
+      "numeral": "XXXII",
+      "name": "The Fiddle-Leaf Fig",
+      "meaning": "Balance appearance with reality.",
+      "image": {
+        "full": "cards/32_fiddle_leaf_fig.png",
+        "web": "cards-web/32_fiddle_leaf_fig.png",
+        "foil_full": "cards-foil/32_fiddle_leaf_fig.png",
+        "foil_web": "cards-foil-web/32_fiddle_leaf_fig.png"
+      }
+    },
+    {
+      "index": 33,
+      "numeral": "XXXIII",
+      "name": "The Star",
+      "meaning": "Hope and healing are ahead.",
+      "image": {
+        "full": "cards/33_star.png",
+        "web": "cards-web/33_star.png",
+        "foil_full": "cards-foil/33_star.png",
+        "foil_web": "cards-foil-web/33_star.png"
+      }
+    },
+    {
+      "index": 34,
+      "numeral": "XXXIV",
+      "name": "The Devil",
+      "meaning": "Break free from unhealthy cycles.",
+      "image": {
+        "full": "cards/34_devil.png",
+        "web": "cards-web/34_devil.png",
+        "foil_full": "cards-foil/34_devil.png",
+        "foil_web": "cards-foil-web/34_devil.png"
+      }
+    },
+    {
+      "index": 35,
+      "numeral": "XXXV",
+      "name": "The Fair Weather Friend",
+      "meaning": "Reevaluate shallow relationships.",
+      "image": {
+        "full": "cards/35_fair_weather_friend.png",
+        "web": "cards-web/35_fair_weather_friend.png",
+        "foil_full": "cards-foil/35_fair_weather_friend.png",
+        "foil_web": "cards-foil-web/35_fair_weather_friend.png"
+      }
+    },
+    {
+      "index": 36,
+      "numeral": "XXXVI",
+      "name": "The Tower",
+      "meaning": "Breakdown leads to breakthrough.",
+      "image": {
+        "full": "cards/36_tower.png",
+        "web": "cards-web/36_tower.png",
+        "foil_full": "cards-foil/36_tower.png",
+        "foil_web": "cards-foil-web/36_tower.png"
+      }
+    },
+    {
+      "index": 37,
+      "numeral": "XXXVII",
+      "name": "The Drama Queen",
+      "meaning": "Not everything is a crisis. Check the story you're telling yourself.",
+      "image": {
+        "full": "cards/37_drama_queen.png",
+        "web": "cards-web/37_drama_queen.png",
+        "foil_full": "cards-foil/37_drama_queen.png",
+        "foil_web": "cards-foil-web/37_drama_queen.png"
+      }
+    },
+    {
+      "index": 38,
+      "numeral": "XXXVIII",
+      "name": "The Last Flying Fuck",
+      "meaning": "Watch it go. Some things no longer deserve your energy.",
+      "image": {
+        "full": "cards/38_last_flying_fuck.png",
+        "web": "cards-web/38_last_flying_fuck.png",
+        "foil_full": "cards-foil/38_last_flying_fuck.png",
+        "foil_web": "cards-foil-web/38_last_flying_fuck.png"
+      }
+    },
+    {
+      "index": 39,
+      "numeral": "XXXIX",
+      "name": "The Nap",
+      "meaning": "Rest is productive. Lie down.",
+      "image": {
+        "full": "cards/39_nap.png",
+        "web": "cards-web/39_nap.png",
+        "foil_full": "cards-foil/39_nap.png",
+        "foil_web": "cards-foil-web/39_nap.png"
+      }
+    }
+  ]
+}
