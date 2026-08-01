@@ -14,8 +14,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
    stretches to a uniform art box (744×1223 in an 800×1280 canvas — uniformity
    beats aspect purity, max ~12% stretch is invisible on this art style) →
    `release/major-arcanai/cards{,-web}/`, plus `deck.json` and `GUIDEBOOK.md`.
-3. `python3 foil.py [slug]` — gold-foil edition (bronze→gold→glint luster LUT,
-   warm black stock, crisp lines, NO glow) → `cards-foil{,-web}/`.
+3. `python3 foil.py [slug]` — gold-foil edition: FLAT metallic gold on warm
+   black stock, crisp lines, no glow, no luster bands — the draw page's
+   dynamic sheen is deliberately the only lighting → `cards-foil{,-web}/`.
 4. `python3 build_draw_page.py` — regenerates `index.html` and appends foil
    paths to `deck.json`.
 
@@ -32,7 +33,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
 - **Gyro must never call `layoutStack()` during a drag** (`S.dragging` guard)
   — it fights the finger and looks choppy.
 - Gyro handling: gamma only (vertical is locked deliberately), low-passed
-  0.8/0.2, fan direction hops sides with tilt sign with hysteresis.
+  0.8/0.2, fan direction hops sides with tilt sign with hysteresis. The same
+  smoothed TILT drives a subtle 3D card tilt via the `--tiltY` CSS var on the
+  `.t3d` wrappers (±5.6° max, skipped under reduced motion).
 - Card XI is *The Audacity* — the deck was renamed, the card was not.
 - `audacity_*.png` and `samples/` were scrubbed from git history on request —
   they are gitignored; never re-add them.
