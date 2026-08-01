@@ -208,7 +208,7 @@ function draw() {
     const slot = document.createElement('div');
     slot.className = 'slot' + (mode === 1 ? ' single' : '');
     slot.innerHTML = `<div class="poslabel">${LABELS[mode][i] || ''}</div>` + cardHTML(c.img, c.name) +
-      `<div class="tap">tap to reveal</div><div class="caption">${capHTML(c)}</div>`;
+      `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
     const flip = () => {
       if (slot.classList.contains('revealed')) return;
       slot.querySelector('.card').classList.add('flipped');
@@ -222,7 +222,7 @@ function draw() {
     cardEl.classList.add('deal');
     cardEl.style.animationDelay = (i * 120) + 'ms';
     table.appendChild(slot);
-    if (!COARSE || mode === 1) {  // single card: the reveal IS the point — deal and flip
+    if (!COARSE) {  // desktop: auto-reveal; touch always gets the flip gesture
       slot.querySelector('.tap').style.display = 'none';
       setTimeout(flip, REDUCED ? 0 : 550 + i * 550);
     }
@@ -424,7 +424,9 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
     if (Math.abs(rate) > 280 && now - lastFlick > 700) {
       lastFlick = now;
       if (table.classList.contains('stackmode')) {
-        if (!S.dragging && !S.revealed.has(topIdx())) tapTop();
+        if (S.dragging) return;
+        if (!S.revealed.has(topIdx())) tapTop();
+        else if (S.picks.length > 1) flingNext(rate);
       } else {
         const card = [...table.querySelectorAll('.slot')]
           .find(s => !s.classList.contains('revealed') && s.querySelector('.face.front img'))
