@@ -378,7 +378,9 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
     if (DEBUG) dbgEl.textContent = 'debug: type=' + e.type +
       ' beta=' + (e.beta === null ? 'null' : e.beta.toFixed(1)) +
       ' gamma=' + (e.gamma === null ? 'null' : e.gamma.toFixed(1)) +
-      ' live=' + document.body.classList.contains('sheen-live');
+      ' live=' + document.body.classList.contains('sheen-live') +
+      ' reduced=' + REDUCED +
+      ' tiltY=' + document.documentElement.style.getPropertyValue('--tiltY');
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = null;
@@ -389,10 +391,8 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       // sheen wants a deliberate lean: quadratic response on the smoothed tilt
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + TILT * Math.abs(TILT) * 1.4)),
                innerHeight * .42);   // vertical locked: only side-to-side tilt moves the light
-      if (!REDUCED) {
-        document.documentElement.style.setProperty('--tiltY', (TILT * 12).toFixed(2) + 'deg');
-        document.documentElement.style.setProperty('--tiltX', (TILT * 14).toFixed(1) + 'px');
-      }
+      document.documentElement.style.setProperty('--tiltY', (TILT * 12).toFixed(2) + 'deg');
+      document.documentElement.style.setProperty('--tiltX', (TILT * 14).toFixed(1) + 'px');
       if (table.classList.contains('stackmode') && !S.dragging) layoutStack();
     });
   };
