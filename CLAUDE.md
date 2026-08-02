@@ -110,6 +110,57 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   ~0.04 hands about a third of cards back to the seeded coin). The Back Room
   also exposes Faces and Seats chips so a seeker can take either decision away
   from the deck; both persist in localStorage and default on.
+- **Tells** (`TELL_CFG` / `qtSample` / `fireTell`): the deck feels *how* the
+  question was written and answers with a vibration, never a word, and never a
+  change to the deal. All of it is derived from the `#q` value sampled over
+  time, never from key events — swipe keyboards deliver whole words in one
+  event and report an `inputType` that describes the keyboard rather than the
+  hand, so counting keystrokes on a phone measures the keyboard. The one
+  discriminator that matters is autocorrect versus a change of mind, and it is
+  **trough duration, not depth**: autocorrect deletes and reinserts inside a
+  tick, a person leaves a dip with width (`troughMs`, 400). Measured on the
+  harness: an autocorrect-heavy question logs `raw=30, churn=0`.
+- Corollary, and the bug it caused once: **churn must be committed when a dip
+  closes as a qualifying trough**, not as characters disappear. Counting on the
+  way down let autocorrect pile up 30 chars of "rewriting" on a question typed
+  straight through and fire the wrong tell. `QT.raw` keeps the uncommitted
+  total for the log only — it is the measure of how noisy a given keyboard is.
+- `.leanrow` is `display:none` unless `#settings.att` — the lean rows only
+  exist when attunement is on. Anything appended to the Back Room that should
+  survive attunement being off must use `.srow` instead.
+- `?tells` (or `?debug`) appends a Readings panel to the Back Room: a rolling
+  60-entry log in localStorage that survives reloads, with Copy / Clear / Forget
+  questions. The thresholds in `TELL_CFG` are **guesses pending real thumbs on
+  a real phone** — they were set to be tuned from that log, the way the lean
+  stops were. `?debug` also adds the gyro overlay bar; `?tells` does not.
+- A tell arrives as a vibration, as light, or both (`TELLMODE`, Back Room
+  "How it answers"). The default is capability-picked: **iOS has no vibration
+  API at all**, so `CAN_BUZZ` false defaults to light. The haptic patterns
+  must **not** be translated to light one-for-one — they are pulses 90ms
+  apart, which as light is a 10Hz strobe, and WCAG 2.3.1 puts the seizure
+  threshold at 3 flashes/second. `#tellglow` re-expresses the same signatures
+  as *breaths*, every one under 2Hz, peaking at .26 alpha at the screen edge
+  and fully transparent across the middle 40%. It is one static gradient,
+  painted once and only ever composited at a different opacity, so no card
+  layer is touched and nothing repaints. Reduced motion kills the light and
+  keeps the buzz: a vibration is not visual motion.
+- `idle(wipe)`: **finishing a reading wipes the question**, because asking the
+  deck the same thing again until it says something kinder is the one thing
+  tarot is strict about. Only the two end-of-reading paths pass `true` (the
+  again button and the popstate off a spread). A spread-type switch also calls
+  `idle()` and must NOT wipe — losing what you typed just for changing One to
+  Cross is infuriating.
+- **A flick is not a shake.** A wrist flick throws as much linear acceleration
+  as a deliberate shake, so the card jumper cannot be told apart by force: it
+  is gated on rotation being *low* (`|rate| < FLICK_RATE`) as well as force
+  being high. It is also disabled entirely in Cross mode, and the idle hint
+  drops its "shake it and one may jump" line there, because a seeker who asked
+  for ten cards did not ask for one. `SHAKE_MAG` and `FLICK_RATE` still want
+  tuning against a real wrist.
+- The echo tell reuses `ARCANAI_ATTUNE.vecFor()`, which deliberately refuses to
+  boot the model on its own, so a page with attunement off never pays 23 MB for
+  a side feature. No echo without a reading, which is correct: the deck was not
+  listening that closely.
 - Only the lightbox image (`data-big`) gets a `srcset` onto the 800×1280 set;
   spreads and gallery thumbs stay on the 500×800 web set — full-res everywhere
   would cost a phone megabytes per deal. `applyFoil()` rewrites `src` **and**
@@ -128,4 +179,7 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   compressed timestamps that inflate swipe-velocity readings — space dispatched
   moves ≥80 ms apart.
 - Careful with `pkill -f`: patterns that appear in the shell's own command
-  line self-kill the shell (exit 144). Kill by PID from `pgrep -a`.
+  line self-kill the shell (exit 144). Kill by PID from `pgrep -a`. The
+  bracket trick (`tellsr[v].py`) only saves you if the *unbracketed* string
+  appears nowhere else on that command line — so never put the kill and the
+  relaunch of the same process in one command. Bit me twice again this way.

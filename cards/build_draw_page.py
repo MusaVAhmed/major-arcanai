@@ -274,6 +274,32 @@ html = """<!doctype html>
   /* lean strength: only meaningful while the attuned shuffle is on */
   .leanrow { display:none; margin-top:1rem; position:relative; z-index:1; }
   #settings.att .leanrow { display:block; }
+  /* The tell for hands that cannot feel it. One static gradient, painted once
+     and only ever composited at a different opacity, so nothing repaints and
+     no card layer is touched. A breath at the edge of the room, never a
+     full-screen flash: the haptic patterns are pulses 90ms apart, and light at
+     that rate is a 10Hz strobe. Everything here stays under 2Hz. */
+  #tellglow { position:fixed; inset:0; z-index:45; pointer-events:none; opacity:0;
+    will-change:opacity; background: radial-gradient(ellipse 120% 85% at 50% 50%,
+      transparent 40%, rgba(233,227,211,.10) 76%, rgba(233,227,211,.26) 100%); }
+  body.foil #tellglow { background: radial-gradient(ellipse 120% 85% at 50% 50%,
+      transparent 40%, rgba(255,215,106,.10) 76%, rgba(255,215,106,.26) 100%); }
+  #tellglow.t-resolute { animation: tg-resolute .55s ease-in-out; }
+  #tellglow.t-held     { animation: tg-held 1.5s ease-in-out; }
+  #tellglow.t-circled  { animation: tg-circled 1.4s ease-in-out; }
+  #tellglow.t-restart  { animation: tg-restart 1.3s ease-in-out; }
+  #tellglow.t-echo     { animation: tg-echo 1.5s ease-in-out; }
+  /* one clean swell, nothing to add */
+  @keyframes tg-resolute { 0%,100% { opacity:0 } 45% { opacity:1 } }
+  /* slow to rise, slow to let go */
+  @keyframes tg-held { 0% { opacity:0 } 55% { opacity:1 } 74% { opacity:.9 } 100% { opacity:0 } }
+  /* two uneven swells, the second larger: still unresolved */
+  @keyframes tg-circled { 0%,100% { opacity:0 } 22% { opacity:.8 } 46% { opacity:.12 } 72% { opacity:1 } }
+  /* a false start, almost gone, then the real one */
+  @keyframes tg-restart { 0%,100% { opacity:0 } 18% { opacity:.45 } 36% { opacity:.05 } 64% { opacity:1 } }
+  /* the same shape returning, quieter: literally an echo */
+  @keyframes tg-echo { 0%,100% { opacity:0 } 20% { opacity:1 } 46% { opacity:0 } 66% { opacity:.36 } }
+  @media (prefers-reduced-motion: reduce) { #tellglow { display:none; } }
   .seg { display:flex; gap:.4rem; margin-top:.55rem; }
   .spanel .seg button { display:block; width:auto; flex:1; margin:0; padding:.7rem .25rem;
                         font-size:.66rem; letter-spacing:.05em; }
@@ -361,6 +387,21 @@ html = """<!doctype html>
         </div>
         <span class="sdesc">Which cards is always the deck's. Faces lets it turn a card upright or
           reversed to suit. Seats lets it decide which card belongs in which position.</span>
+      </div>
+      <label class="srow">
+        <span class="shead">Tells <input type="checkbox" id="tells"></span>
+        <span class="sdesc">The deck notices how you wrote the question and answers without
+          words. Rewrites, long silences, questions it has heard from you before. Never a
+          sentence, and only when it is sure.</span>
+      </label>
+      <div class="srow" id="tmrow">
+        <span class="shead">How it answers</span>
+        <div class="seg" role="group" aria-label="How a tell arrives">
+          <button type="button" id="tm1">Hand</button><button type="button" id="tm2">Light</button><button
+            type="button" id="tm3">Both</button>
+        </div>
+        <span class="sdesc">A vibration, or a breath of light at the edge of the room. Phones
+          that cannot buzz are given the light instead.</span>
       </div>
     </div>
   </div>
@@ -458,8 +499,209 @@ function shuffled(rng) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-qInput.addEventListener('input', e => stir(e.timeStamp * 1000));
 qInput.addEventListener('keydown', e => { if (e.key === 'Enter') { qInput.blur(); draw(); } });
+
+/* ---- the collector: how the question was written, not what it says -------
+   Every metric here comes from the VALUE of the field sampled over time, and
+   never from key events. Swipe keyboards deliver whole words in one event,
+   autocorrect rewrites silently, and IME composition reports inputType that
+   describes the keyboard rather than the hand. A string with timestamps is
+   the same shape on every input method, so that is what we watch.
+
+   The one thing that still needs discriminating is autocorrect versus a
+   change of mind, and the discriminator is not how many characters vanished
+   but how long they stayed gone. Autocorrect deletes and reinserts inside a
+   tick or two. A person deletes, thinks, and types again, which leaves a
+   trough with width. Filtering on trough duration needs no per-keyboard
+   tuning and no guessing about which keyboard is in use.
+
+   Nothing here leaves the page and nothing here touches which cards come up.
+   It only decides whether the deck answers in the hand. */
+const TELL_CFG = {
+  troughMs: 400,    // a dip must persist this long to be a rewrite, not autocorrect
+  troughMin: 4,     // ...and must remove at least this many characters
+  restartMin: 12,   // wiping a field at least this long counts as starting over
+  echoSim: 0.90,    // cosine at which a question is the same question again
+  histN: 8,         // prior questions remembered for the echo check
+  heldMs: 4000,     // written, then sat on without touching it
+  fastMs: 1200,     // ...versus asked the moment it was finished
+  minLen: 12,       // below this there is not enough question to read anything
+};
+
+const QT = {};
+function qtReset() {
+  Object.assign(QT, {
+    t0: 0, last: 0, prev: 0, peak: 0, churn: 0, troughs: 0, restarts: 0,
+    stall: 0, edits: 0, raw: 0, paste: false, ime: false,
+    dipAt: 0, dipTop: 0, dipFloor: 0,
+    gN: 0, gSum: 0, gMax: 0, gLast: null,
+    rubMs: 0, rubDist: 0,
+  });
+}
+qtReset();
+
+/* Churn is committed here rather than as characters disappear, because a
+   deletion is not evidence of anything until we know whether it lasted.
+   Counting it on the way down let autocorrect's delete-and-reinsert cycle
+   pile up thirty characters of "rewriting" on a question typed straight
+   through. QT.raw keeps the uncommitted total for the log, where it is a
+   useful measure of how noisy a given keyboard actually is. */
+function qtCloseDip(t) {
+  if (QT.dipAt && t - QT.dipAt >= TELL_CFG.troughMs &&
+      QT.dipTop - QT.dipFloor >= TELL_CFG.troughMin) {
+    QT.troughs++;
+    QT.churn += QT.dipTop - QT.dipFloor;
+  }
+  QT.dipAt = 0;
+}
+function qtSample(len, t) {
+  if (!QT.t0) { QT.t0 = QT.last = t; QT.prev = QT.peak = len; return; }
+  const gap = t - QT.last;
+  if (gap > QT.stall) QT.stall = gap;
+  QT.last = t;
+  QT.edits++;
+  if (len < QT.prev) {
+    QT.raw += QT.prev - len;
+    if (!QT.dipAt) { QT.dipAt = t; QT.dipTop = QT.prev; }
+    QT.dipFloor = len;
+    // a wipe to nothing is its own tell, and must not also count as a trough
+    if (!len && QT.dipTop >= TELL_CFG.restartMin) {
+      QT.restarts++; QT.churn += QT.dipTop; QT.dipAt = 0;
+    }
+  } else if (len > QT.prev && QT.dipAt) qtCloseDip(t);
+  QT.prev = len;
+  if (len > QT.peak) QT.peak = len;
+}
+/* performance.now() rather than e.timeStamp: the draw tap is measured with the
+   same clock and older engines disagree about the event timestamp origin */
+qInput.addEventListener('input', e => {
+  stir(e.timeStamp * 1000);
+  qtSample(qInput.value.length, performance.now());
+});
+qInput.addEventListener('beforeinput', e => {
+  if (e.inputType === 'insertFromPaste') QT.paste = true;
+});
+qInput.addEventListener('compositionstart', () => { QT.ime = true; });
+
+/* the reading, taken at the instant of the deal so dwell is honest */
+function qtRead(q) {
+  const now = performance.now();
+  qtCloseDip(now);
+  const len = q.length, wrote = QT.t0 ? QT.last - QT.t0 : 0;
+  return {
+    len, peak: QT.peak, churn: QT.churn, raw: QT.raw, troughs: QT.troughs,
+    restarts: QT.restarts, edits: QT.edits,
+    wrote: Math.round(wrote),                        // first keystroke to last
+    dwell: QT.t0 ? Math.round(now - QT.last) : 0,    // last keystroke to the tap
+    stall: Math.round(QT.stall),                     // longest silence mid-question
+    cps: wrote > 250 ? +(len / (wrote / 1000)).toFixed(2) : null,
+    paste: QT.paste, ime: QT.ime,
+    // the hands, which have no input method to lie about
+    restless: QT.gN ? +(QT.gSum / QT.gN).toFixed(2) : null,
+    gmax: QT.gN ? +QT.gMax.toFixed(1) : null,
+    rubMs: Math.round(QT.rubMs), rubDist: Math.round(QT.rubDist),
+  };
+}
+
+/* ---- the tell: the deck answers in the hand ----------------------------
+   Silent by default. One signature fires only when a signal is unambiguous,
+   which is the whole point: a tell that fires every draw is a status bar.
+   navigator.vibrate patterns are [buzz, pause, buzz, ...] in ms, and Android
+   swallows pulses under about 8ms, so nothing shorter is used. iOS has no
+   vibration API at all, so this is a quiet no-op there. */
+const TELLS = {
+  echo:     [34, 90, 18, 90, 9],       // the same shape returning, quieter
+  restart:  [10, 40, 10, 40, 46],      // false starts, then commitment
+  circled:  [12, 90, 12, 90, 12],      // an even, unresolved knocking
+  held:     [8, 60, 16, 60, 32],       // a swell: it grew on you
+  resolute: [30],                      // one flat pulse, nothing to add
+};
+/* iOS has no vibration API at all, so the same signatures render as light.
+   The rhythm is what carries a tell, not the amplitude, which is why the
+   patterns translate: two uneven swells read as unresolved whether they
+   arrive through the skin or the eye. Capability picks the default; the Back
+   Room overrides it, on any device. */
+const CAN_BUZZ = typeof navigator.vibrate === 'function';
+const TELLMODE = { 1: 'hand', 2: 'light', 3: 'both' };
+let tellMode = +(localStorage.getItem('arcanai-tellmode') || (CAN_BUZZ ? 1 : 2));
+if (!TELLMODE[tellMode]) tellMode = CAN_BUZZ ? 1 : 2;
+const glowEl = document.createElement('div');
+glowEl.id = 'tellglow';
+document.body.appendChild(glowEl);
+function tellGlow(name) {
+  if (REDUCED) return;
+  glowEl.className = '';
+  void glowEl.offsetWidth;      // reflow, or a repeated tell never replays
+  glowEl.className = 't-' + name;
+}
+function deliverTell(name) {
+  const m = TELLMODE[tellMode];
+  if (m !== 'light') buzz(TELLS[name]);
+  if (m !== 'hand') tellGlow(name);
+}
+
+function tellFor(r, echo) {
+  if (echo >= TELL_CFG.echoSim) return 'echo';
+  if (r.restarts) return 'restart';
+  if (r.troughs >= 2 || (r.len >= TELL_CFG.minLen && r.churn >= r.len * 0.5)) return 'circled';
+  if (r.len >= TELL_CFG.minLen && r.dwell >= TELL_CFG.heldMs) return 'held';
+  if (r.len >= 15 && !r.troughs && r.churn <= 2 && !r.paste &&
+      r.dwell <= TELL_CFG.fastMs) return 'resolute';
+  return null;
+}
+
+/* prior questions, as vectors, so the deck can recognize one it has heard.
+   Only ever consulted when the model is already loaded for the reading. */
+const QHIST_KEY = 'arcanai-qhist';
+const qhist = () => { try { return JSON.parse(localStorage.getItem(QHIST_KEY) || '[]'); } catch (_) { return []; } };
+function echoScore(v) {
+  let best = 0;
+  for (const a of qhist()) {
+    if (a.length !== v.length) continue;
+    let s = 0;
+    for (let i = 0; i < v.length; i++) s += v[i] * a[i];
+    if (s > best) best = s;
+  }
+  return +best.toFixed(3);
+}
+function rememberQ(v) {
+  const h = qhist();
+  h.push(Array.from(v, x => Math.round(x * 1e4) / 1e4));
+  while (h.length > TELL_CFG.histN) h.shift();
+  try { localStorage.setItem(QHIST_KEY, JSON.stringify(h)); } catch (_) {}
+}
+
+/* Fires after the deck has looked at the question, so it lands as a response
+   rather than as feedback on the tap. The echo check rides on the vector the
+   reading already computed; with attunement off there is no vector and no
+   echo, which is correct: the deck was not listening that closely. */
+let LASTTELL = null;
+async function fireTell(r, q) {
+  let echo = 0;
+  if (q && window.ARCANAI_ATTUNE) {
+    const v = await ARCANAI_ATTUNE.vecFor(q, 250);
+    if (v) { echo = echoScore(v); rememberQ(v); }
+  }
+  r.echo = echo;
+  r.tell = tellFor(r, echo);
+  LASTTELL = r;
+  logTell(r);
+  qtReset();
+  if (r.tell && tellsOn) setTimeout(() => deliverTell(r.tell), 500);
+}
+
+/* The log is the instrument: it survives reloads so a week of real questions
+   on a real phone can be read back and the thresholds above set against data
+   instead of guesses. Never sent anywhere; there is nowhere to send it. */
+const TELLOG_KEY = 'arcanai-tellog';
+const tellog = () => { try { return JSON.parse(localStorage.getItem(TELLOG_KEY) || '[]'); } catch (_) { return []; } };
+function logTell(r) {
+  const h = tellog();
+  h.push({ ...r, at: new Date().toISOString().slice(0, 16) });
+  while (h.length > 60) h.shift();
+  try { localStorage.setItem(TELLOG_KEY, JSON.stringify(h)); } catch (_) {}
+  if (typeof paintTellout === 'function') paintTellout();
+}
 
 /* ---- moon phase: local synodic arithmetic, no lookup ---- */
 (() => {
@@ -508,7 +750,7 @@ addEventListener('popstate', () => {
   if (nav.settings) { nav.settings = false; settingsEl.classList.remove('open'); return; }
   if (nav.lightbox) { nav.lightbox = false; lightbox.classList.remove('open'); return; }
   if (nav.gallery) { nav.gallery = false; closeGallery(); return; }
-  if (nav.spread) { nav.spread = false; idle(); return; }
+  if (nav.spread) { nav.spread = false; idle(true); return; }
 });
 
 /* The Back Room */
@@ -573,6 +815,78 @@ for (const k in CHOOSE) {
     paint(); buzz(6);
   });
   paint();
+}
+
+/* Tells: the deck's only reply to how the question was written. On by
+   default, because it costs nothing on the draws where nothing is certain. */
+const tellsBox = document.getElementById('tells');
+let tellsOn = localStorage.getItem('arcanai-tells') !== '0';
+tellsBox.checked = tellsOn;
+tellsBox.addEventListener('change', () => {
+  tellsOn = tellsBox.checked;
+  localStorage.setItem('arcanai-tells', tellsOn ? '1' : '0');
+  if (tellsOn) deliverTell('resolute'); else buzz(6);   // show what one is like
+});
+
+const tmBtns = [1, 2, 3].map(i => document.getElementById('tm' + i));
+function applyTellMode() {
+  tmBtns.forEach((b, i) => b.classList.toggle('active', i + 1 === tellMode));
+  localStorage.setItem('arcanai-tellmode', String(tellMode));
+}
+tmBtns.forEach((b, i) => b.addEventListener('click', () => {
+  tellMode = i + 1; applyTellMode();
+  if (tellsOn) deliverTell('resolute'); else buzz(6);   // preview the change
+}));
+// a phone with no vibration motor should not be offered a silent default
+if (!CAN_BUZZ) tmBtns[0].title = 'This browser cannot vibrate';
+applyTellMode();
+
+/* ---- the instrument ----------------------------------------------------
+   ?tells on the URL appends a readout of the rolling log to the Back Room, so
+   the thresholds above can be set from a week of real questions typed with
+   real thumbs instead of from guesses. Off by default: this is a measuring
+   tool, not part of the reading. */
+if (new URLSearchParams(location.search).has('tells') ||
+    new URLSearchParams(location.search).has('debug')) {
+  const box = document.createElement('div');
+  // .srow, not .leanrow: the lean rows are hidden unless attunement is on, and
+  // every metric here except echo is measured whether the model loaded or not
+  box.className = 'srow';
+  box.style.cursor = 'auto';
+  box.innerHTML = '<span class="shead">Readings</span><pre id="tellout"></pre>' +
+    '<div class="seg" role="group" aria-label="Readings log">' +
+    '<button type="button" id="tellcopy">Copy</button>' +
+    '<button type="button" id="tellclear">Clear log</button>' +
+    '<button type="button" id="tellforget">Forget questions</button></div>';
+  document.querySelector('.spanel').appendChild(box);
+  const out = box.querySelector('#tellout');
+  out.style.cssText = 'max-height:38vh;overflow:auto;text-align:left;margin:.5rem 0;' +
+    'font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;opacity:.85';
+  const KEYS = ['len', 'peak', 'churn', 'raw', 'troughs', 'restarts', 'edits',
+                'wrote', 'dwell', 'stall', 'cps', 'echo', 'restless', 'rubMs'];
+  window.paintTellout = () => {
+    const h = tellog();
+    if (!h.length) { out.textContent = 'no readings yet. ask the deck something.'; return; }
+    const rows = h.slice(-16).reverse().map(r =>
+      (r.tell || '.').padEnd(9) +
+      KEYS.map(k => k + '=' + (r[k] === null || r[k] === undefined ? '-' : r[k])).join(' ') +
+      (r.ime ? ' IME' : '') + (r.paste ? ' PASTE' : ''));
+    out.textContent = h.length + ' readings, newest first\\n\\n' + rows.join('\\n');
+  };
+  paintTellout();
+  box.querySelector('#tellcopy').addEventListener('click', () => {
+    const t = JSON.stringify(tellog());
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject())
+      .then(() => { out.textContent = 'copied ' + t.length + ' bytes.\\n\\n' + out.textContent; })
+      .catch(() => { out.textContent = t; });   // no clipboard: select it by hand
+  });
+  box.querySelector('#tellclear').addEventListener('click', () => {
+    localStorage.removeItem(TELLOG_KEY); paintTellout();
+  });
+  box.querySelector('#tellforget').addEventListener('click', () => {
+    localStorage.removeItem(QHIST_KEY);
+    out.textContent = 'question memory cleared. the deck has heard nothing before.';
+  });
 }
 
 /* ---- the heretical shuffle: question keywords tilt the deck ----
@@ -695,11 +1009,22 @@ const capHTML = c => `<div class="cname">${c.name}</div>
   <div class="cnum">${c.n}${c.rev ? ' &middot; <span class="revtag">reversed</span>' : ''}</div>
   <div class="cmean">${c.rev ? c.r : c.meaning}</div>`;
 
-function idle() {
+/* `wipe` means a reading actually ended, and the question ends with it: asking
+   the deck the same thing again until it says something kinder is the one
+   thing tarot is genuinely strict about. Switching spread type is not the end
+   of a reading, so that path keeps what you have typed. */
+function idle(wipe) {
   again.style.display = 'none';
+  if (wipe) {
+    qInput.value = '';
+    askedEl.textContent = '';
+    askedEl.classList.remove('has');
+    qtReset();          // the next question is a new question, not a continuation
+  }
   hint.style.display = '';
   hint.textContent = COARSE
-    ? 'Rub the deck to shuffle \\u00b7 tap to draw \\u00b7 shake it and one may jump.'
+    ? (mode === 10 ? 'Rub the deck to shuffle \\u00b7 tap to lay the Cross.'
+                   : 'Rub the deck to shuffle \\u00b7 tap to draw \\u00b7 shake it and one may jump.')
     : 'Rub the deck to shuffle it, or just tap to draw.';
   document.body.classList.remove('spreadon');
   document.body.classList.toggle('crossmode', mode === 10);
@@ -724,11 +1049,12 @@ function idle() {
 
 /* rub the pile to shuffle: every wiggle of your hand feeds the seed */
 function attachShuffle(deckEl) {
-  let down = false, moved = 0, lastBuzz = 0, px = 0, py = 0;
+  let down = false, moved = 0, lastBuzz = 0, px = 0, py = 0, rubT0 = 0;
   const piles = deckEl.querySelectorAll('.pile');   // [p2, p1]
   const settle = () => { piles[0].style.transform = ''; piles[1].style.transform = ''; };
   deckEl.addEventListener('pointerdown', e => {
     down = true; moved = 0; px = e.clientX; py = e.clientY;
+    rubT0 = performance.now();
     try { deckEl.setPointerCapture(e.pointerId); } catch (_) {}
   });
   deckEl.addEventListener('pointermove', e => {
@@ -746,6 +1072,7 @@ function attachShuffle(deckEl) {
   deckEl.addEventListener('pointerup', () => {
     if (!down) return;
     down = false; settle();
+    QT.rubMs += performance.now() - rubT0; QT.rubDist += moved;
     if (moved < 10) draw();                              // it was a tap
     else { buzz([12, 40, 8]); hint.textContent = 'Shuffled. Tap to draw.'; }
   });
@@ -758,12 +1085,15 @@ async function draw(opts = {}) {
   stir(performance.now() * 1000);
   const q = opts.silentQ ? '' : qInput.value.trim();
   const rng = makeRng(q);
+  // read the writing before anything awaits, or dwell becomes the model's latency
+  const wr = (!opts.picks && !opts.restore) ? qtRead(q) : null;
   /* the semantic heresy: embeddings first, keyword hints as the fallback.
      the ternary short-circuits when there is nothing to attune to, so the
      ordinary draw never awaits and stays fully synchronous. */
   if (window.ARCANAI_ATTUNE) ARCANAI_ATTUNE.config.temp = LEANS[lean];
   const sem = (attuned && q && !opts.picks && window.ARCANAI_ATTUNE)
     ? await ARCANAI_ATTUNE.readFor(q, mode, 450) : null;
+  if (wr) fireTell(wr, sem ? q : '');
   const themes = (!sem && attuned && q && !opts.picks) ? questionThemes(q) : new Set();
   const leaned = !!sem || themes.size > 0;
   let picks = opts.picks;
@@ -1243,6 +1573,12 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       document.body.classList.add('sheen-live');
       const g = e.gamma || 0;
       stir(g * 1048576);
+      // restlessness of the hand between frames: a sensor with no input method
+      if (QT.gLast !== null) {
+        const d = Math.abs(g - QT.gLast);
+        QT.gN++; QT.gSum += d; if (d > QT.gMax) QT.gMax = d;
+      }
+      QT.gLast = g;
       TILT = TILT * 0.8 + Math.max(-0.7, Math.min(0.7, g / 45)) * 0.2;   // low-pass: ignore hand tremor
       // sheen wants a deliberate lean: quadratic response on the smoothed tilt
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + TILT * Math.abs(TILT) * 1.4)),
@@ -1256,6 +1592,11 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
   addEventListener('deviceorientationabsolute', onOri);
   // wrist flick = rotation-rate spike far above normal tilt play
   let lastFlick = 0, lastJump = 0;
+  /* A flick throws as much linear acceleration as a deliberate shake, so the
+     jumper cannot be told apart by force alone. It is told apart by what it is
+     NOT: a flick is rotation, a shake is not. Both numbers still want tuning
+     against a real wrist. */
+  const FLICK_RATE = 170, SHAKE_MAG = 24;
   addEventListener('devicemotion', e => {
     const rate = (e.rotationRate && e.rotationRate.gamma) || 0;
     if (DEBUG) window.__rate = Math.abs(rate).toFixed(0);
@@ -1266,7 +1607,9 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       const mag = Math.hypot(acc.x || 0, acc.y || 0, acc.z || 0);
       if (DEBUG) window.__acc = mag.toFixed(0);
       stir(mag * 65536);
-      if (mag > 24 && now - lastJump > 1500) {
+      // a spinning wrist is a flick, and ten cards asked for is not one card
+      if (mag > SHAKE_MAG && Math.abs(rate) < FLICK_RATE && mode !== 10 &&
+          now - lastJump > 1500) {
         lastJump = now; lastFlick = now;   // a shake is not a flick
         const rng = makeRng('jumper');
         const c = shuffled(rng)[0];
@@ -1275,7 +1618,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
         return;
       }
     }
-    if (Math.abs(rate) > 170 && now - lastFlick > 700) {
+    if (Math.abs(rate) > FLICK_RATE && now - lastFlick > 700) {
       lastFlick = now;
       if (table.classList.contains('stackmode')) {
         if (S.dragging) return;
@@ -1304,7 +1647,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
 // long-press on a card must summon a clarifier, not the image context menu
 addEventListener('contextmenu', e => { if (e.target.closest('#table')) e.preventDefault(); });
 
-again.addEventListener('click', () => { if (nav.spread) history.back(); else idle(); });
+again.addEventListener('click', () => { if (nav.spread) history.back(); else idle(true); });
 if (!restoreSpread()) idle();
 </script>
 <script src="attune.js"></script>
