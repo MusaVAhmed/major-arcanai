@@ -397,10 +397,8 @@ for (const n of [1,3,5,10]) {
     mode = n;
     for (const k of [1,3,5,10]) document.getElementById('m'+k).classList.toggle('active', k === n);
     closeGallery();
-    // switching spread type must not eat an active reading — it re-arms the
-    // NEXT deal; only reshuffle/back regenerates
-    if (CUR.length) saveSpread();
-    else idle();
+    idle();   // an explicit spread-type switch arms a fresh deal; only
+              // browser reloads/tab switches preserve the reading
   });
 }
 
