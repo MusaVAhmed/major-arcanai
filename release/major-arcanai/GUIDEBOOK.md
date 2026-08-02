@@ -22,7 +22,7 @@ Stand confidently on your own. You don't need validation.
 **III — The Lovers**  
 Deep connection — romantic, platonic, or with yourself.
 
-**IV — The Coffee**  
+**IV — The Iced Coffee**  
 Wake up. Face reality. Do what needs to be done.
 
 **V — Death**  

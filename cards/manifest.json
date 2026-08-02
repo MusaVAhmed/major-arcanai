@@ -1,5 +1,5 @@
 {
-  "style_prompt": "Generate a black and white tarot card illustration, bold clean vector line art in a humorous gothic style: {SCENE}. Ornate decorative frame with a double-rule border and corner rose motifs, scattered stars, sparkles and crescent moons in the background, high contrast pure black ink on plain white background, no grayscale, no shading, no gradients, thick sticker-style outlines, whimsical sarcastic mood, centered composition, tall portrait orientation. Important: absolutely no text, no lettering, no numbers, no words anywhere in the image.",
+  "style_prompt": "Generate a black and white tarot card illustration, bold clean vector line art in a humorous gothic style: {SCENE}. Ornate decorative frame with a double-rule border and corner rose motifs, scattered stars and sparkles in the background, high contrast pure black ink on plain white background, no grayscale, no shading, no gradients, thick sticker-style outlines, whimsical sarcastic mood, centered composition, tall portrait orientation. Important: absolutely no text, no lettering, no numbers, no words anywhere in the image.",
   "cards": [
     {
       "num": "0",
@@ -26,14 +26,14 @@
       "num": "III",
       "slug": "lovers",
       "name": "The Lovers",
-      "scene": "two skulls nose-to-nose about to kiss, a single rose held between them",
+      "scene": "two skeletons locked in a passionate kiss, one bony hand tenderly cradling the other's skull, arms wrapped around each other, a single rose between them",
       "status": "generated"
     },
     {
       "num": "IV",
       "slug": "coffee",
-      "name": "The Coffee",
-      "scene": "skeletal hand rising from roses, gripping a to-go coffee cup like a holy relic, crystals floating around",
+      "name": "The Iced Coffee",
+      "scene": "skeletal hand rising from roses, gripping a clear plastic iced coffee cup filled with ice cubes and a straw, condensation drops, crystals floating around",
       "status": "generated"
     },
     {
@@ -208,14 +208,14 @@
       "num": "XXIX",
       "slug": "life_of_the_party",
       "name": "The Life of the Party",
-      "scene": "skeleton in a party hat mid confetti toss, lampshade slightly askew on its head, one single tear below the eye socket",
+      "scene": "skeleton dancing wildly on top of a table, lampshade on its skull, blowing a party horn, confetti flying everywhere, one single tear below its eye socket",
       "status": "generated"
     },
     {
       "num": "XXX",
       "slug": "last_hurrah",
       "name": "The Last Hurrah",
-      "scene": "skeleton popping a champagne bottle, cork flying past star fireworks, a wilting bouquet in the other hand",
+      "scene": "skeleton in a party hat sitting alone at a small round table, raising a champagne glass in a solo toast over a tiny cake with one lit candle, a sagging balloon tied to the chair",
       "status": "generated"
     },
     {
@@ -257,7 +257,7 @@
       "num": "XXXVI",
       "slug": "tower",
       "name": "The Tower",
-      "scene": "lightning-struck crumbling tower, a skeleton falling from it while calmly sipping a cup of coffee",
+      "scene": "lightning-struck crumbling stone tower, a skeleton falling from it mid-air giving a casual unbothered shrug, palms up",
       "status": "generated"
     },
     {
@@ -271,7 +271,7 @@
       "num": "XXXVIII",
       "slug": "last_flying_fuck",
       "name": "The Last Flying Fuck",
-      "scene": "skeleton with a messy hair bun and a flower, waving goodbye to a butterfly fluttering away",
+      "scene": "skeleton with a messy hair bun and large monarch butterfly wings on its back, defiantly raising a middle finger, butterflies fluttering away around it",
       "status": "generated"
     },
     {
