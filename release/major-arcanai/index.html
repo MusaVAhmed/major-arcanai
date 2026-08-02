@@ -18,15 +18,44 @@
     padding: max(1.2rem, env(safe-area-inset-top)) 1rem 4rem;
   }
   body.foil { background: radial-gradient(ellipse 90% 70% at 50% 30%, #1a1510 0%, #0a0908 70%); }
-  h1 {
-    font-family:'Cinzel', Georgia, serif; font-weight:700; letter-spacing:.16em;
-    font-size: clamp(1.3rem, 6vw, 2.4rem); margin:.2em 0 .1em; text-transform:uppercase;
+  /* masthead: styled as one of the deck's own card frames —
+     double-rule border, cartouche eyebrow, banner word, star ornaments */
+  .mast {
+    position:relative; margin:0 auto 1.5rem; max-width:24rem;
+    border:1px solid var(--line); padding:.9rem .9rem .8rem;
   }
-  body.foil h1 {
+  .mast::before { content:''; position:absolute; inset:4px; border:1px solid var(--line); pointer-events:none; }
+  .mast .star { position:absolute; top:-.62em; left:50%; transform:translateX(-50%);
+                background:var(--ink); padding:0 .55em; color:var(--dim); font-size:.85rem;
+                line-height:1; user-select:none; }
+  h1 { margin:0; font-family:'Cinzel', Georgia, serif; text-transform:uppercase; line-height:1; }
+  h1 .eyebrow {
+    display:inline-block; font-size:.62rem; font-weight:600; letter-spacing:.3em; color:var(--dim);
+    border:1px solid var(--line); border-radius:999px;
+    padding:.42em .85em .42em calc(.85em + .3em); margin-bottom:.6rem;
+  }
+  h1 .word {
+    display:block; font-size:clamp(2.2rem, 12.5vw, 3.7rem); font-weight:800;
+    letter-spacing:.05em; margin-right:-.05em; color:var(--bone);
+  }
+  h1 .ai {
+    background: linear-gradient(165deg, var(--gold3), var(--gold2) 45%, var(--gold1));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .mast .orn { color:var(--dim); letter-spacing:.5em; padding-left:.5em; font-size:.78rem;
+               margin-top:.45rem; user-select:none; }
+  body.foil .mast, body.foil .mast::before, body.foil h1 .eyebrow { border-color:#6a5426; }
+  body.foil .mast .star { background:#0f0c08; color:var(--gold1); }
+  body.foil h1 .eyebrow { color:var(--gold1); }
+  body.foil h1 .word {
     background: linear-gradient(100deg, var(--gold1), var(--gold2), var(--gold3), var(--gold2), var(--gold1));
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .orn { color:var(--dim); letter-spacing:.5em; user-select:none; margin:.2rem 0 1.2rem; }
+  body.foil h1 .ai {
+    background: linear-gradient(165deg, #fffdf2, var(--gold3) 55%, var(--gold2));
+    -webkit-background-clip:text; background-clip:text;
+  }
+  body.foil .mast .orn { color:#8a6d2f; }
   .modes { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-bottom:1.6rem; }
   button {
     font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
@@ -126,8 +155,11 @@
 </style>
 </head>
 <body>
-  <h1>The Major ArcanAI</h1>
-  <div class="orn">&#9789; &#10022; &#9790;</div>
+  <header class="mast">
+    <span class="star" aria-hidden="true">&#10022;</span>
+    <h1><span class="eyebrow">The Major</span> <span class="word">Arcan<span class="ai">AI</span></span></h1>
+    <div class="orn" aria-hidden="true">&#9789; &#10022; &#9790;</div>
+  </header>
   <div class="modes" role="group" aria-label="Spread and style">
     <button id="m1" class="active">One</button>
     <button id="m3">Three</button>
