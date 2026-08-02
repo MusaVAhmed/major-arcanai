@@ -163,6 +163,25 @@
   #lightbox.open { display:block; }
   #lightbox img { max-width:min(88vw, 380px); border-radius:12px; box-shadow:0 12px 50px rgba(0,0,0,.8); }
   #lightbox .caption { opacity:1; max-width:34rem; margin:1rem auto 0; }
+  /* settings sheet: The Back Room */
+  #settings { display:none; position:fixed; inset:0; background:rgba(8,7,5,.82); z-index:60; }
+  #settings.open { display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+  .spanel { background:var(--ink); border:1px solid var(--line); max-width:20rem; width:100%;
+            padding:1.3rem 1.4rem 1.4rem; text-align:left; position:relative; }
+  .spanel::before { content:''; position:absolute; inset:4px; border:1px solid var(--line); pointer-events:none; }
+  .stitle { font-family:'Cinzel', Georgia, serif; font-size:.8rem; letter-spacing:.22em;
+            text-transform:uppercase; text-align:center; margin-bottom:1.1rem; }
+  .spanel button { display:block; width:100%; margin-bottom:.7rem; position:relative; z-index:1; }
+  .srow { display:block; margin-top:.6rem; cursor:pointer; position:relative; z-index:1; }
+  .srow .shead { display:flex; justify-content:space-between; align-items:center; gap:.8rem;
+                 font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em;
+                 text-transform:uppercase; }
+  .srow input { accent-color:#c9a44a; width:1.15rem; height:1.15rem; flex:none; }
+  .srow .sdesc { display:block; color:var(--dim); font-size:.8rem; font-style:italic;
+                 line-height:1.5; margin-top:.45rem; }
+  body.foil .spanel { background:#0f0c08; border-color:#6a5426; }
+  body.foil .spanel::before { border-color:#6a5426; }
+  body.foil .srow input { accent-color:var(--gold2); }
   #again { margin-top:2.2rem; display:none; }
   .hint { color:var(--dim); font-size:.85rem; font-style:italic; margin-top:1.4rem; }
   @media (max-width: 430px) {
@@ -196,8 +215,19 @@
     <button id="m5">Five</button>
     <button id="m10">Cross</button>
     <button id="foil" aria-pressed="false">&#10022; Foil</button>
-    <button id="daily" title="Card of the Day">&#10038; Today</button>
-    <button id="gallery">All cards</button>
+    <button id="gear" aria-label="Settings" title="Settings">&#9881;&#xFE0E;</button>
+  </div>
+  <div id="settings" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="spanel">
+      <div class="stitle">&#10022; The Back Room</div>
+      <button id="daily" title="Card of the Day">&#10038; Card of the Day</button>
+      <button id="gallery">All 40 cards</button>
+      <label class="srow">
+        <span class="shead">Attuned shuffle <input type="checkbox" id="attuned"></span>
+        <span class="sdesc">The deck reads your question and leans toward cards that share its
+          themes. Purists call it rigged. The deck calls it listening.</span>
+      </label>
+    </div>
   </div>
   <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
     placeholder="Ask the deck a question&hellip; (optional)" aria-label="Ask the deck a question"></div>
@@ -328,13 +358,75 @@ const lightbox = document.getElementById('lightbox');
 /* Back button peels UI layers instead of leaving the page.
    Each layer pushes at most one history entry (flags dedupe); popstate
    closes the topmost open layer. */
-const nav = { spread: false, gallery: false, lightbox: false };
+const nav = { spread: false, gallery: false, lightbox: false, settings: false };
 const pushNav = k => { if (!nav[k]) { nav[k] = true; history.pushState({ k }, ''); } };
+const settingsEl = document.getElementById('settings');
 addEventListener('popstate', () => {
+  if (nav.settings) { nav.settings = false; settingsEl.classList.remove('open'); return; }
   if (nav.lightbox) { nav.lightbox = false; lightbox.classList.remove('open'); return; }
   if (nav.gallery) { nav.gallery = false; closeGallery(); return; }
   if (nav.spread) { nav.spread = false; idle(); return; }
 });
+
+/* The Back Room */
+document.getElementById('gear').addEventListener('click', () => {
+  settingsEl.classList.add('open');
+  pushNav('settings');
+  buzz(6);
+});
+settingsEl.addEventListener('click', e => {
+  if (e.target !== settingsEl) return;
+  if (nav.settings) history.back(); else settingsEl.classList.remove('open');
+});
+/* run an action from inside the sheet: close it (consuming its history
+   entry) FIRST, so the action's own nav layers stack cleanly */
+function closeSettingsThen(fn) {
+  settingsEl.classList.remove('open');
+  if (nav.settings) {
+    addEventListener('popstate', () => fn(), { once: true });
+    history.back();
+  } else fn();
+}
+const attunedBox = document.getElementById('attuned');
+let attuned = localStorage.getItem('arcanai-attuned') === '1';
+attunedBox.checked = attuned;
+attunedBox.addEventListener('change', () => {
+  attuned = attunedBox.checked;
+  localStorage.setItem('arcanai-attuned', attuned ? '1' : '0');
+  buzz(6);
+});
+
+/* ---- the heretical shuffle: question keywords tilt the deck ----
+   Words in the question map to card themes; matching cards get a heavier
+   weight in the draw. Mechanically rigged, spiritually attentive. */
+const THEME_HINTS = {
+  comfort: ['food','eat','eating','hungry','snack','taco','nugget','cozy','comfort','tired','rest','sleep','nap'],
+  endings: ['end','ending','over','quit','leave','leaving','breakup','broke','done','goodbye','finish','divorce','job','fired'],
+  boundaries: ['no','boundary','boundaries','toxic','block','cut','space','enough','stop','drained'],
+  care: ['mom','mother','kid','kids','baby','family','care','burnout','overwhelmed','help','husband','wife','partner'],
+  image: ['instagram','tiktok','social','media','online','post','followers','clout','looks','look','appearance','image'],
+  truth: ['truth','honest','honesty','secret','gossip','tea','know','real','clarity','answer','lying','lie'],
+  grit: ['should','can','strength','brave','risk','try','start','push','courage','apply','ask'],
+  hope: ['love','crush','hope','better','heal','healing','future','dream','happy','text','date'],
+  shadow: ['habit','drink','drinking','smoke','addiction','ex','cycle','again','relapse','doom','scroll'],
+};
+function questionThemes(q) {
+  const words = q.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  const hit = new Set();
+  for (const t in THEME_HINTS) if (THEME_HINTS[t].some(k => words.includes(k))) hit.add(t);
+  return hit;
+}
+function attunedOrder(rng, themes) {
+  const pool = DECK.map(c => ({ c, w: 1 + 2.5 * (c.t || []).filter(t => themes.has(t)).length }));
+  const out = [];
+  while (pool.length) {
+    const total = pool.reduce((s, p) => s + p.w, 0);
+    let r = rng() * total, i = 0;
+    while (i < pool.length - 1 && r > pool[i].w) { r -= pool[i].w; i++; }
+    out.push(pool.splice(i, 1)[0].c);
+  }
+  return out;
+}
 
 for (const n of [1,3,5,10]) {
   document.getElementById('m'+n).addEventListener('click', () => {
@@ -347,7 +439,7 @@ for (const n of [1,3,5,10]) {
 }
 
 /* Card of the Day: seeded by the date alone — same card for everyone, all day */
-document.getElementById('daily').addEventListener('click', () => {
+document.getElementById('daily').addEventListener('click', () => closeSettingsThen(() => {
   const now = new Date();
   const rng = mulberry32(xmur3(`arcanai-day-${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`)());
   const c = DECK[Math.floor(rng() * DECK.length)];
@@ -356,13 +448,13 @@ document.getElementById('daily').addEventListener('click', () => {
   draw({ picks: [{ ...c, rev: rng() < .5,
     label: 'Card of the Day \u00b7 ' + now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }],
     silentQ: true });
-});
+}));
 
 function closeGallery() {
   document.body.classList.remove('gallery');
   galleryBtn.classList.remove('active');
 }
-galleryBtn.addEventListener('click', () => {
+galleryBtn.addEventListener('click', () => closeSettingsThen(() => {
   const on = !document.body.classList.contains('gallery');
   if (!on && nav.gallery) { history.back(); return; }
   if (on) pushNav('gallery');
@@ -387,7 +479,7 @@ galleryBtn.addEventListener('click', () => {
     });
   }
   if (on) applyFoil();
-});
+}));
 lightbox.addEventListener('click', () => {
   if (nav.lightbox) history.back(); else lightbox.classList.remove('open');
 });
@@ -463,13 +555,15 @@ function draw(opts = {}) {
   stir(performance.now() * 1000);
   const q = opts.silentQ ? '' : qInput.value.trim();
   const rng = makeRng(q);
+  const themes = (attuned && q && !opts.picks) ? questionThemes(q) : new Set();
   const picks = opts.picks ||
-    shuffled(rng).slice(0, mode).map((c, i) => ({ ...c, rev: rng() < .5, label: LABELS[mode][i] || '' }));
+    (themes.size ? attunedOrder(rng, themes) : shuffled(rng))
+      .slice(0, mode).map((c, i) => ({ ...c, rev: rng() < .5, label: LABELS[mode][i] || '' }));
   const rst = opts.restore || null;
   CUR = picks;
   document.body.classList.add('spreadon');
   document.body.classList.toggle('crossmode', picks.length >= 10);
-  askedEl.textContent = q ? `you asked \u2014 \u201c${q}\u201d` : '';
+  askedEl.textContent = q ? `you asked \u2014 \u201c${q}\u201d${themes.size ? ' \u00b7 the deck leaned in' : ''}` : '';
   askedEl.classList.toggle('has', !!q);
   verdictEl.classList.remove('show');
   hint.style.display = 'none';
