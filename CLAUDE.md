@@ -65,10 +65,14 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   keep it that way. Any failure (offline, CDN down, cold model inside the
   450 ms budget) resolves to `null` and the keyword `THEME_HINTS` path takes
   over; both set `leaned`, which drives the "the deck leaned in" caption.
-- Attunement strength lives in `ARCANAI_ATTUNE.config.temp`. It was measured,
-  not guessed: 400 five-card draws per question showed `temp: 0.06` putting one
-  card in 92% of draws (reads as stacked). `0.15` gives topical questions ~2.3x
-  their baseline rate. There is NO reliable gibberish detector — nonsense
+- Attunement strength is the Back Room's three-stop lean (Subtle / Attuned /
+  Shameless), which writes `ARCANAI_ATTUNE.config.temp` from the page's `LEANS`
+  map at draw time — the page is authoritative, `attune.js`'s own default only
+  matters if the map is bypassed. The stops were measured, not guessed: 400
+  five-card draws per question showed `temp: 0.06` putting one card in 92% of
+  draws (reads as stacked), so the stops are 0.30 / 0.15 / 0.07 for roughly
+  1.7x / 2.3x / 4x a card's baseline rate. Keep the UI in named stops — a
+  softmax temperature slider would break the deck's voice. There is NO reliable gibberish detector — nonsense
   embeds to real points (max cosine for real questions 0.149–0.389 vs 0.066–0.323
   for word salad, fully overlapping), so a nonsense question still leans. Don't
   spend another session trying to gate it on similarity.

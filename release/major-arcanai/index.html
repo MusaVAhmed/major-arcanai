@@ -194,12 +194,18 @@
             text-transform:uppercase; text-align:center; margin-bottom:1.1rem; }
   .spanel button { display:block; width:100%; margin-bottom:.7rem; position:relative; z-index:1; }
   .srow { display:block; margin-top:.6rem; cursor:pointer; position:relative; z-index:1; }
-  .srow .shead { display:flex; justify-content:space-between; align-items:center; gap:.8rem;
+  .srow .shead, .leanrow .shead { display:flex; justify-content:space-between; align-items:center; gap:.8rem;
                  font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em;
                  text-transform:uppercase; }
   .srow input { accent-color:#c9a44a; width:1.15rem; height:1.15rem; flex:none; }
-  .srow .sdesc { display:block; color:var(--dim); font-size:.8rem; font-style:italic;
+  .srow .sdesc, .leanrow .sdesc { display:block; color:var(--dim); font-size:.8rem; font-style:italic;
                  line-height:1.5; margin-top:.45rem; }
+  /* lean strength: only meaningful while the attuned shuffle is on */
+  .leanrow { display:none; margin-top:1rem; position:relative; z-index:1; }
+  #settings.att .leanrow { display:block; }
+  .seg { display:flex; gap:.4rem; margin-top:.55rem; }
+  .spanel .seg button { display:block; width:auto; flex:1; margin:0; padding:.7rem .25rem;
+                        font-size:.66rem; letter-spacing:.05em; }
   body.foil .spanel { background:#0f0c08; border-color:#6a5426; }
   body.foil .spanel::before { border-color:#6a5426; }
   body.foil .srow input { accent-color:var(--gold2); }
@@ -268,6 +274,14 @@
         <span class="sdesc">The deck reads your question and leans toward cards that share its
           themes. Purists call it rigged. The deck calls it listening.</span>
       </label>
+      <div class="leanrow">
+        <span class="shead">How far it leans</span>
+        <div class="seg" role="group" aria-label="Lean strength">
+          <button id="lean1">Subtle</button><button id="lean2">Attuned</button><button
+            id="lean3">Shameless</button>
+        </div>
+        <span class="sdesc">Shameless is not subtle. That is rather the point.</span>
+      </div>
     </div>
   </div>
   <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
@@ -439,11 +453,28 @@ function closeSettingsThen(fn) {
 const attunedBox = document.getElementById('attuned');
 let attuned = localStorage.getItem('arcanai-attuned') === '1';
 attunedBox.checked = attuned;
+settingsEl.classList.toggle('att', attuned);
 attunedBox.addEventListener('change', () => {
   attuned = attunedBox.checked;
+  settingsEl.classList.toggle('att', attuned);
   localStorage.setItem('arcanai-attuned', attuned ? '1' : '0');
   buzz(6);
 });
+
+/* How far the deck leans when it recognizes a question. These are softmax
+   temperatures over the embedding similarities, measured at 400 five-card
+   draws each: 0.30 lifts a matching card to ~1.7x its baseline rate, 0.15 to
+   ~2.3x, 0.07 to ~4x. Lower is peakier. */
+const LEANS = { 1: 0.30, 2: 0.15, 3: 0.07 };
+let lean = +(localStorage.getItem('arcanai-lean') || 2);
+if (!LEANS[lean]) lean = 2;
+const leanBtns = [1, 2, 3].map(i => document.getElementById('lean' + i));
+function applyLean() {
+  leanBtns.forEach((b, i) => b.classList.toggle('active', i + 1 === lean));
+  localStorage.setItem('arcanai-lean', String(lean));
+}
+leanBtns.forEach((b, i) => b.addEventListener('click', () => { lean = i + 1; applyLean(); buzz(6); }));
+applyLean();
 
 /* ---- the heretical shuffle: question keywords tilt the deck ----
    Words in the question map to card themes; matching cards get a heavier
@@ -613,6 +644,7 @@ async function draw(opts = {}) {
   /* the semantic heresy: embeddings first, keyword hints as the fallback.
      the ternary short-circuits when there is nothing to attune to, so the
      ordinary draw never awaits and stays fully synchronous. */
+  if (window.ARCANAI_ATTUNE) ARCANAI_ATTUNE.config.temp = LEANS[lean];
   const semW = (attuned && q && !opts.picks && window.ARCANAI_ATTUNE)
     ? await ARCANAI_ATTUNE.weightsFor(q, 450) : null;
   const themes = (!semW && attuned && q && !opts.picks) ? questionThemes(q) : new Set();
