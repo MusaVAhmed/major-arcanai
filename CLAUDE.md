@@ -19,6 +19,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
    dynamic sheen is deliberately the only lighting → `cards-foil{,-web}/`.
 4. `python3 build_draw_page.py` — regenerates `index.html` and appends foil
    paths to `deck.json`.
+5. `python3 masthead.py` — draw-page masthead images (classic + foil) built
+   from the card back's ornament + Cinzel lettering → `release/.../assets/`.
+   Rerun only if `back.png` or the title design changes.
 
 `cards/manifest.json` is the deck source of truth: numeral, name, scene
 (doubles as the Gemini image prompt), meaning lives in `package.py`.
