@@ -47,6 +47,19 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   synthetic `el.click()` no longer draws; dispatch pointerdown/up in tests.
 - Spread position labels live on the pick objects (`pick.label`), not in
   `LABELS` lookups at render time — clarifiers and jumpers rely on this.
+- The draw page's CSS is **mobile-first**: base rules are phone portrait, and
+  only `min-width` queries (640 / 1024) add desktop behaviour, plus one
+  `(orientation: landscape) and (max-height: 560px)` block that sizes cards off
+  `dvh` because height is the scarce axis there. Don't reintroduce `max-width`
+  queries — they fight the base layer.
+- `#table` carries `--n` (card count, set in `draw()`, `idle()`, and after a
+  clarifier). From 640px up, `.slot` width is `min(clamp(...), (100% - gaps)/--n)`
+  so a five-card spread stays on one row. Any new code that appends a slot must
+  update `--n`.
+- Only the lightbox image (`data-big`) gets a `srcset` onto the 800×1280 set;
+  spreads and gallery thumbs stay on the 500×800 web set — full-res everywhere
+  would cost a phone megabytes per deal. `applyFoil()` rewrites `src` **and**
+  `srcset`.
 - `audacity_*.png` and `samples/` were scrubbed from git history on request —
   they are gitignored; never re-add them.
 

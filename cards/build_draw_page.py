@@ -70,7 +70,7 @@ html = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#141311">
 <title>The Major ArcanAI — Draw a Card</title>
 <style>
@@ -80,15 +80,19 @@ html = """<!doctype html>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overscroll-behavior: none; }
   body {
-    margin:0; min-height:100vh; color:var(--bone);
+    margin:0; min-height:100vh; min-height:100dvh; color:var(--bone);
     background: radial-gradient(ellipse 90% 70% at 50% 30%, #23201a 0%, var(--ink) 70%);
     font-family: Georgia, 'Times New Roman', serif; text-align:center;
-    padding: max(1.2rem, env(safe-area-inset-top)) 1rem 4rem;
+    /* viewport-fit=cover means the page runs under the notch/rounded corners,
+       so every edge pays the inset — landscape is where the sides matter */
+    padding: max(1.2rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+             max(4rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   }
   body.foil { background: radial-gradient(ellipse 90% 70% at 50% 30%, #1a1510 0%, #0a0908 70%); }
   /* masthead: the deck's own art — built by cards/masthead.py from the card
      back's roses + thorn vines, lettered like the cards (Cinzel + cartouche) */
-  .mast { margin:0 auto 1.4rem; max-width:26rem; }
+  /* full width on a phone, grander as the screen grows (art is 1500px wide) */
+  .mast { margin:0 auto 1.4rem; max-width:min(100%, clamp(24rem, 12rem + 22vw, 34rem)); }
   .mast img { width:100%; height:auto; display:block; user-select:none; -webkit-user-drag:none; }
   .sr { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden;
         clip:rect(0 0 0 0); white-space:nowrap; border:0; }
@@ -107,17 +111,17 @@ html = """<!doctype html>
   body.spreadon .ask { display:none; }
   #asked { display:none; color:var(--dim); font-style:italic; margin:-.4rem 0 1.2rem; }
   body.spreadon #asked.has { display:block; }
-  #verdict { display:none; max-width:30rem; margin:1.8rem auto 0; font-style:italic;
+  #verdict { display:none; max-width:min(100%, 54ch); margin:1.8rem auto 0; font-style:italic;
              color:#c9a44a; line-height:1.55; }
   #verdict.show { display:block; }
   body.foil #verdict { color:var(--gold2); }
   /* Celtic Cross reading guide */
-  #crossguide { display:none; max-width:34rem; margin:2.2rem auto 0; text-align:left;
-                border:1px solid var(--line); padding:.9rem 1.2rem; }
+  #crossguide { display:none; max-width:min(100%, 66ch); margin:2.2rem auto 0; text-align:left;
+                border:1px solid var(--line); padding:.9rem clamp(.9rem, .5rem + 1.5vw, 1.4rem); }
   body.crossmode #crossguide { display:block; }
   #crossguide summary { cursor:pointer; font-family:'Cinzel', Georgia, serif; font-size:.72rem;
                         letter-spacing:.18em; text-transform:uppercase; color:var(--dim);
-                        text-align:center; list-style:none; padding:.3rem 0; }
+                        text-align:center; list-style:none; padding:.9rem 0; }
   #crossguide summary::-webkit-details-marker { display:none; }
   #crossguide summary:hover { color:var(--bone); }
   #crossguide[open] summary { color:var(--bone); margin-bottom:.7rem; }
@@ -128,11 +132,16 @@ html = """<!doctype html>
                       font-size:.85rem; font-style:italic; color:var(--dim); line-height:1.55; }
   body.foil #crossguide { border-color:#6a5426; }
   body.foil #crossguide .gpos b { color:var(--gold2); }
-  .modes { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-bottom:1.6rem; }
+  .modes { display:flex; gap:clamp(.45rem, .2rem + 1vw, .6rem); justify-content:center;
+           flex-wrap:wrap; margin-bottom:1.6rem; }
+  /* fluid type + padding: the mode row shrinks to fit a 320px phone without a
+     breakpoint step, and never drops below a 48px touch target */
   button {
-    font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
-    background:none; color:var(--bone); border:1px solid var(--line); padding:.75rem 1.2rem;
-    cursor:pointer; transition: border-color .2s, background .2s; min-height:44px;
+    font-family:'Cinzel', Georgia, serif; font-size:clamp(.7rem, .62rem + .35vw, .78rem);
+    letter-spacing:clamp(.09em, .06em + .12vw, .12em); text-transform:uppercase;
+    background:none; color:var(--bone); border:1px solid var(--line);
+    padding:.7rem clamp(.8rem, .35rem + 2vw, 1.2rem);
+    cursor:pointer; transition: border-color .2s, background .2s; min-height:48px;
   }
   button:hover { border-color: var(--bone); }
   button.active { background: var(--bone); color: var(--ink); border-color: var(--bone); }
@@ -141,12 +150,14 @@ html = """<!doctype html>
     background: linear-gradient(100deg, var(--gold1), var(--gold2), var(--gold3), var(--gold2), var(--gold1));
     color:#0a0908; border-color:transparent;
   }
-  #table { display:flex; gap: clamp(.8rem,2.5vw,2rem); justify-content:center; flex-wrap:wrap; perspective:1600px; min-height:280px; }
+  /* mobile first: spreads stack down the page; from 640px up they go side by side */
+  #table { --gap: clamp(.8rem,2.5vw,2rem); display:flex; flex-direction:column; align-items:center;
+           gap:1.6rem; justify-content:center; flex-wrap:wrap; perspective:1600px; min-height:280px; }
   #table.stackmode { display:block; }
   #table img { -webkit-user-drag:none; user-select:none; -webkit-touch-callout:none; }
   /* Celtic Cross (desktop): cross of six + staff of four */
-  #table.celtic { display:grid; grid-template-columns:repeat(4, clamp(84px, 9.5vw, 128px));
-    gap:1rem .9rem; justify-content:center; align-items:start;
+  #table.celtic { display:grid; grid-template-columns:repeat(4, min(19vw, 128px));
+    gap:.8rem .5rem; justify-content:center; align-items:start;
     grid-template-areas: ". p5 . p10" "p4 p1 p6 p9" ". p2 . p8" ". p3 . p7"; }
   #table.celtic .slot { width:100%; }
   #table.celtic .caption, #table.celtic .tap { display:none; }
@@ -161,7 +172,8 @@ html = """<!doctype html>
   .slot.p1{grid-area:p1} .slot.p2{grid-area:p2} .slot.p3{grid-area:p3} .slot.p4{grid-area:p4}
   .slot.p5{grid-area:p5} .slot.p6{grid-area:p6} .slot.p7{grid-area:p7} .slot.p8{grid-area:p8}
   .slot.p9{grid-area:p9} .slot.p10{grid-area:p10}
-  .slot { width: clamp(150px, 26vw, 250px); }
+  .slot { width: min(72vw, 320px); }
+  .slot.single { width: min(80vw, 340px); }
   .poslabel {
     font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.22em; color:var(--dim);
     text-transform:uppercase; margin-bottom:.6rem; min-height:1em;
@@ -189,9 +201,9 @@ html = """<!doctype html>
   .caption { opacity:0; transition: opacity .5s .2s; margin-top:.8rem; }
   .slot.revealed .caption, .stackwrap.revealed .caption { opacity:1; }
   .slot.revealed .tap { display:none; }
-  .caption .cname { font-family:'Cinzel', Georgia, serif; font-size:.9rem; letter-spacing:.12em; text-transform:uppercase; }
+  .caption .cname { font-family:'Cinzel', Georgia, serif; font-size:1rem; letter-spacing:.12em; text-transform:uppercase; }
   .caption .cnum { color:var(--dim); font-style:italic; font-size:.8rem; }
-  .caption .cmean { color:var(--dim); font-size:.85rem; line-height:1.5; margin-top:.4rem; }
+  .caption .cmean { color:var(--dim); font-size:.95rem; line-height:1.5; margin-top:.4rem; }
   /* idle deck pile */
   .deck { position:relative; cursor:pointer; animation:breathe 2.6s ease-in-out infinite alternate; }
   .deck .pile { position:absolute; inset:0; border-radius:10px; background:#f2ecdd; border:1px solid #b9b19d;
@@ -215,26 +227,35 @@ html = """<!doctype html>
   .dot.active { background:var(--bone); border-color:var(--bone); }
   body.foil .dot.active { background:var(--gold2); border-color:var(--gold2); }
   .stackwrap .caption { min-height:5.6rem; }
-  #galleryview { display:none; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:1.1rem;
-                 max-width:72rem; margin:0 auto; }
+  /* a 140px floor drops a 320px phone to ONE giant column — scale the floor instead */
+  #galleryview { display:none; grid-template-columns:repeat(auto-fill, minmax(clamp(6.5rem, 30vw, 10rem), 1fr));
+                 gap:clamp(.7rem, 2vw, 1.1rem); max-width:72rem; margin:0 auto; }
   body.gallery #galleryview { display:grid; }
   body.gallery #table, body.gallery .hint, body.gallery #again,
   body.gallery .ask, body.gallery #asked, body.gallery #verdict,
   body.gallery #crossguide { display:none !important; }
   .gcell { cursor:pointer; }
-  .gcell img { width:100%; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.5); display:block; }
+  .gcell img { width:100%; height:auto; aspect-ratio:5/8; border-radius:8px;
+               box-shadow:0 6px 20px rgba(0,0,0,.5); display:block; }
   .gcell .gname { font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.1em;
                   text-transform:uppercase; margin-top:.5rem; }
   .gcell .gnum { color:var(--dim); font-style:italic; font-size:.7rem; }
   #lightbox { display:none; position:fixed; inset:0; background:rgba(8,7,5,.94); z-index:50;
-              padding:2rem 1rem; overflow-y:auto; cursor:pointer; }
+              padding:max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                      max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+              overflow-y:auto; cursor:pointer; }
   #lightbox.open { display:block; }
-  #lightbox img { max-width:min(88vw, 380px); border-radius:12px; box-shadow:0 12px 50px rgba(0,0,0,.8); }
-  #lightbox .caption { opacity:1; max-width:34rem; margin:1rem auto 0; }
+  /* bounded on BOTH axes so a landscape phone shows the whole card, not a slice */
+  #lightbox img { max-width:min(88vw, 380px); max-height:min(76dvh, 610px); width:auto; height:auto;
+                  border-radius:12px; box-shadow:0 12px 50px rgba(0,0,0,.8); }
+  #lightbox .caption { opacity:1; max-width:min(100%, 60ch); margin:1rem auto 0; }
   /* settings sheet: The Back Room */
   #settings { display:none; position:fixed; inset:0; background:rgba(8,7,5,.82); z-index:60; }
-  #settings.open { display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+  #settings.open { display:flex; align-items:center; justify-content:center;
+                   padding:max(1rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+                           max(1rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left)); }
   .spanel { background:var(--ink); border:1px solid var(--line); max-width:20rem; width:100%;
+            max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;
             padding:1.3rem 1.4rem 1.4rem; text-align:left; position:relative; }
   .spanel::before { content:''; position:absolute; inset:4px; border:1px solid var(--line); pointer-events:none; }
   .stitle { font-family:'Cinzel', Georgia, serif; font-size:.8rem; letter-spacing:.22em;
@@ -251,18 +272,38 @@ html = """<!doctype html>
   body.foil .spanel::before { border-color:#6a5426; }
   body.foil .srow input { accent-color:var(--gold2); }
   #again { margin-top:2.2rem; display:none; }
-  .hint { color:var(--dim); font-size:.85rem; font-style:italic; margin-top:1.4rem; }
-  @media (max-width: 430px) {
-    #table.celtic { grid-template-columns:repeat(4, 19vw); gap:.8rem .5rem; }
+  .hint { color:var(--dim); font-size:.85rem; font-style:italic; margin-top:1.4rem;
+          max-width:min(100%, 56ch); margin-left:auto; margin-right:auto; }
+  /* ---- breakpoints, mobile-first (min-width) ------------------------------
+     base above = phone portrait; each query only adds what the extra room buys */
+  @media (min-width: 640px) {
+    #table { flex-direction:row; align-items:flex-start; gap:var(--gap); }
+    /* fit the spread on one row: cap at 250px, but shrink so N cards + gaps fit */
+    .slot, .slot.single {
+      width: min(clamp(150px, 26vw, 250px),
+                 calc((100% - (var(--n, 1) - 1) * var(--gap)) / var(--n, 1)));
+    }
+    #table.celtic { grid-template-columns:repeat(4, clamp(84px, 9.5vw, 128px)); gap:1rem .9rem; }
+    .caption .cname { font-size:.9rem; }
+    .caption .cmean { font-size:.85rem; }
   }
-  @media (max-width: 700px) {
-    .modes { gap:.45rem; }
-    button { font-size:.7rem; padding:.7rem .8rem; letter-spacing:.09em; }
-    #table:not(.stackmode) { flex-direction: column; align-items: center; gap: 1.6rem; }
-    .slot { width: min(72vw, 320px); }
-    .slot.single { width: min(80vw, 340px); }
-    .caption .cname { font-size:1rem; }
-    .caption .cmean { font-size:.95rem; }
+  @media (min-width: 1024px) {
+    .slot, .slot.single {
+      width: min(clamp(200px, 20vw, 290px),
+                 calc((100% - (var(--n, 1) - 1) * var(--gap)) / var(--n, 1)));
+    }
+  }
+  /* landscape phone: width is plentiful, height is the scarce axis */
+  @media (orientation: landscape) and (max-height: 560px) {
+    body { padding-top: max(.6rem, env(safe-area-inset-top)); padding-bottom: 2rem; }
+    .mast { max-width:min(36vw, 12rem); margin-bottom:.7rem; }
+    .modes { margin-bottom:.9rem; }
+    .ask { margin-bottom:.9rem; }
+    .hint { margin-top:.9rem; }
+    #table { min-height:0; }
+    .stackwrap { max-width:min(76vw, 330px, calc(68dvh * 0.625)); }
+    .slot, .slot.single { width:min(60vw, 320px, calc(68dvh * 0.625)); }
+    #table.celtic { grid-template-columns:repeat(4, min(18vh, 128px)); }
   }
   @media (prefers-reduced-motion: reduce) {
     .card, .scard, .caption { transition:none; }
@@ -404,12 +445,20 @@ qInput.addEventListener('keydown', e => { if (e.key === 'Enter') { qInput.blur()
 })();
 
 const skin = p => foil ? p.replace('cards-web/', 'cards-foil-web/') : p;
+/* the web set is 500x800; the print-grade set is 800x1280. Only the lightbox
+   (data-big) offers both — a 3x phone picks the big one for a card it is
+   deliberately zooming, while spreads and thumbs stay on the light set. */
+const bigOf = p => p.replace('cards-web/', 'cards/').replace('cards-foil-web/', 'cards-foil/');
 function applyFoil() {
   document.body.classList.toggle('foil', foil);
   foilBtn.classList.toggle('active', foil);
   foilBtn.setAttribute('aria-pressed', String(foil));
   document.getElementById('mastimg').src = foil ? 'assets/masthead-foil.png' : 'assets/masthead.png';
-  document.querySelectorAll('img[data-src]').forEach(img => { img.src = skin(img.dataset.src); });
+  document.querySelectorAll('img[data-src]').forEach(img => {
+    const s = skin(img.dataset.src);
+    img.src = s;
+    if (img.dataset.big) img.srcset = s + ' 500w, ' + bigOf(s) + ' 800w';
+  });
   // glint only where the art is bright: mask each sheen with its own card image
   document.querySelectorAll('.face').forEach(f => {
     const img = f.querySelector('img'), sh = f.querySelector('.sheen');
@@ -532,10 +581,11 @@ galleryBtn.addEventListener('click', () => closeSettingsThen(() => {
     DECK.forEach(c => {
       const cell = document.createElement('div');
       cell.className = 'gcell';
-      cell.innerHTML = `<img data-src="${c.img}" alt="${c.name}" loading="lazy">
+      cell.innerHTML = `<img data-src="${c.img}" alt="${c.name}" loading="lazy" width="500" height="800">
         <div class="gname">${c.name}</div><div class="gnum">${c.n}</div>`;
       cell.addEventListener('click', () => {
-        lightbox.innerHTML = `<img data-src="${c.img}" alt="${c.name}">
+        lightbox.innerHTML = `<img data-src="${c.img}" data-big="1" alt="${c.name}"
+            sizes="(min-width: 500px) 380px, 88vw">
           <div class="caption"><div class="cname">${c.name}</div><div class="cnum">${c.n}</div>
           <div class="cmean">${c.meaning}</div>
           <div class="cmean"><span class="revtag">Reversed:</span> ${c.r}</div></div>`;
@@ -576,6 +626,7 @@ function idle() {
   table.classList.remove('stackmode');
   table.classList.remove('celtic');
   table.innerHTML = '';
+  table.style.setProperty('--n', 1);
   const slot = document.createElement('div');
   slot.className = 'slot single';
   slot.innerHTML = `<div class="poslabel"></div>
@@ -638,6 +689,7 @@ function draw(opts = {}) {
   table.innerHTML = '';
   table.classList.remove('celtic');
   const n = picks.length;
+  table.style.setProperty('--n', n);   // wide screens shrink cards to fit one row
   ccap.classList.remove('show');
   if (COARSE && n > 1 && n < 10) {   // the Cross uses the grid even on touch
     buildStack(picks, !!rst);
@@ -773,7 +825,8 @@ function selectCeltic(slot, c) {
 
 /* celtic cards are small: a click on a revealed one zooms it in the lightbox */
 function openCardBox(c) {
-  lightbox.innerHTML = `<img data-src="${c.img}" alt="${c.name}"${c.rev ? ' style="transform:rotate(180deg)"' : ''}>
+  lightbox.innerHTML = `<img data-src="${c.img}" data-big="1" alt="${c.name}"
+      sizes="(min-width: 500px) 380px, 88vw"${c.rev ? ' style="transform:rotate(180deg)"' : ''}>
     <div class="caption">${capHTML(c)}</div>`;
   lightbox.classList.add('open');
   pushNav('lightbox');
@@ -842,6 +895,7 @@ function addClarifierSlot(slot, parent) {
   attachHold(cardEl, () => { if (ns.classList.contains('revealed')) addClarifierSlot(ns, c); });
   cardEl.classList.add('deal');
   slot.insertAdjacentElement('afterend', ns);
+  if (!table.classList.contains('celtic')) table.style.setProperty('--n', table.children.length);
   if (!COARSE) { ns.querySelector('.tap').style.display = 'none'; setTimeout(flip, REDUCED ? 0 : 500); }
   saveSpread();
   applyFoil();
