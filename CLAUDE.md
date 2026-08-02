@@ -62,7 +62,21 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   question is embedded and cosine-matched against card text. `draw()` is
   `async` for it, but the ternary short-circuits when there is no question or
   attunement is off, so an ordinary deal never awaits and stays synchronous —
-  keep it that way. Any failure (offline, CDN down, cold model inside the
+  keep it that way.
+- One question embedding drives three things via `readFor(q, mode)`: **which
+  cards** (softmax over `max(simUpright, simReversed)`), **which face** (the
+  better-matching side wins outright — the owner chose the hard rule over a
+  calibrated coin), and **which seat** (cosine against per-position prose in
+  `POSITIONS`, soft-roulette assigned by `seatByAffinity`). Each card face is
+  its own document; `vUp`/`vRev` are cached separately in localStorage.
+- The hard orientation rule pulls the attuned reversal rate to ~29-45% (vs 50%
+  unattuned) because reversed copy is second-person and punchy while upright
+  copy is declarative, and questions match declarative text better. Measured,
+  known, accepted. Recentring it is a one-line change if it ever grates.
+- **Seat temperature is deliberately colder than selection temperature**
+  (`LEANS[lean] / 3`). At the selection temp the seating measured a 9% affinity
+  lift and near-uniform seats, i.e. it did nothing. A third of it gives ~20%
+  lift and puts a card in its best seat about twice as often as chance. Any failure (offline, CDN down, cold model inside the
   450 ms budget) resolves to `null` and the keyword `THEME_HINTS` path takes
   over; both set `leaned`, which drives the "the deck leaned in" caption.
 - Attunement strength is the Back Room's three-stop lean (Subtle / Attuned /
@@ -76,6 +90,14 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   embeds to real points (max cosine for real questions 0.149–0.389 vs 0.066–0.323
   for word salad, fully overlapping), so a nonsense question still leans. Don't
   spend another session trying to gate it on similarity.
+- `attune.js` reads optional `sit` / `sitr` fields per card (situational
+  expansions: the everyday circumstances a face speaks to) and appends them to
+  the embedded document. The hook is live; the copy is not written yet. If it
+  ever is: write all 40 or none (expanded cards get systematically quieter on
+  unrelated questions, so a partial pass hands the unexpanded cards an unearned
+  advantage), keep each to ~20 words, and measure every one — a trial expansion
+  moved The Moon from rank 12 to 1 but knocked Strength from 4 to 17 by
+  diluting a short vector that was already well placed.
 - Only the lightbox image (`data-big`) gets a `srcset` onto the 800×1280 set;
   spreads and gallery thumbs stay on the 500×800 web set — full-res everywhere
   would cost a phone megabytes per deal. `applyFoil()` rewrites `src` **and**

@@ -511,6 +511,23 @@ function weightedOrder(rng, weights) {
 function attunedOrder(rng, themes) {
   return weightedOrder(rng, DECK.map(c => 1 + 2.5 * (c.t || []).filter(t => themes.has(t)).length));
 }
+const IDX = new Map(DECK.map((c, i) => [c.name, i]));
+
+/* Seat the drawn cards by how well each fits each position, using the same
+   roulette the draw itself uses. Soft on purpose: optimal matching would put
+   the same cards in the same seats every time they appear. */
+function seatByAffinity(rng, cards, pos, temp) {
+  const pool = cards.slice(), out = [];
+  for (let p = 0; p < pos.length && pool.length; p++) {
+    const a = pool.map(c => pos[p][IDX.get(c.name)]);
+    const mx = Math.max(...a);
+    const w = a.map(x => Math.exp((x - mx) / temp));
+    let r = rng() * w.reduce((s, x) => s + x, 0), k = 0;
+    while (k < w.length - 1 && r > w[k]) { r -= w[k]; k++; }
+    out.push(pool.splice(k, 1)[0]);
+  }
+  return out.concat(pool);
+}
 
 for (const n of [1,3,5,10]) {
   document.getElementById('m'+n).addEventListener('click', () => {
@@ -645,13 +662,27 @@ async function draw(opts = {}) {
      the ternary short-circuits when there is nothing to attune to, so the
      ordinary draw never awaits and stays fully synchronous. */
   if (window.ARCANAI_ATTUNE) ARCANAI_ATTUNE.config.temp = LEANS[lean];
-  const semW = (attuned && q && !opts.picks && window.ARCANAI_ATTUNE)
-    ? await ARCANAI_ATTUNE.weightsFor(q, 450) : null;
-  const themes = (!semW && attuned && q && !opts.picks) ? questionThemes(q) : new Set();
-  const leaned = !!semW || themes.size > 0;
-  const picks = opts.picks ||
-    (semW ? weightedOrder(rng, semW) : themes.size ? attunedOrder(rng, themes) : shuffled(rng))
-      .slice(0, mode).map((c, i) => ({ ...c, rev: rng() < .5, label: LABELS[mode][i] || '' }));
+  const sem = (attuned && q && !opts.picks && window.ARCANAI_ATTUNE)
+    ? await ARCANAI_ATTUNE.readFor(q, mode, 450) : null;
+  const themes = (!sem && attuned && q && !opts.picks) ? questionThemes(q) : new Set();
+  const leaned = !!sem || themes.size > 0;
+  let picks = opts.picks;
+  if (!picks) {
+    const drawn = (sem ? weightedOrder(rng, sem.w)
+      : themes.size ? attunedOrder(rng, themes) : shuffled(rng)).slice(0, mode);
+    // the deck picks the face it means, and the seat each card belongs in
+    /* seats need a colder temperature than selection: affinities between the
+       few drawn cards sit close together, and at the selection temp the seating
+       came out all but uniform (9% affinity lift, measured). A third of it puts
+       a card in its best seat about twice as often as chance. */
+    const seated = (sem && sem.pos.length === mode)
+      ? seatByAffinity(rng, drawn, sem.pos, LEANS[lean] / 3) : drawn;
+    picks = seated.map((c, i) => ({
+      ...c,
+      rev: sem ? !!sem.rev[IDX.get(c.name)] : rng() < .5,
+      label: LABELS[mode][i] || '',
+    }));
+  }
   const rst = opts.restore || null;
   CUR = picks;
   document.body.classList.add('spreadon');
