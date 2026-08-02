@@ -9,8 +9,60 @@ deck = json.load(open(os.path.join(REL, 'deck.json')))
 os.makedirs(os.path.join(REL, 'assets'), exist_ok=True)
 shutil.copy(os.path.join(CARDS, 'Cinzel.ttf'), os.path.join(REL, 'assets', 'Cinzel.ttf'))
 
+# thematic tags per card — the draw page synthesizes a verdict line when a
+# spread clusters (3+ cards sharing a theme)
+THEMES = {
+    '00_zero_of_fucks': ['boundaries'],
+    '01_burned_bridge': ['endings'],
+    '02_two_of_deez': ['boundaries', 'grit'],
+    '03_lovers': ['hope'],
+    '04_coffee': ['truth'],
+    '05_death': ['endings'],
+    '06_moon': ['truth'],
+    '07_strength': ['grit'],
+    '08_perseverance': ['grit'],
+    '09_tea': ['truth'],
+    '10_last_straw': ['endings'],
+    '11_audacity': ['grit'],
+    '12_breast_pump': ['care'],
+    '13_bottle': ['shadow'],
+    '14_taco': ['comfort'],
+    '15_gold_shoulder': ['image'],
+    '16_child': ['care'],
+    '17_mother': ['care'],
+    '18_mom_boss': ['care', 'shadow'],
+    '19_hermit': ['truth'],
+    '20_gardener': ['care', 'hope'],
+    '21_cheese_fries': ['comfort'],
+    '22_slice': ['boundaries', 'endings'],
+    '23_empress': ['grit', 'hope'],
+    '24_chicken_nugget': ['comfort'],
+    '25_sun': ['hope', 'truth'],
+    '26_high_priestess': ['truth'],
+    '27_zoom_meeting': ['image'],
+    '28_influencer': ['image'],
+    '29_life_of_the_party': ['image'],
+    '30_last_hurrah': ['endings'],
+    '31_dead_end_job': ['shadow', 'endings'],
+    '32_fiddle_leaf_fig': ['image'],
+    '33_star': ['hope'],
+    '34_devil': ['shadow'],
+    '35_fair_weather_friend': ['shadow', 'boundaries'],
+    '36_tower': ['endings'],
+    '37_drama_queen': ['image'],
+    '38_last_flying_fuck': ['boundaries', 'endings'],
+    '39_nap': ['comfort', 'care'],
+}
+
+def _slug(c):
+    return os.path.basename(c['image']['web']).rsplit('.', 1)[0]
+
+missing = [_slug(c) for c in deck['cards'] if _slug(c) not in THEMES]
+assert not missing, f'cards missing theme tags: {missing}'
+
 deck_js = json.dumps([
-    {"n": c['numeral'], "name": c['name'], "meaning": c['meaning'], "r": c['reversed'], "img": c['image']['web']}
+    {"n": c['numeral'], "name": c['name'], "meaning": c['meaning'], "r": c['reversed'],
+     "img": c['image']['web'], "t": THEMES[_slug(c)]}
     for c in deck['cards']
 ], indent=None)
 
@@ -72,6 +124,25 @@ html = """<!doctype html>
     -webkit-background-clip:text; background-clip:text;
   }
   body.foil .mast .orn { color:#8a6d2f; }
+  .mast .moonline { color:var(--dim); font-family:'Cinzel', Georgia, serif; font-size:.58rem;
+                    letter-spacing:.3em; padding-left:.3em; text-transform:uppercase; margin-top:.4rem; user-select:none; }
+  body.foil .mast .moonline { color:#8a6d2f; }
+  /* ask the deck: the question (and your typing) seeds the shuffle */
+  .ask { max-width:24rem; margin:0 auto 1.4rem; }
+  .ask input {
+    width:100%; background:none; border:0; border-bottom:1px solid var(--line);
+    color:var(--bone); font-family:Georgia, serif; font-style:italic; font-size:16px;
+    text-align:center; padding:.5rem .2rem; outline:none; border-radius:0;
+  }
+  .ask input::placeholder { color:var(--dim); opacity:.8; }
+  .ask input:focus { border-bottom-color:var(--dim); }
+  body.spreadon .ask { display:none; }
+  #asked { display:none; color:var(--dim); font-style:italic; margin:-.4rem 0 1.2rem; }
+  body.spreadon #asked.has { display:block; }
+  #verdict { display:none; max-width:30rem; margin:1.8rem auto 0; font-style:italic;
+             color:#c9a44a; line-height:1.55; }
+  #verdict.show { display:block; }
+  body.foil #verdict { color:var(--gold2); }
   .modes { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-bottom:1.6rem; }
   button {
     font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
@@ -87,6 +158,17 @@ html = """<!doctype html>
   }
   #table { display:flex; gap: clamp(.8rem,2.5vw,2rem); justify-content:center; flex-wrap:wrap; perspective:1600px; min-height:280px; }
   #table.stackmode { display:block; }
+  #table img { -webkit-user-drag:none; user-select:none; -webkit-touch-callout:none; }
+  /* Celtic Cross (desktop): cross of six + staff of four */
+  #table.celtic { display:grid; grid-template-columns:repeat(4, clamp(84px, 9.5vw, 128px));
+    gap:1rem .9rem; justify-content:center; align-items:start;
+    grid-template-areas: ". p5 . p10" "p4 p1 p6 p9" ". p2 . p8" ". p3 . p7"; }
+  #table.celtic .slot { width:100%; }
+  #table.celtic .caption, #table.celtic .tap { display:none; }
+  #table.celtic .poslabel { font-size:.55rem; letter-spacing:.14em; margin-bottom:.4rem; min-height:2.2em; }
+  .slot.p1{grid-area:p1} .slot.p2{grid-area:p2} .slot.p3{grid-area:p3} .slot.p4{grid-area:p4}
+  .slot.p5{grid-area:p5} .slot.p6{grid-area:p6} .slot.p7{grid-area:p7} .slot.p8{grid-area:p8}
+  .slot.p9{grid-area:p9} .slot.p10{grid-area:p10}
   .slot { width: clamp(150px, 26vw, 250px); }
   .poslabel {
     font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.22em; color:var(--dim);
@@ -141,7 +223,8 @@ html = """<!doctype html>
   #galleryview { display:none; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:1.1rem;
                  max-width:72rem; margin:0 auto; }
   body.gallery #galleryview { display:grid; }
-  body.gallery #table, body.gallery .hint, body.gallery #again { display:none !important; }
+  body.gallery #table, body.gallery .hint, body.gallery #again,
+  body.gallery .ask, body.gallery #asked, body.gallery #verdict { display:none !important; }
   .gcell { cursor:pointer; }
   .gcell img { width:100%; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.5); display:block; }
   .gcell .gname { font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.1em;
@@ -175,15 +258,22 @@ html = """<!doctype html>
     <span class="star" aria-hidden="true">&#10022;</span>
     <h1><span class="eyebrow">The Major</span> <span class="word">Arcan<span class="ai">AI</span></span></h1>
     <div class="orn" aria-hidden="true">&#9789; &#10022; &#9790;</div>
+    <div class="moonline" id="moonline"></div>
   </header>
   <div class="modes" role="group" aria-label="Spread and style">
     <button id="m1" class="active">One</button>
     <button id="m3">Three</button>
     <button id="m5">Five</button>
+    <button id="m10">Cross</button>
     <button id="foil" aria-pressed="false">&#10022; Foil</button>
+    <button id="daily" title="Card of the Day">&#10038; Today</button>
     <button id="gallery">All cards</button>
   </div>
+  <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
+    placeholder="Ask the deck a question&hellip; (optional)" aria-label="Ask the deck a question"></div>
+  <div id="asked"></div>
   <div id="table" aria-live="polite"></div>
+  <div id="verdict" aria-live="polite"></div>
   <div id="galleryview"></div>
   <div id="lightbox" role="dialog" aria-label="Card detail"></div>
   <p class="hint" id="hint">Tap the deck to draw.</p>
@@ -191,17 +281,71 @@ html = """<!doctype html>
 
 <script>
 const DECK = __DECK__;
-const LABELS = {1:[''],3:['Past','Present','Future'],5:['The Situation','The Obstacle','The Advice','The Vibe','The Outcome']};
+const LABELS = {1:[''],3:['Past','Present','Future'],5:['The Situation','The Obstacle','The Advice','The Vibe','The Outcome'],
+  10:['The Situation','What Crosses You','The Root','The Recent Past','The Crown','The Near Future','The Self','The House','Hopes & Fears','The Outcome']};
+const VERDICTS = {
+  comfort: 'A cluster of comfort cards. Your coping strategy has a drive-thru window.',
+  endings: 'Multiple endings in one spread. Something is already over \\u2014 the deck is waiting for you to say it out loud.',
+  boundaries: 'The boundary cards came out together. Somebody is about to get a lot less of you.',
+  care: 'The deck keeps dealing caretakers. Oxygen mask on yourself first.',
+  image: 'Heavy on the appearance cards. The deck has seen your camera roll.',
+  truth: 'Truth cards, clustered. Whatever you are not saying is getting said this week.',
+  grit: 'The backbone cards showed up as a committee. You already know what to do.',
+  hope: 'The gentle cards arrived as a group. Exhale \\u2014 it gets lighter from here.',
+  shadow: 'That is a cluster of bad habits. This spread is an intervention.',
+};
 const COARSE = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let mode = 1;
 let foil = localStorage.getItem('arcanai-foil') === '1';
 let TILT = 0;
+let CUR = [];    // picks currently on the table (desktop slots and stack both use it)
 const table = document.getElementById('table');
 const again = document.getElementById('again');
 const hint = document.getElementById('hint');
 const foilBtn = document.getElementById('foil');
+const qInput = document.getElementById('q');
+const askedEl = document.getElementById('asked');
+const verdictEl = document.getElementById('verdict');
 const buzz = ms => { if (navigator.vibrate) navigator.vibrate(ms); };
+
+/* ---- seeded randomness: the question and your hands are the shuffle ----
+   Every touch, tilt, and keystroke stirs an entropy pool; at draw time the
+   pool + the question text + the clock seed a small PRNG (mulberry32). */
+let ENT = 0x9e3779b9, entN = 0;
+const stir = v => {
+  ENT = (ENT ^ (v | 0)) >>> 0;
+  ENT = Math.imul(ENT ^ (ENT >>> 15), 2246822507) >>> 0;
+  ENT = (Math.imul(ENT ^ (ENT >>> 13), 3266489909) + (entN++)) >>> 0;
+};
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return (h ^= h >>> 16) >>> 0; };
+}
+const mulberry32 = a => () => {
+  a |= 0; a = (a + 0x6D2B79F5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const makeRng = (extra = '') => mulberry32((xmur3('arcanai\\u00b7' + extra)() ^ ENT ^ Date.now()) >>> 0);
+function shuffled(rng) {
+  const a = [...DECK];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+qInput.addEventListener('input', e => stir(e.timeStamp * 1000));
+qInput.addEventListener('keydown', e => { if (e.key === 'Enter') { qInput.blur(); draw(); } });
+
+/* ---- moon phase: local synodic arithmetic, no lookup ---- */
+(() => {
+  const syn = 29.53058867;
+  let d = ((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000) % syn;
+  if (d < 0) d += syn;
+  const names = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
+  document.getElementById('moonline').textContent = names[Math.floor(((d + syn / 16) / syn) * 8) % 8] + ' tonight';
+})();
 
 const skin = p => foil ? p.replace('cards-web/', 'cards-foil-web/') : p;
 function applyFoil() {
@@ -233,14 +377,26 @@ addEventListener('popstate', () => {
   if (nav.spread) { nav.spread = false; idle(); return; }
 });
 
-for (const n of [1,3,5]) {
+for (const n of [1,3,5,10]) {
   document.getElementById('m'+n).addEventListener('click', () => {
     mode = n;
-    for (const k of [1,3,5]) document.getElementById('m'+k).classList.toggle('active', k === n);
+    for (const k of [1,3,5,10]) document.getElementById('m'+k).classList.toggle('active', k === n);
     closeGallery();
     idle();
   });
 }
+
+/* Card of the Day: seeded by the date alone — same card for everyone, all day */
+document.getElementById('daily').addEventListener('click', () => {
+  const now = new Date();
+  const rng = mulberry32(xmur3(`arcanai-day-${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`)());
+  const c = DECK[Math.floor(rng() * DECK.length)];
+  closeGallery();
+  buzz(8);
+  draw({ picks: [{ ...c, rev: rng() < .5,
+    label: 'Card of the Day \\u00b7 ' + now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }],
+    silentQ: true });
+});
 
 function closeGallery() {
   document.body.classList.remove('gallery');
@@ -288,56 +444,179 @@ const capHTML = c => `<div class="cname">${c.name}</div>
 function idle() {
   again.style.display = 'none';
   hint.style.display = '';
+  hint.textContent = COARSE
+    ? 'Rub the deck to shuffle \\u00b7 tap to draw \\u00b7 shake it and one may jump.'
+    : 'Rub the deck to shuffle it, or just tap to draw.';
+  document.body.classList.remove('spreadon');
+  verdictEl.classList.remove('show');
+  CUR = [];
   table.classList.remove('stackmode');
+  table.classList.remove('celtic');
   table.innerHTML = '';
   const slot = document.createElement('div');
   slot.className = 'slot single';
   slot.innerHTML = `<div class="poslabel"></div>
     <div class="deck"><div class="pile p2"></div><div class="pile p1"></div>` + cardHTML('', '') + `</div>`;
-  slot.querySelector('.deck').addEventListener('click', draw);
-  slot.querySelector('.deck').setAttribute('title', 'Draw');
+  const deckEl = slot.querySelector('.deck');
+  deckEl.setAttribute('title', 'Draw');
+  attachShuffle(deckEl);
   table.appendChild(slot);
   applyFoil();
 }
 
-function draw() {
+/* rub the pile to shuffle: every wiggle of your hand feeds the seed */
+function attachShuffle(deckEl) {
+  let down = false, moved = 0, lastBuzz = 0, px = 0, py = 0;
+  const piles = deckEl.querySelectorAll('.pile');   // [p2, p1]
+  const settle = () => { piles[0].style.transform = ''; piles[1].style.transform = ''; };
+  deckEl.addEventListener('pointerdown', e => {
+    down = true; moved = 0; px = e.clientX; py = e.clientY;
+    try { deckEl.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  deckEl.addEventListener('pointermove', e => {
+    if (!down) return;
+    moved += Math.abs(e.clientX - px) + Math.abs(e.clientY - py);
+    px = e.clientX; py = e.clientY;
+    stir(e.clientX * 7919 + e.clientY * 104729 + e.timeStamp * 1000);
+    if (moved > 12) {
+      const j = (ENT % 1000) / 1000 - .5, k = ((ENT >>> 10) % 1000) / 1000 - .5;
+      piles[0].style.transform = `translate(${(10 + j * 10).toFixed(1)}px, ${(12 + k * 8).toFixed(1)}px) rotate(${(3.2 + j * 5).toFixed(1)}deg)`;
+      piles[1].style.transform = `translate(${(5 - k * 9).toFixed(1)}px, ${(6 + j * 7).toFixed(1)}px) rotate(${(1.6 - k * 5).toFixed(1)}deg)`;
+      if (e.timeStamp - lastBuzz > 90) { buzz(3); lastBuzz = e.timeStamp; }
+    }
+  });
+  deckEl.addEventListener('pointerup', () => {
+    if (!down) return;
+    down = false; settle();
+    if (moved < 10) draw();                              // it was a tap
+    else { buzz([12, 40, 8]); hint.textContent = 'Shuffled. Tap to draw.'; }
+  });
+  deckEl.addEventListener('pointercancel', () => { down = false; settle(); });
+}
+
+function draw(opts = {}) {
   buzz(8);
   pushNav('spread');
-  const picks = [...DECK].sort(() => Math.random() - .5).slice(0, mode)
-    .map(c => ({...c, rev: Math.random() < .5}));
+  stir(performance.now() * 1000);
+  const q = opts.silentQ ? '' : qInput.value.trim();
+  const rng = makeRng(q);
+  const picks = opts.picks ||
+    shuffled(rng).slice(0, mode).map((c, i) => ({ ...c, rev: rng() < .5, label: LABELS[mode][i] || '' }));
+  CUR = picks;
+  document.body.classList.add('spreadon');
+  askedEl.textContent = q ? `you asked \\u2014 \\u201c${q}\\u201d` : '';
+  askedEl.classList.toggle('has', !!q);
+  verdictEl.classList.remove('show');
   hint.style.display = 'none';
   table.innerHTML = '';
-  if (COARSE && mode > 1) { buildStack(picks); return; }
+  table.classList.remove('celtic');
+  const n = picks.length;
+  if (COARSE && n > 1) { buildStack(picks); return; }
   table.classList.remove('stackmode');
+  const celtic = n === 10;
+  if (celtic) table.classList.add('celtic');
   picks.forEach((c, i) => {
     const slot = document.createElement('div');
-    slot.className = 'slot' + (mode === 1 ? ' single' : '');
-    slot.innerHTML = `<div class="poslabel">${LABELS[mode][i] || ''}</div>` + cardHTML(c.img, c.name) +
+    slot.className = 'slot' + (n === 1 ? ' single' : '') + (celtic ? ' p' + (i + 1) : '');
+    slot.innerHTML = `<div class="poslabel">${c.label}</div>` + cardHTML(c.img, c.name) +
       `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
     if (c.rev) slot.querySelector('.card').classList.add('rev');
+    const cardEl = slot.querySelector('.card');
     const flip = () => {
       if (slot.classList.contains('revealed')) return;
-      slot.querySelector('.card').classList.add('flipped');
+      cardEl.classList.add('flipped');
       slot.classList.add('revealed');
       buzz(12);
-      if ([...table.children].every(s => s.classList.contains('revealed')))
+      if ([...table.children].every(s => s.classList.contains('revealed'))) {
         again.style.display = 'inline-block';
+        showVerdict();
+      }
     };
-    slot.querySelector('.card').addEventListener('click', flip);
-    const cardEl = slot.querySelector('.card');
+    cardEl.addEventListener('click', () => {
+      if (!slot.classList.contains('revealed')) { flip(); return; }
+      if (table.classList.contains('celtic')) openCardBox(c);
+    });
+    attachHold(cardEl, () => { if (slot.classList.contains('revealed')) addClarifierSlot(slot, c); });
     cardEl.classList.add('deal');
-    cardEl.style.animationDelay = (i * 120) + 'ms';
+    cardEl.style.animationDelay = (i * (celtic ? 90 : 120)) + 'ms';
     table.appendChild(slot);
     if (!COARSE) {  // desktop: auto-reveal; touch always gets the flip gesture
       slot.querySelector('.tap').style.display = 'none';
-      setTimeout(flip, REDUCED ? 0 : 550 + i * 550);
+      setTimeout(flip, REDUCED ? 0 : 550 + i * (celtic ? 260 : 550));
     }
   });
   applyFoil();
 }
 
+/* celtic cards are small: a click on a revealed one zooms it in the lightbox */
+function openCardBox(c) {
+  lightbox.innerHTML = `<img data-src="${c.img}" alt="${c.name}"${c.rev ? ' style="transform:rotate(180deg)"' : ''}>
+    <div class="caption">${capHTML(c)}</div>`;
+  lightbox.classList.add('open');
+  pushNav('lightbox');
+  applyFoil();
+}
+
+/* when a spread clusters on a theme, the deck editorializes */
+function showVerdict() {
+  const counts = {};
+  CUR.forEach(p => (p.t || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  let best = null;
+  for (const t in counts) if (counts[t] >= 3 && (!best || counts[t] > counts[best])) best = t;
+  if (!best) return;
+  verdictEl.textContent = VERDICTS[best];
+  verdictEl.classList.add('show');
+}
+
+/* long-press helper (600ms, cancels on drift) */
+function attachHold(el, fn) {
+  let t = null, sx = 0, sy = 0;
+  el.addEventListener('pointerdown', e => {
+    sx = e.clientX; sy = e.clientY;
+    if (t) clearTimeout(t);
+    t = setTimeout(() => { t = null; fn(); }, 600);
+  });
+  const cancel = () => { if (t) { clearTimeout(t); t = null; } };
+  el.addEventListener('pointermove', e => { if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 12) cancel(); });
+  el.addEventListener('pointerup', cancel);
+  el.addEventListener('pointercancel', cancel);
+}
+
+/* clarifier for the desktop/slot layout: a fresh card dealt beside its parent */
+function addClarifierSlot(slot, parent) {
+  if (slot.dataset.clarified) return;
+  const used = new Set(CUR.map(p => p.name));
+  const rest = DECK.filter(c => !used.has(c.name));
+  if (!rest.length) return;
+  slot.dataset.clarified = '1';
+  const rng = makeRng('clarifier\\u00b7' + parent.name);
+  const c = { ...rest[Math.floor(rng() * rest.length)], rev: rng() < .5,
+              label: 'Clarifier \\u00b7 ' + (parent.label || parent.name) };
+  CUR.push(c);
+  buzz([10, 30, 10]);
+  const ns = document.createElement('div');
+  ns.className = 'slot' + (slot.classList.contains('single') ? ' single' : '');
+  ns.innerHTML = `<div class="poslabel">${c.label}</div>` + cardHTML(c.img, c.name) +
+    `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
+  if (c.rev) ns.querySelector('.card').classList.add('rev');
+  const cardEl = ns.querySelector('.card');
+  const flip = () => {
+    if (ns.classList.contains('revealed')) return;
+    cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12); showVerdict();
+  };
+  cardEl.addEventListener('click', () => {
+    if (!ns.classList.contains('revealed')) { flip(); return; }
+    if (table.classList.contains('celtic')) openCardBox(c);
+  });
+  attachHold(cardEl, () => { if (ns.classList.contains('revealed')) addClarifierSlot(ns, c); });
+  cardEl.classList.add('deal');
+  slot.insertAdjacentElement('afterend', ns);
+  if (!COARSE) { ns.querySelector('.tap').style.display = 'none'; setTimeout(flip, REDUCED ? 0 : 500); }
+  applyFoil();
+}
+
 /* ---- swipeable stack ---- */
-const S = { order: [], els: [], picks: [], revealed: new Set(), wrap: null, dragging: false, side: -1 };
+const S = { order: [], els: [], picks: [], revealed: new Set(), wrap: null, stackEl: null, dragging: false, held: false, side: -1 };
 const topIdx = () => S.order[0];
 const topEl = () => S.els[topIdx()];
 
@@ -352,6 +631,8 @@ function buildStack(picks) {
   table.appendChild(wrap);
   S.wrap = wrap;
   const stack = wrap.querySelector('#stack');
+  S.stackEl = stack;
+  attachHold(stack, () => { if (S.revealed.has(topIdx())) { S.held = true; addClarifier(); } });
   S.els = picks.map(c => {
     const el = document.createElement('div');
     el.className = 'scard';
@@ -394,15 +675,53 @@ function layoutStack(dragX = 0, dragY = 0) {
 
 function updateStackUI() {
   const i = topIdx();
-  S.wrap.querySelector('#spos').textContent = LABELS[mode][i] || '';
+  S.wrap.querySelector('#spos').textContent = S.picks[i].label || '';
   S.wrap.querySelectorAll('.dot').forEach((d, k) => d.classList.toggle('active', k === i));
   const seen = S.revealed.has(i);
   S.wrap.classList.toggle('revealed', seen);
   S.wrap.querySelector('#scap').innerHTML = seen ? capHTML(S.picks[i]) : '';
   S.wrap.querySelector('#shint').textContent = seen
-    ? (S.revealed.size === S.picks.length ? 'swipe to fidget' : 'swipe for next')
+    ? (S.revealed.size === S.picks.length ? 'swipe to fidget · hold for a clarifier' : 'swipe for next · hold for a clarifier')
     : 'tap or flick your wrist to reveal · swipe for next';
-  again.style.display = S.revealed.size === S.picks.length ? 'inline-block' : 'none';
+  const done = S.revealed.size === S.picks.length;
+  again.style.display = done ? 'inline-block' : 'none';
+  if (done) showVerdict();
+}
+
+/* clarifier for the stack: a fresh card lands on top, face-down */
+function addClarifier() {
+  const i = topIdx();
+  const parent = S.picks[i];
+  const used = new Set(S.picks.map(p => p.name));
+  const rest = DECK.filter(c => !used.has(c.name));
+  if (!rest.length) return;
+  const rng = makeRng('clarifier\\u00b7' + parent.name);
+  const c = { ...rest[Math.floor(rng() * rest.length)], rev: rng() < .5,
+              label: 'Clarifier \\u00b7 ' + (parent.label || parent.name) };
+  buzz([10, 30, 10]);
+  const idx = S.picks.push(c) - 1;
+  CUR = S.picks;
+  const el = document.createElement('div');
+  el.className = 'scard';
+  el.innerHTML = cardHTML(c.img, c.name);
+  if (c.rev) el.querySelector('.card').classList.add('rev');
+  S.stackEl.appendChild(el);
+  S.els.push(el);
+  S.order.unshift(idx);
+  const d = document.createElement('span');
+  d.className = 'dot';
+  S.wrap.querySelector('#dots').appendChild(d);
+  if (!REDUCED) {
+    el.style.transition = 'none';
+    el.style.transform = 'translateY(-46px) scale(.94)';
+    el.style.opacity = '0';
+    void el.offsetWidth;
+    el.style.transition = '';
+    el.style.opacity = '1';
+  }
+  layoutStack();
+  updateStackUI();
+  applyFoil();
 }
 
 function attachDrag(stack) {
@@ -413,7 +732,7 @@ function attachDrag(stack) {
     dragging = true; S.dragging = true; moved = false;
     document.body.classList.add('dragging');
     x0 = lastX = e.clientX; y0 = e.clientY; lastT = e.timeStamp; vx = 0;
-    stack.setPointerCapture(e.pointerId);
+    try { stack.setPointerCapture(e.pointerId); } catch (_) {}
     topEl().style.transition = 'none';
   });
   stack.addEventListener('pointermove', e => {
@@ -424,6 +743,7 @@ function attachDrag(stack) {
     if (dt > 0) vx = 0.8 * vx + 0.2 * (e.clientX - lastX) / dt;
     lastX = e.clientX; lastT = e.timeStamp;
     if (Math.abs(curDX) > 6) moved = true;
+    stir(e.clientX * 31 + e.timeStamp * 997);
     if (!raf) raf = requestAnimationFrame(paint);
   });
   const end = e => {
@@ -436,7 +756,8 @@ function attachDrag(stack) {
     // distance OR velocity: a quick flick counts even if short
     if (moved && S.picks.length > 1 && (Math.abs(dx) > 70 || Math.abs(vx) > 0.55))
       flingNext(dx !== 0 ? dx : vx, curDY);
-    else { layoutStack(0, 0); if (!moved) tapTop(); }
+    else { layoutStack(0, 0); if (!moved && !S.held) tapTop(); }
+    S.held = false;
     curDX = curDY = 0;
   };
   stack.addEventListener('pointerup', end);
@@ -505,13 +826,15 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
       ' live=' + document.body.classList.contains('sheen-live') +
       ' reduced=' + REDUCED +
       ' tiltY=' + document.documentElement.style.getPropertyValue('--tiltY') +
-      ' rate=' + (window.__rate || '0');
+      ' rate=' + (window.__rate || '0') +
+      ' acc=' + (window.__acc || '0');
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = null;
       if (e.gamma === null && e.beta === null) return;   // no sensor data: keep sheen off
       document.body.classList.add('sheen-live');
       const g = e.gamma || 0;
+      stir(g * 1048576);
       TILT = TILT * 0.8 + Math.max(-0.7, Math.min(0.7, g / 45)) * 0.2;   // low-pass: ignore hand tremor
       // sheen wants a deliberate lean: quadratic response on the smoothed tilt
       setSheen(innerWidth * Math.max(-.15, Math.min(1.15, .5 + TILT * Math.abs(TILT) * 1.4)),
@@ -524,11 +847,26 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
   addEventListener('deviceorientation', onOri);
   addEventListener('deviceorientationabsolute', onOri);
   // wrist flick = rotation-rate spike far above normal tilt play
-  let lastFlick = 0;
+  let lastFlick = 0, lastJump = 0;
   addEventListener('devicemotion', e => {
     const rate = (e.rotationRate && e.rotationRate.gamma) || 0;
     if (DEBUG) window.__rate = Math.abs(rate).toFixed(0);
     const now = e.timeStamp;
+    // a hard shake while the deck is idle makes one card jump out
+    const acc = e.acceleration;
+    if (acc && table.querySelector('.deck')) {
+      const mag = Math.hypot(acc.x || 0, acc.y || 0, acc.z || 0);
+      if (DEBUG) window.__acc = mag.toFixed(0);
+      stir(mag * 65536);
+      if (mag > 24 && now - lastJump > 1500) {
+        lastJump = now; lastFlick = now;   // a shake is not a flick
+        const rng = makeRng('jumper');
+        const c = shuffled(rng)[0];
+        buzz([30, 40, 30]);
+        draw({ picks: [{ ...c, rev: rng() < .5, label: 'It jumped out of the deck' }] });
+        return;
+      }
+    }
     if (Math.abs(rate) > 170 && now - lastFlick > 700) {
       lastFlick = now;
       if (table.classList.contains('stackmode')) {
@@ -550,9 +888,13 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
 } else {
   addEventListener('pointermove', e => {
     document.body.classList.add('sheen-live');
+    stir(e.clientX * 31 + e.clientY * 7 + e.timeStamp * 1000);
     setSheen(e.clientX, e.clientY);
   });
 }
+
+// long-press on a card must summon a clarifier, not the image context menu
+addEventListener('contextmenu', e => { if (e.target.closest('#table')) e.preventDefault(); });
 
 again.addEventListener('click', () => { if (nav.spread) history.back(); else idle(); });
 idle();
