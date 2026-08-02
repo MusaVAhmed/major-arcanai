@@ -51,6 +51,51 @@ MEANINGS = {
 }
 
 
+
+REVERSED = {
+    "zero_of_fucks": "You claim you don't care. You absolutely do. Admit it.",
+    "burned_bridge": "You lit this one too soon. Some bridges deserve an apology and a rebuild.",
+    "two_of_deez": "Fishing for validation again. Deez are not for external approval.",
+    "lovers": "Disconnection. You're kissing distance from someone you stopped seeing.",
+    "coffee": "Decaf energy. You're running on fumes and calling it fine.",
+    "death": "Clinging to the old you. Rigor mortis is not a personality.",
+    "moon": "The fog is self-made. Stop mistaking anxiety for intuition.",
+    "strength": "Forcing it. The lion calms down when you stop wrestling.",
+    "perseverance": "Stubbornness isn't progress. Maybe it's the wrong staircase.",
+    "tea": "The gossip turned toxic. Spill less, sip more.",
+    "last_straw": "You keep declaring the last straw, then buying more straws.",
+    "audacity": "Bold in the wrong direction. Audacity without follow-through is just noise.",
+    "breast_pump": "Running on empty and still giving. Refill the well first.",
+    "bottle": "It already burst. Clean up honestly instead of re-corking.",
+    "taco": "Comfort became avoidance. The taco cannot fix this one.",
+    "gold_shoulder": "The mirror is winning. Look outward for once.",
+    "child": "Your inner child is running the meeting. Adult supervision required.",
+    "mother": "Martyr mode. Care that costs you everything isn't care.",
+    "mom_boss": "Delegation refused, burnout accepted. Put three of the six arms down.",
+    "hermit": "Solitude curdled into hiding. Crack the door open.",
+    "gardener": "Overwatering. Some things only grow when you leave them alone.",
+    "cheese_fries": "All reward, no task. Earn the fries.",
+    "slice": "You cut the wrong thread — or keep re-tying the one you cut.",
+    "empress": "Creative block by comparison. Make ugly things on purpose.",
+    "chicken_nugget": "Comfort became the whole menu. Vary the diet.",
+    "sun": "Forced positivity. It's okay to sit in the shade sometimes.",
+    "high_priestess": "You already know. You've known for months. Stop asking for signs.",
+    "zoom_meeting": "This could have been an email. So could your excuses.",
+    "influencer": "Performing a life instead of living one. Log off.",
+    "life_of_the_party": "The mask slipped. Let someone see the tear.",
+    "last_hurrah": "The party's over and you're still holding the glass. Go home.",
+    "dead_end_job": "The exit exists. You've just memorized the wallpaper.",
+    "fiddle_leaf_fig": "All price tag, no roots. Get real or get repotted.",
+    "star": "Hope deferred. Healing isn't linear — pour anyway.",
+    "devil": "Back in the cuffs, voluntarily. You know the way out; you've walked it before.",
+    "fair_weather_friend": "Plot twist: you might be the one holding the umbrella. Check.",
+    "drama_queen": "Suppressed feelings staging a coup. A little drama is honest.",
+    "last_flying_fuck": "You let it go too fast. Some things deserved your care.",
+    "nap": "Rest became hiding. Get up, hydrate, face one thing.",
+    "tower": "Postponing the collapse. Controlled demolition beats waiting for lightning.",
+}
+
+
 def normalize(src, canvas, box_frac=0.93):
     """Crop to ink bbox, stretch to one uniform art box, center on canvas.
     Uniformity beats aspect purity here: every frame gets identical size
@@ -91,6 +136,7 @@ def main():
             "numeral": c['num'],
             "name": c['name'],
             "meaning": MEANINGS[slug],
+            "reversed": REVERSED[slug],
             "image": {"full": f"cards/{fn}", "web": f"cards-web/{fn}"},
         })
         print('packed', fn)
@@ -109,7 +155,7 @@ def main():
           "future; it tells you what you already know, but louder.\n",
           "## The cards\n"]
     for c in deck['cards']:
-        gb.append(f"**{c['numeral']} — {c['name']}**  \n{c['meaning']}\n")
+        gb.append(f"**{c['numeral']} — {c['name']}**  \n{c['meaning']}  \n*Reversed:* {c['reversed']}\n")
     gb.append("\n---\n")
     gb.append("Art style: ornate black-and-white skeleton line art. Generated with Google Gemini, ")
     gb.append("art-directed and lettered (Cinzel) by hand. v1.0, 2026.\n")

@@ -10,7 +10,7 @@ os.makedirs(os.path.join(REL, 'assets'), exist_ok=True)
 shutil.copy(os.path.join(CARDS, 'Cinzel.ttf'), os.path.join(REL, 'assets', 'Cinzel.ttf'))
 
 deck_js = json.dumps([
-    {"n": c['numeral'], "name": c['name'], "meaning": c['meaning'], "img": c['image']['web']}
+    {"n": c['numeral'], "name": c['name'], "meaning": c['meaning'], "r": c['reversed'], "img": c['image']['web']}
     for c in deck['cards']
 ], indent=None)
 
@@ -74,6 +74,8 @@ html = """<!doctype html>
   body.foil .face { background:#0a0908; }
   .face img { width:100%; height:100%; object-fit:cover; display:block; }
   .face.front { transform: rotateY(180deg); }
+  .card.rev .face.front { transform: rotateY(180deg) rotate(180deg); }
+  .revtag { font-style:italic; letter-spacing:.06em; }
   .sheen { position:absolute; inset:0; overflow:hidden; pointer-events:none; opacity:0; transition:opacity .25s;
            mask-size:cover; -webkit-mask-size:cover; mask-mode:luminance; }
   body.dragging .sheen { opacity:0 !important; }
@@ -214,7 +216,8 @@ galleryBtn.addEventListener('click', () => {
       cell.addEventListener('click', () => {
         lightbox.innerHTML = `<img data-src="${c.img}" alt="${c.name}">
           <div class="caption"><div class="cname">${c.name}</div><div class="cnum">${c.n}</div>
-          <div class="cmean">${c.meaning}</div></div>`;
+          <div class="cmean">${c.meaning}</div>
+          <div class="cmean"><span class="revtag">Reversed:</span> ${c.r}</div></div>`;
         lightbox.classList.add('open');
         applyFoil();
       });
@@ -230,7 +233,9 @@ function cardHTML(frontImg, alt) {
   return `<div class="t3d"><div class="card"><div class="face back"><img data-src="cards-web/back.png" alt="card back"><span class="sheen"><span class="glint"></span></span></div>
     <div class="face front">${front}<span class="sheen"><span class="glint"></span></span></div></div></div>`;
 }
-const capHTML = c => `<div class="cname">${c.name}</div><div class="cnum">${c.n}</div><div class="cmean">${c.meaning}</div>`;
+const capHTML = c => `<div class="cname">${c.name}</div>
+  <div class="cnum">${c.n}${c.rev ? ' &middot; <span class="revtag">reversed</span>' : ''}</div>
+  <div class="cmean">${c.rev ? c.r : c.meaning}</div>`;
 
 function idle() {
   again.style.display = 'none';
@@ -249,7 +254,8 @@ function idle() {
 
 function draw() {
   buzz(8);
-  const picks = [...DECK].sort(() => Math.random() - .5).slice(0, mode);
+  const picks = [...DECK].sort(() => Math.random() - .5).slice(0, mode)
+    .map(c => ({...c, rev: Math.random() < .5}));
   hint.style.display = 'none';
   table.innerHTML = '';
   if (COARSE && mode > 1) { buildStack(picks); return; }
@@ -259,6 +265,7 @@ function draw() {
     slot.className = 'slot' + (mode === 1 ? ' single' : '');
     slot.innerHTML = `<div class="poslabel">${LABELS[mode][i] || ''}</div>` + cardHTML(c.img, c.name) +
       `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
+    if (c.rev) slot.querySelector('.card').classList.add('rev');
     const flip = () => {
       if (slot.classList.contains('revealed')) return;
       slot.querySelector('.card').classList.add('flipped');
@@ -300,6 +307,7 @@ function buildStack(picks) {
     const el = document.createElement('div');
     el.className = 'scard';
     el.innerHTML = cardHTML(c.img, c.name);
+    if (c.rev) el.querySelector('.card').classList.add('rev');
     stack.appendChild(el);
     return el;
   });
@@ -427,7 +435,8 @@ function setSheen(lxPx, lyPx) {
     const x = Math.max(-.6, Math.min(1.6, (lxPx - r.left) / r.width));
     const y = Math.max(-.6, Math.min(1.6, (lyPx - r.top) / r.height));
     const g = s.firstElementChild;
-    if (g) g.style.transform = `translate(${((x - .5) * r.width).toFixed(1)}px, ${((y - .5) * r.height).toFixed(1)}px)`;
+    const m = (s.closest('.card')?.classList.contains('rev') && s.closest('.face')?.classList.contains('front')) ? -1 : 1;
+    if (g) g.style.transform = `translate(${(m * (x - .5) * r.width).toFixed(1)}px, ${(m * (y - .5) * r.height).toFixed(1)}px)`;
   });
 }
 const DEBUG = new URLSearchParams(location.search).has('debug');

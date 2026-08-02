@@ -24,6 +24,7 @@
       "numeral": "0",
       "name": "The Zero of Fucks",
       "meaning": "Let go of expectations and pressure. Step into freedom and a fresh start.",
+      "reversed": "You claim you don't care. You absolutely do. Admit it.",
       "image": {
         "full": "cards/00_zero_of_fucks.png",
         "web": "cards-web/00_zero_of_fucks.png",
@@ -36,6 +37,7 @@
       "numeral": "I",
       "name": "The Burned Bridge",
       "meaning": "Not everything is meant to be saved. Some endings are necessary.",
+      "reversed": "You lit this one too soon. Some bridges deserve an apology and a rebuild.",
       "image": {
         "full": "cards/01_burned_bridge.png",
         "web": "cards-web/01_burned_bridge.png",
@@ -48,6 +50,7 @@
       "numeral": "II",
       "name": "The Two of Deez",
       "meaning": "Stand confidently on your own. You don't need validation.",
+      "reversed": "Fishing for validation again. Deez are not for external approval.",
       "image": {
         "full": "cards/02_two_of_deez.png",
         "web": "cards-web/02_two_of_deez.png",
@@ -60,6 +63,7 @@
       "numeral": "III",
       "name": "The Lovers",
       "meaning": "Deep connection \u2014 romantic, platonic, or with yourself.",
+      "reversed": "Disconnection. You're kissing distance from someone you stopped seeing.",
       "image": {
         "full": "cards/03_lovers.png",
         "web": "cards-web/03_lovers.png",
@@ -72,6 +76,7 @@
       "numeral": "IV",
       "name": "The Iced Coffee",
       "meaning": "Wake up. Face reality. Do what needs to be done.",
+      "reversed": "Decaf energy. You're running on fumes and calling it fine.",
       "image": {
         "full": "cards/04_coffee.png",
         "web": "cards-web/04_coffee.png",
@@ -84,6 +89,7 @@
       "numeral": "V",
       "name": "Death",
       "meaning": "Transformation through endings. Let the old version of you go.",
+      "reversed": "Clinging to the old you. Rigor mortis is not a personality.",
       "image": {
         "full": "cards/05_death.png",
         "web": "cards-web/05_death.png",
@@ -96,6 +102,7 @@
       "numeral": "VI",
       "name": "The Moon",
       "meaning": "Things are unclear. Trust your intuition and wait.",
+      "reversed": "The fog is self-made. Stop mistaking anxiety for intuition.",
       "image": {
         "full": "cards/06_moon.png",
         "web": "cards-web/06_moon.png",
@@ -108,6 +115,7 @@
       "numeral": "VII",
       "name": "Strength",
       "meaning": "Inner calm and patience will carry you through.",
+      "reversed": "Forcing it. The lion calms down when you stop wrestling.",
       "image": {
         "full": "cards/07_strength.png",
         "web": "cards-web/07_strength.png",
@@ -120,6 +128,7 @@
       "numeral": "VIII",
       "name": "Perseverance",
       "meaning": "Keep going. You're closer than you think.",
+      "reversed": "Stubbornness isn't progress. Maybe it's the wrong staircase.",
       "image": {
         "full": "cards/08_perseverance.png",
         "web": "cards-web/08_perseverance.png",
@@ -132,6 +141,7 @@
       "numeral": "IX",
       "name": "The Tea",
       "meaning": "Truth is being revealed. Stay grounded.",
+      "reversed": "The gossip turned toxic. Spill less, sip more.",
       "image": {
         "full": "cards/09_tea.png",
         "web": "cards-web/09_tea.png",
@@ -144,6 +154,7 @@
       "numeral": "X",
       "name": "The Last Straw",
       "meaning": "You've reached your limit. Change is inevitable.",
+      "reversed": "You keep declaring the last straw, then buying more straws.",
       "image": {
         "full": "cards/10_last_straw.png",
         "web": "cards-web/10_last_straw.png",
@@ -156,6 +167,7 @@
       "numeral": "XI",
       "name": "The Audacity",
       "meaning": "Be bold. Take the risk.",
+      "reversed": "Bold in the wrong direction. Audacity without follow-through is just noise.",
       "image": {
         "full": "cards/11_audacity.png",
         "web": "cards-web/11_audacity.png",
@@ -168,6 +180,7 @@
       "numeral": "XII",
       "name": "The Breast Pump",
       "meaning": "You're overgiving. Rest and refill yourself.",
+      "reversed": "Running on empty and still giving. Refill the well first.",
       "image": {
         "full": "cards/12_breast_pump.png",
         "web": "cards-web/12_breast_pump.png",
@@ -180,6 +193,7 @@
       "numeral": "XIII",
       "name": "The Bottle",
       "meaning": "Unexpressed emotions will surface eventually.",
+      "reversed": "It already burst. Clean up honestly instead of re-corking.",
       "image": {
         "full": "cards/13_bottle.png",
         "web": "cards-web/13_bottle.png",
@@ -192,6 +206,7 @@
       "numeral": "XIV",
       "name": "The Taco",
       "meaning": "Find joy in small pleasures.",
+      "reversed": "Comfort became avoidance. The taco cannot fix this one.",
       "image": {
         "full": "cards/14_taco.png",
         "web": "cards-web/14_taco.png",
@@ -204,6 +219,7 @@
       "numeral": "XV",
       "name": "The Gold Shoulder",
       "meaning": "Beware of ego and image obsession.",
+      "reversed": "The mirror is winning. Look outward for once.",
       "image": {
         "full": "cards/15_gold_shoulder.png",
         "web": "cards-web/15_gold_shoulder.png",
@@ -216,6 +232,7 @@
       "numeral": "XVI",
       "name": "The Child",
       "meaning": "Nurture your inner child.",
+      "reversed": "Your inner child is running the meeting. Adult supervision required.",
       "image": {
         "full": "cards/16_child.png",
         "web": "cards-web/16_child.png",
@@ -228,6 +245,7 @@
       "numeral": "XVII",
       "name": "The Mother",
       "meaning": "You also deserve care, not just others.",
+      "reversed": "Martyr mode. Care that costs you everything isn't care.",
       "image": {
         "full": "cards/17_mother.png",
         "web": "cards-web/17_mother.png",
@@ -240,6 +258,7 @@
       "numeral": "XVIII",
       "name": "The Mom Boss",
       "meaning": "You're doing too much. Let go of control.",
+      "reversed": "Delegation refused, burnout accepted. Put three of the six arms down.",
       "image": {
         "full": "cards/18_mom_boss.png",
         "web": "cards-web/18_mom_boss.png",
@@ -252,6 +271,7 @@
       "numeral": "XIX",
       "name": "The Hermit",
       "meaning": "Withdraw and reflect.",
+      "reversed": "Solitude curdled into hiding. Crack the door open.",
       "image": {
         "full": "cards/19_hermit.png",
         "web": "cards-web/19_hermit.png",
@@ -264,6 +284,7 @@
       "numeral": "XX",
       "name": "The Gardener",
       "meaning": "Growth takes time. Keep nurturing.",
+      "reversed": "Overwatering. Some things only grow when you leave them alone.",
       "image": {
         "full": "cards/20_gardener.png",
         "web": "cards-web/20_gardener.png",
@@ -276,6 +297,7 @@
       "numeral": "XXI",
       "name": "The Cheese Fries",
       "meaning": "You deserve enjoyment.",
+      "reversed": "All reward, no task. Earn the fries.",
       "image": {
         "full": "cards/21_cheese_fries.png",
         "web": "cards-web/21_cheese_fries.png",
@@ -288,6 +310,7 @@
       "numeral": "XXII",
       "name": "The Slice",
       "meaning": "Release toxic attachments.",
+      "reversed": "You cut the wrong thread \u2014 or keep re-tying the one you cut.",
       "image": {
         "full": "cards/22_slice.png",
         "web": "cards-web/22_slice.png",
@@ -300,6 +323,7 @@
       "numeral": "XXIII",
       "name": "The Empress",
       "meaning": "You are creative and abundant.",
+      "reversed": "Creative block by comparison. Make ugly things on purpose.",
       "image": {
         "full": "cards/23_empress.png",
         "web": "cards-web/23_empress.png",
@@ -312,6 +336,7 @@
       "numeral": "XXIV",
       "name": "The Chicken Nugget",
       "meaning": "Comfort and simplicity heal.",
+      "reversed": "Comfort became the whole menu. Vary the diet.",
       "image": {
         "full": "cards/24_chicken_nugget.png",
         "web": "cards-web/24_chicken_nugget.png",
@@ -324,6 +349,7 @@
       "numeral": "XXV",
       "name": "The Sun",
       "meaning": "Joy and truth are coming to light.",
+      "reversed": "Forced positivity. It's okay to sit in the shade sometimes.",
       "image": {
         "full": "cards/25_sun.png",
         "web": "cards-web/25_sun.png",
@@ -336,6 +362,7 @@
       "numeral": "XXVI",
       "name": "The High Priestess",
       "meaning": "Trust your inner wisdom.",
+      "reversed": "You already know. You've known for months. Stop asking for signs.",
       "image": {
         "full": "cards/26_high_priestess.png",
         "web": "cards-web/26_high_priestess.png",
@@ -348,6 +375,7 @@
       "numeral": "XXVII",
       "name": "The Zoom Meeting",
       "meaning": "Disconnect from the fake, reconnect with real life.",
+      "reversed": "This could have been an email. So could your excuses.",
       "image": {
         "full": "cards/27_zoom_meeting.png",
         "web": "cards-web/27_zoom_meeting.png",
@@ -360,6 +388,7 @@
       "numeral": "XXVIII",
       "name": "The Influencer",
       "meaning": "Be authentic \u2014 image isn't everything.",
+      "reversed": "Performing a life instead of living one. Log off.",
       "image": {
         "full": "cards/28_influencer.png",
         "web": "cards-web/28_influencer.png",
@@ -372,6 +401,7 @@
       "numeral": "XXIX",
       "name": "The Life of the Party",
       "meaning": "Outward shine can hide inner loneliness.",
+      "reversed": "The mask slipped. Let someone see the tear.",
       "image": {
         "full": "cards/29_life_of_the_party.png",
         "web": "cards-web/29_life_of_the_party.png",
@@ -384,6 +414,7 @@
       "numeral": "XXX",
       "name": "The Last Hurrah",
       "meaning": "A final celebration before an ending.",
+      "reversed": "The party's over and you're still holding the glass. Go home.",
       "image": {
         "full": "cards/30_last_hurrah.png",
         "web": "cards-web/30_last_hurrah.png",
@@ -396,6 +427,7 @@
       "numeral": "XXXI",
       "name": "The Dead End Job",
       "meaning": "Don't stay stuck in something meaningless.",
+      "reversed": "The exit exists. You've just memorized the wallpaper.",
       "image": {
         "full": "cards/31_dead_end_job.png",
         "web": "cards-web/31_dead_end_job.png",
@@ -408,6 +440,7 @@
       "numeral": "XXXII",
       "name": "The Fiddle-Leaf Fig",
       "meaning": "Balance appearance with reality.",
+      "reversed": "All price tag, no roots. Get real or get repotted.",
       "image": {
         "full": "cards/32_fiddle_leaf_fig.png",
         "web": "cards-web/32_fiddle_leaf_fig.png",
@@ -420,6 +453,7 @@
       "numeral": "XXXIII",
       "name": "The Star",
       "meaning": "Hope and healing are ahead.",
+      "reversed": "Hope deferred. Healing isn't linear \u2014 pour anyway.",
       "image": {
         "full": "cards/33_star.png",
         "web": "cards-web/33_star.png",
@@ -432,6 +466,7 @@
       "numeral": "XXXIV",
       "name": "The Devil",
       "meaning": "Break free from unhealthy cycles.",
+      "reversed": "Back in the cuffs, voluntarily. You know the way out; you've walked it before.",
       "image": {
         "full": "cards/34_devil.png",
         "web": "cards-web/34_devil.png",
@@ -444,6 +479,7 @@
       "numeral": "XXXV",
       "name": "The Fair Weather Friend",
       "meaning": "Reevaluate shallow relationships.",
+      "reversed": "Plot twist: you might be the one holding the umbrella. Check.",
       "image": {
         "full": "cards/35_fair_weather_friend.png",
         "web": "cards-web/35_fair_weather_friend.png",
@@ -456,6 +492,7 @@
       "numeral": "XXXVI",
       "name": "The Tower",
       "meaning": "Breakdown leads to breakthrough.",
+      "reversed": "Postponing the collapse. Controlled demolition beats waiting for lightning.",
       "image": {
         "full": "cards/36_tower.png",
         "web": "cards-web/36_tower.png",
@@ -468,6 +505,7 @@
       "numeral": "XXXVII",
       "name": "The Drama Queen",
       "meaning": "Not everything is a crisis. Check the story you're telling yourself.",
+      "reversed": "Suppressed feelings staging a coup. A little drama is honest.",
       "image": {
         "full": "cards/37_drama_queen.png",
         "web": "cards-web/37_drama_queen.png",
@@ -480,6 +518,7 @@
       "numeral": "XXXVIII",
       "name": "The Last Flying Fuck",
       "meaning": "Watch it go. Some things no longer deserve your energy.",
+      "reversed": "You let it go too fast. Some things deserved your care.",
       "image": {
         "full": "cards/38_last_flying_fuck.png",
         "web": "cards-web/38_last_flying_fuck.png",
@@ -492,6 +531,7 @@
       "numeral": "XXXIX",
       "name": "The Nap",
       "meaning": "Rest is productive. Lie down.",
+      "reversed": "Rest became hiding. Get up, hydrate, face one thing.",
       "image": {
         "full": "cards/39_nap.png",
         "web": "cards-web/39_nap.png",
