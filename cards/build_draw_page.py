@@ -106,23 +106,20 @@ html = """<!doctype html>
     display:block; font-size:clamp(2.2rem, 12.5vw, 3.7rem); font-weight:800;
     letter-spacing:.05em; margin-right:-.05em; color:var(--bone);
   }
+  /* the AI is the point: hollow foil-stamped letters against the solid word */
   h1 .ai {
-    background: linear-gradient(165deg, var(--gold3), var(--gold2) 45%, var(--gold1));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
+    color:transparent; -webkit-text-stroke:.048em #d8ab4e; margin-left:.05em;
   }
   .mast .orn { color:var(--dim); letter-spacing:.5em; padding-left:.5em; font-size:.78rem;
                margin-top:.45rem; user-select:none; }
   body.foil .mast, body.foil .mast::before, body.foil h1 .eyebrow { border-color:#6a5426; }
   body.foil .mast .star { background:#0f0c08; color:var(--gold1); }
   body.foil h1 .eyebrow { color:var(--gold1); }
-  body.foil h1 .word {
+  body.foil h1 .arcan {
     background: linear-gradient(100deg, var(--gold1), var(--gold2), var(--gold3), var(--gold2), var(--gold1));
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  body.foil h1 .ai {
-    background: linear-gradient(165deg, #fffdf2, var(--gold3) 55%, var(--gold2));
-    -webkit-background-clip:text; background-clip:text;
-  }
+  body.foil h1 .ai { -webkit-text-stroke-color:#ffe9a8; }
   body.foil .mast .orn { color:#8a6d2f; }
   .mast .moonline { color:var(--dim); font-family:'Cinzel', Georgia, serif; font-size:.58rem;
                     letter-spacing:.3em; padding-left:.3em; text-transform:uppercase; margin-top:.4rem; user-select:none; }
@@ -143,6 +140,23 @@ html = """<!doctype html>
              color:#c9a44a; line-height:1.55; }
   #verdict.show { display:block; }
   body.foil #verdict { color:var(--gold2); }
+  /* Celtic Cross reading guide */
+  #crossguide { display:none; max-width:34rem; margin:2.2rem auto 0; text-align:left;
+                border:1px solid var(--line); padding:.9rem 1.2rem; }
+  body.crossmode #crossguide { display:block; }
+  #crossguide summary { cursor:pointer; font-family:'Cinzel', Georgia, serif; font-size:.72rem;
+                        letter-spacing:.18em; text-transform:uppercase; color:var(--dim);
+                        text-align:center; list-style:none; padding:.3rem 0; }
+  #crossguide summary::-webkit-details-marker { display:none; }
+  #crossguide summary:hover { color:var(--bone); }
+  #crossguide[open] summary { color:var(--bone); margin-bottom:.7rem; }
+  #crossguide .gpos { margin:.55rem 0; font-size:.88rem; color:var(--dim); line-height:1.5; }
+  #crossguide .gpos b { font-family:'Cinzel', Georgia, serif; font-weight:700; font-size:.7rem;
+                        letter-spacing:.14em; text-transform:uppercase; color:var(--bone); }
+  #crossguide .gtip { margin-top:.9rem; padding-top:.8rem; border-top:1px solid var(--line);
+                      font-size:.85rem; font-style:italic; color:var(--dim); line-height:1.55; }
+  body.foil #crossguide { border-color:#6a5426; }
+  body.foil #crossguide .gpos b { color:var(--gold2); }
   .modes { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-bottom:1.6rem; }
   button {
     font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
@@ -210,6 +224,9 @@ html = """<!doctype html>
   @keyframes breathe { from { transform:translateY(0); } to { transform:translateY(-7px); } }
   @keyframes dealIn { from { transform:translateY(34px) scale(.92); opacity:0; } }
   .card.deal { animation:dealIn .45s cubic-bezier(.2,.8,.3,1) backwards; }
+  /* Celtic deal: each card flies from the table's center to its position, in order */
+  @keyframes celtDeal { from { transform: translate(var(--fx,0px), var(--fy,0px)) rotate(var(--fr,-8deg)) scale(.85); opacity:0; } }
+  #table.celtic .card.cdeal { animation: celtDeal .55s cubic-bezier(.2,.8,.3,1) backwards; }
   /* swipeable stack (touch, multi-card spreads) */
   .stackwrap { max-width:min(76vw, 330px); margin:0 auto; }
   .stack { position:relative; aspect-ratio:5/8; touch-action:pan-y; }
@@ -224,7 +241,8 @@ html = """<!doctype html>
                  max-width:72rem; margin:0 auto; }
   body.gallery #galleryview { display:grid; }
   body.gallery #table, body.gallery .hint, body.gallery #again,
-  body.gallery .ask, body.gallery #asked, body.gallery #verdict { display:none !important; }
+  body.gallery .ask, body.gallery #asked, body.gallery #verdict,
+  body.gallery #crossguide { display:none !important; }
   .gcell { cursor:pointer; }
   .gcell img { width:100%; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.5); display:block; }
   .gcell .gname { font-family:'Cinzel', Georgia, serif; font-size:.68rem; letter-spacing:.1em;
@@ -249,14 +267,14 @@ html = """<!doctype html>
   @media (prefers-reduced-motion: reduce) {
     .card, .scard, .caption { transition:none; }
     .deck { animation:none; }
-    .card.deal { animation:none; }
+    .card.deal, #table.celtic .card.cdeal { animation:none; }
   }
 </style>
 </head>
 <body>
   <header class="mast">
     <span class="star" aria-hidden="true">&#10022;</span>
-    <h1><span class="eyebrow">The Major</span> <span class="word">Arcan<span class="ai">AI</span></span></h1>
+    <h1><span class="eyebrow">The Major</span> <span class="word"><span class="arcan">Arcan</span><span class="ai">AI</span></span></h1>
     <div class="orn" aria-hidden="true">&#9789; &#10022; &#9790;</div>
     <div class="moonline" id="moonline"></div>
   </header>
@@ -274,6 +292,32 @@ html = """<!doctype html>
   <div id="asked"></div>
   <div id="table" aria-live="polite"></div>
   <div id="verdict" aria-live="polite"></div>
+  <details id="crossguide">
+    <summary>&#10022; How to read the Cross</summary>
+    <div class="gpos"><b>The order:</b> read the cross first (I&ndash;VI), then the staff on the right
+      (VII&ndash;X), bottom to top. The cross is the situation; the staff is the commentary.</div>
+    <div class="gpos"><b>I &middot; The Situation</b> &mdash; the heart of the matter. Where you actually are,
+      not where you say you are.</div>
+    <div class="gpos"><b>II &middot; What Crosses You</b> &mdash; the force working with or against card I.
+      Read the two together as one sentence.</div>
+    <div class="gpos"><b>III &middot; The Root</b> &mdash; what is driving this from underneath. The part you
+      do not say out loud.</div>
+    <div class="gpos"><b>IV &middot; The Recent Past</b> &mdash; what is on its way out. Stop steering by it.</div>
+    <div class="gpos"><b>V &middot; The Crown</b> &mdash; the best available outcome; what you are consciously
+      reaching for.</div>
+    <div class="gpos"><b>VI &middot; The Near Future</b> &mdash; the next beat. Days and weeks, not destiny.</div>
+    <div class="gpos"><b>VII &middot; The Self</b> &mdash; how you are showing up in this story.</div>
+    <div class="gpos"><b>VIII &middot; The House</b> &mdash; your environment: the people, the room,
+      the group chat.</div>
+    <div class="gpos"><b>IX &middot; Hopes &amp; Fears</b> &mdash; hope and fear are usually the same card.
+      That is the point of this position.</div>
+    <div class="gpos"><b>X &middot; The Outcome</b> &mdash; where this lands if nothing changes. If you do not
+      like it, change something &mdash; then ask again later.</div>
+    <div class="gtip">Pairs matter more than singles: I + II is the engine, III versus IX is the secret
+      conversation you are having with yourself, and the distance between V and X is exactly the work
+      left to do. A reversed card is the same energy blocked or turned inward &mdash; not doom.
+      Confused by a card? Hold it and the deck will offer a clarifier.</div>
+  </details>
   <div id="galleryview"></div>
   <div id="lightbox" role="dialog" aria-label="Card detail"></div>
   <p class="hint" id="hint">Tap the deck to draw.</p>
@@ -382,7 +426,10 @@ for (const n of [1,3,5,10]) {
     mode = n;
     for (const k of [1,3,5,10]) document.getElementById('m'+k).classList.toggle('active', k === n);
     closeGallery();
-    idle();
+    // switching spread type must not eat an active reading — it re-arms the
+    // NEXT deal; only reshuffle/back regenerates
+    if (CUR.length) saveSpread();
+    else idle();
   });
 }
 
@@ -448,8 +495,10 @@ function idle() {
     ? 'Rub the deck to shuffle \\u00b7 tap to draw \\u00b7 shake it and one may jump.'
     : 'Rub the deck to shuffle it, or just tap to draw.';
   document.body.classList.remove('spreadon');
+  document.body.classList.toggle('crossmode', mode === 10);
   verdictEl.classList.remove('show');
   CUR = [];
+  sessionStorage.removeItem(SKEY);
   table.classList.remove('stackmode');
   table.classList.remove('celtic');
   table.innerHTML = '';
@@ -502,8 +551,10 @@ function draw(opts = {}) {
   const rng = makeRng(q);
   const picks = opts.picks ||
     shuffled(rng).slice(0, mode).map((c, i) => ({ ...c, rev: rng() < .5, label: LABELS[mode][i] || '' }));
+  const rst = opts.restore || null;
   CUR = picks;
   document.body.classList.add('spreadon');
+  document.body.classList.toggle('crossmode', picks.length >= 10);
   askedEl.textContent = q ? `you asked \\u2014 \\u201c${q}\\u201d` : '';
   askedEl.classList.toggle('has', !!q);
   verdictEl.classList.remove('show');
@@ -511,13 +562,24 @@ function draw(opts = {}) {
   table.innerHTML = '';
   table.classList.remove('celtic');
   const n = picks.length;
-  if (COARSE && n > 1) { buildStack(picks); return; }
+  if (COARSE && n > 1) {
+    buildStack(picks);
+    if (rst) {
+      S.revealed = new Set(rst.revealed || []);
+      if (rst.order && rst.order.length === picks.length) S.order = rst.order.slice();
+      S.revealed.forEach(i => S.els[i] && S.els[i].querySelector('.card').classList.add('flipped'));
+      layoutStack(); updateStackUI();
+    }
+    saveSpread();
+    return;
+  }
   table.classList.remove('stackmode');
-  const celtic = n === 10;
+  const celtic = n >= 10;
   if (celtic) table.classList.add('celtic');
   picks.forEach((c, i) => {
     const slot = document.createElement('div');
-    slot.className = 'slot' + (n === 1 ? ' single' : '') + (celtic ? ' p' + (i + 1) : '');
+    slot.className = 'slot' + (n === 1 ? ' single' : '') + (celtic && i < 10 ? ' p' + (i + 1) : '');
+    slot.dataset.ci = i;
     slot.innerHTML = `<div class="poslabel">${c.label}</div>` + cardHTML(c.img, c.name) +
       `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
     if (c.rev) slot.querySelector('.card').classList.add('rev');
@@ -527,6 +589,7 @@ function draw(opts = {}) {
       cardEl.classList.add('flipped');
       slot.classList.add('revealed');
       buzz(12);
+      saveSpread();
       if ([...table.children].every(s => s.classList.contains('revealed'))) {
         again.style.display = 'inline-block';
         showVerdict();
@@ -537,15 +600,79 @@ function draw(opts = {}) {
       if (table.classList.contains('celtic')) openCardBox(c);
     });
     attachHold(cardEl, () => { if (slot.classList.contains('revealed')) addClarifierSlot(slot, c); });
-    cardEl.classList.add('deal');
-    cardEl.style.animationDelay = (i * (celtic ? 90 : 120)) + 'ms';
+    if (rst && (rst.revealed || []).includes(i)) {
+      cardEl.classList.add('flipped');
+      slot.classList.add('revealed');
+    } else if (!rst && !celtic) {
+      cardEl.classList.add('deal');
+      cardEl.style.animationDelay = (i * 120) + 'ms';
+    } else if (!rst && celtic && !REDUCED) {
+      cardEl.style.opacity = '0';   // hidden until the fly-in assigns its origin
+    }
     table.appendChild(slot);
-    if (!COARSE) {  // desktop: auto-reveal; touch always gets the flip gesture
+    if (!COARSE && !slot.classList.contains('revealed')) {  // desktop: auto-reveal; touch always gets the flip gesture
       slot.querySelector('.tap').style.display = 'none';
-      setTimeout(flip, REDUCED ? 0 : 550 + i * (celtic ? 260 : 550));
+      setTimeout(flip, REDUCED ? 0 : (celtic ? 2400 + i * 260 : 550 + i * 550));
+    } else if (!COARSE) {
+      slot.querySelector('.tap').style.display = 'none';
     }
   });
+  if (celtic && !rst && !REDUCED) {
+    // fly each card from the table's center to its grid spot, in reading order;
+    // the crossing card (II) lands with a quarter-turn flourish
+    requestAnimationFrame(() => {
+      const tr = table.getBoundingClientRect();
+      const cx = tr.left + tr.width / 2, cy = tr.top + tr.height * 0.45;
+      [...table.children].forEach((slot, i) => {
+        const card = slot.querySelector('.card');
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--fx', (cx - (r.left + r.width / 2)).toFixed(0) + 'px');
+        card.style.setProperty('--fy', (cy - (r.top + r.height / 2)).toFixed(0) + 'px');
+        card.style.setProperty('--fr', i === 1 ? '84deg' : ((i % 2 ? 6 : -7) + 'deg'));
+        card.style.animationDelay = (i * 180) + 'ms';
+        card.style.opacity = '';
+        card.classList.add('cdeal');
+      });
+    });
+  }
+  if ([...table.children].every(s => s.classList.contains('revealed'))) {
+    again.style.display = 'inline-block';
+    showVerdict();
+  }
+  saveSpread();
   applyFoil();
+}
+
+/* ---- spread persistence: leaving the tab must not eat your reading ---- */
+const SKEY = 'arcanai-spread';
+function saveSpread() {
+  if (!CUR.length) { sessionStorage.removeItem(SKEY); return; }
+  const stacked = table.classList.contains('stackmode');
+  try {
+    sessionStorage.setItem(SKEY, JSON.stringify({
+      mode, q: qInput.value,
+      picks: CUR.map(p => ({ name: p.name, rev: !!p.rev, label: p.label || '' })),
+      revealed: stacked ? [...S.revealed]
+        : [...table.children].filter(s => s.classList.contains('revealed')).map(s => +s.dataset.ci),
+      order: stacked ? S.order : null,
+    }));
+  } catch (_) {}
+}
+function restoreSpread() {
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(SKEY)); } catch (_) {}
+  if (!st || !st.picks || !st.picks.length) return false;
+  const byName = {};
+  DECK.forEach(c => { byName[c.name] = c; });
+  const picks = st.picks.map(p => byName[p.name] && { ...byName[p.name], rev: p.rev, label: p.label }).filter(Boolean);
+  if (picks.length !== st.picks.length) return false;
+  if ([1,3,5,10].includes(st.mode)) {
+    mode = st.mode;
+    for (const k of [1,3,5,10]) document.getElementById('m'+k).classList.toggle('active', k === mode);
+  }
+  qInput.value = st.q || '';
+  draw({ picks, restore: st });
+  return true;
 }
 
 /* celtic cards are small: a click on a revealed one zooms it in the lightbox */
@@ -596,13 +723,14 @@ function addClarifierSlot(slot, parent) {
   buzz([10, 30, 10]);
   const ns = document.createElement('div');
   ns.className = 'slot' + (slot.classList.contains('single') ? ' single' : '');
+  ns.dataset.ci = CUR.length - 1;
   ns.innerHTML = `<div class="poslabel">${c.label}</div>` + cardHTML(c.img, c.name) +
     `<div class="tap">tap or flick to reveal</div><div class="caption">${capHTML(c)}</div>`;
   if (c.rev) ns.querySelector('.card').classList.add('rev');
   const cardEl = ns.querySelector('.card');
   const flip = () => {
     if (ns.classList.contains('revealed')) return;
-    cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12); showVerdict();
+    cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12); showVerdict(); saveSpread();
   };
   cardEl.addEventListener('click', () => {
     if (!ns.classList.contains('revealed')) { flip(); return; }
@@ -612,6 +740,7 @@ function addClarifierSlot(slot, parent) {
   cardEl.classList.add('deal');
   slot.insertAdjacentElement('afterend', ns);
   if (!COARSE) { ns.querySelector('.tap').style.display = 'none'; setTimeout(flip, REDUCED ? 0 : 500); }
+  saveSpread();
   applyFoil();
 }
 
@@ -721,6 +850,7 @@ function addClarifier() {
   }
   layoutStack();
   updateStackUI();
+  saveSpread();
   applyFoil();
 }
 
@@ -785,6 +915,7 @@ function flingNext(dir, dy = 0) {
     el.style.transition = '';
     el.style.opacity = '1';
     updateStackUI();
+    saveSpread();
   }, 225);
 }
 
@@ -795,6 +926,7 @@ function tapTop() {
   S.revealed.add(i);
   buzz(12);
   updateStackUI();
+  saveSpread();
 }
 
 /* ---- sheen + tilt ---- */
@@ -897,7 +1029,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
 addEventListener('contextmenu', e => { if (e.target.closest('#table')) e.preventDefault(); });
 
 again.addEventListener('click', () => { if (nav.spread) history.back(); else idle(); });
-idle();
+if (!restoreSpread()) idle();
 </script>
 </body>
 </html>
