@@ -190,6 +190,17 @@ const galleryBtn = document.getElementById('gallery');
 const galleryView = document.getElementById('galleryview');
 const lightbox = document.getElementById('lightbox');
 
+/* Back button peels UI layers instead of leaving the page.
+   Each layer pushes at most one history entry (flags dedupe); popstate
+   closes the topmost open layer. */
+const nav = { spread: false, gallery: false, lightbox: false };
+const pushNav = k => { if (!nav[k]) { nav[k] = true; history.pushState({ k }, ''); } };
+addEventListener('popstate', () => {
+  if (nav.lightbox) { nav.lightbox = false; lightbox.classList.remove('open'); return; }
+  if (nav.gallery) { nav.gallery = false; closeGallery(); return; }
+  if (nav.spread) { nav.spread = false; idle(); return; }
+});
+
 for (const n of [1,3,5]) {
   document.getElementById('m'+n).addEventListener('click', () => {
     mode = n;
@@ -205,6 +216,8 @@ function closeGallery() {
 }
 galleryBtn.addEventListener('click', () => {
   const on = !document.body.classList.contains('gallery');
+  if (!on && nav.gallery) { history.back(); return; }
+  if (on) pushNav('gallery');
   document.body.classList.toggle('gallery', on);
   galleryBtn.classList.toggle('active', on);
   if (on && !galleryView.childElementCount) {
@@ -219,6 +232,7 @@ galleryBtn.addEventListener('click', () => {
           <div class="cmean">${c.meaning}</div>
           <div class="cmean"><span class="revtag">Reversed:</span> ${c.r}</div></div>`;
         lightbox.classList.add('open');
+        pushNav('lightbox');
         applyFoil();
       });
       galleryView.appendChild(cell);
@@ -226,7 +240,9 @@ galleryBtn.addEventListener('click', () => {
   }
   if (on) applyFoil();
 });
-lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+lightbox.addEventListener('click', () => {
+  if (nav.lightbox) history.back(); else lightbox.classList.remove('open');
+});
 
 function cardHTML(frontImg, alt) {
   const front = frontImg ? `<img data-src="${frontImg}" alt="${alt}">` : '';
@@ -254,6 +270,7 @@ function idle() {
 
 function draw() {
   buzz(8);
+  pushNav('spread');
   const picks = [...DECK].sort(() => Math.random() - .5).slice(0, mode)
     .map(c => ({...c, rev: Math.random() < .5}));
   hint.style.display = 'none';
@@ -505,7 +522,7 @@ if (COARSE && 'DeviceOrientationEvent' in window) {
   });
 }
 
-again.addEventListener('click', idle);
+again.addEventListener('click', () => { if (nav.spread) history.back(); else idle(); });
 idle();
 </script>
 </body>
