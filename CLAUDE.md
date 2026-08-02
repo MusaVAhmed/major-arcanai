@@ -17,8 +17,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
 3. `python3 foil.py [slug]` — gold-foil edition: FLAT metallic gold on warm
    black stock, crisp lines, no glow, no luster bands — the draw page's
    dynamic sheen is deliberately the only lighting → `cards-foil{,-web}/`.
-4. `python3 build_draw_page.py` — regenerates `index.html` and appends foil
-   paths to `deck.json`.
+4. `python3 build_draw_page.py` — regenerates `index.html`, appends foil paths
+   to `deck.json`, and copies `cards/attune.js` (the semantic shuffle) into the
+   release. `cards/attune.js` is the source of truth; never edit the copy.
 5. `python3 masthead.py` — draw-page masthead images (classic + foil) built
    from the card back's ornament + Cinzel lettering → `release/.../assets/`.
    Rerun only if `back.png` or the title design changes.
@@ -56,6 +57,21 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   clarifier). From 640px up, `.slot` width is `min(clamp(...), (100% - gaps)/--n)`
   so a five-card spread stays on one row. Any new code that appends a slot must
   update `--n`.
+- **Semantic attuned shuffle** (`attune.js`, transformers.js +
+  `Xenova/all-MiniLM-L6-v2`, ~23 MB from the HF CDN, browser-cached): the
+  question is embedded and cosine-matched against card text. `draw()` is
+  `async` for it, but the ternary short-circuits when there is no question or
+  attunement is off, so an ordinary deal never awaits and stays synchronous —
+  keep it that way. Any failure (offline, CDN down, cold model inside the
+  450 ms budget) resolves to `null` and the keyword `THEME_HINTS` path takes
+  over; both set `leaned`, which drives the "the deck leaned in" caption.
+- Attunement strength lives in `ARCANAI_ATTUNE.config.temp`. It was measured,
+  not guessed: 400 five-card draws per question showed `temp: 0.06` putting one
+  card in 92% of draws (reads as stacked). `0.15` gives topical questions ~2.3x
+  their baseline rate. There is NO reliable gibberish detector — nonsense
+  embeds to real points (max cosine for real questions 0.149–0.389 vs 0.066–0.323
+  for word salad, fully overlapping), so a nonsense question still leans. Don't
+  spend another session trying to gate it on similarity.
 - Only the lightbox image (`data-big`) gets a `srcset` onto the 800×1280 set;
   spreads and gallery thumbs stay on the 500×800 web set — full-res everywhere
   would cost a phone megabytes per deal. `applyFoil()` rewrites `src` **and**
