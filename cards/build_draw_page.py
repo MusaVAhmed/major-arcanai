@@ -60,9 +60,12 @@ def _slug(c):
 missing = [_slug(c) for c in deck['cards'] if _slug(c) not in THEMES]
 assert not missing, f'cards missing theme tags: {missing}'
 
+# sit/sitr are matching-only: attune.js appends them to the embedded document
+# so terse aphorisms sit nearer the concrete things people ask. Never rendered.
 deck_js = json.dumps([
     {"n": c['numeral'], "name": c['name'], "meaning": c['meaning'], "r": c['reversed'],
-     "img": c['image']['web'], "t": THEMES[_slug(c)]}
+     "img": c['image']['web'], "t": THEMES[_slug(c)],
+     "sit": c.get('situations', ''), "sitr": c.get('situations_reversed', '')}
     for c in deck['cards']
 ], indent=None)
 
@@ -350,6 +353,15 @@ html = """<!doctype html>
         </div>
         <span class="sdesc">Shameless is not subtle. That is rather the point.</span>
       </div>
+      <div class="leanrow">
+        <span class="shead">What it may choose</span>
+        <div class="seg" role="group" aria-label="What the deck may choose">
+          <button id="chooseFace" aria-pressed="true">Faces</button><button
+            id="chooseSeat" aria-pressed="true">Seats</button>
+        </div>
+        <span class="sdesc">Which cards is always the deck's. Faces lets it turn a card upright or
+          reversed to suit. Seats lets it decide which card belongs in which position.</span>
+      </div>
     </div>
   </div>
   <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
@@ -544,6 +556,25 @@ function applyLean() {
 leanBtns.forEach((b, i) => b.addEventListener('click', () => { lean = i + 1; applyLean(); buzz(6); }));
 applyLean();
 
+/* which of the three decisions the deck is allowed to make. Cards is what the
+   attuned toggle means; these two are the ones worth being squeamish about. */
+const CHOOSE = { face: 'chooseFace', seat: 'chooseSeat' };
+const choose = {};
+for (const k in CHOOSE) {
+  const b = document.getElementById(CHOOSE[k]);
+  choose[k] = localStorage.getItem('arcanai-choose-' + k) !== '0';
+  const paint = () => {
+    b.classList.toggle('active', choose[k]);
+    b.setAttribute('aria-pressed', String(choose[k]));
+  };
+  b.addEventListener('click', () => {
+    choose[k] = !choose[k];
+    localStorage.setItem('arcanai-choose-' + k, choose[k] ? '1' : '0');
+    paint(); buzz(6);
+  });
+  paint();
+}
+
 /* ---- the heretical shuffle: question keywords tilt the deck ----
    Words in the question map to card themes; matching cards get a heavier
    weight in the draw. Mechanically rigged, spiritually attentive. */
@@ -580,6 +611,7 @@ function attunedOrder(rng, themes) {
   return weightedOrder(rng, DECK.map(c => 1 + 2.5 * (c.t || []).filter(t => themes.has(t)).length));
 }
 const IDX = new Map(DECK.map((c, i) => [c.name, i]));
+const ARCANAI_CFG = () => (window.ARCANAI_ATTUNE && ARCANAI_ATTUNE.config) || {};
 
 /* Seat the drawn cards by how well each fits each position, using the same
    roulette the draw itself uses. Soft on purpose: optimal matching would put
@@ -739,17 +771,14 @@ async function draw(opts = {}) {
     const drawn = (sem ? weightedOrder(rng, sem.w)
       : themes.size ? attunedOrder(rng, themes) : shuffled(rng)).slice(0, mode);
     // the deck picks the face it means, and the seat each card belongs in
-    /* seats need a colder temperature than selection: affinities between the
-       few drawn cards sit close together, and at the selection temp the seating
-       came out all but uniform (9% affinity lift, measured). A third of it puts
-       a card in its best seat about twice as often as chance. */
-    const seated = (sem && sem.pos.length === mode)
-      ? seatByAffinity(rng, drawn, sem.pos, LEANS[lean] / 3) : drawn;
-    picks = seated.map((c, i) => ({
-      ...c,
-      rev: sem ? !!sem.rev[IDX.get(c.name)] : rng() < .5,
-      label: LABELS[mode][i] || '',
-    }));
+    const seatTemp = LEANS[lean] * (ARCANAI_CFG().seatRatio || 0.34);
+    const seated = (sem && choose.seat && sem.pos.length === mode)
+      ? seatByAffinity(rng, drawn, sem.pos, seatTemp) : drawn;
+    picks = seated.map((c, i) => {
+      // -1 from the model means the two faces were too close to call
+      const face = sem && choose.face ? sem.rev[IDX.get(c.name)] : -1;
+      return { ...c, rev: face === -1 ? rng() < .5 : face === 1, label: LABELS[mode][i] || '' };
+    });
   }
   const rst = opts.restore || null;
   CUR = picks;

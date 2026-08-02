@@ -30,7 +30,9 @@
         "web": "cards-web/00_zero_of_fucks.png",
         "foil_full": "cards-foil/00_zero_of_fucks.png",
         "foil_web": "cards-foil-web/00_zero_of_fucks.png"
-      }
+      },
+      "situations": "Walking away without drama, starting over somewhere new, no longer auditioning for anyone's approval.",
+      "situations_reversed": "Performing indifference, pretending to be over it while checking on them nightly."
     },
     {
       "index": 1,
@@ -43,7 +45,9 @@
         "web": "cards-web/01_burned_bridge.png",
         "foil_full": "cards-foil/01_burned_bridge.png",
         "foil_web": "cards-foil-web/01_burned_bridge.png"
-      }
+      },
+      "situations": "Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.",
+      "situations_reversed": "Regretting how you ended it, wanting to apologise, wondering whether to reach out again."
     },
     {
       "index": 2,
@@ -56,7 +60,9 @@
         "web": "cards-web/02_two_of_deez.png",
         "foil_full": "cards-foil/02_two_of_deez.png",
         "foil_web": "cards-foil-web/02_two_of_deez.png"
-      }
+      },
+      "situations": "Making a decision nobody approves of, backing yourself, ignoring the group chat's opinion of your life.",
+      "situations_reversed": "Fishing for compliments, posting for reassurance, asking six people until one of them agrees."
     },
     {
       "index": 3,
@@ -69,7 +75,9 @@
         "web": "cards-web/03_lovers.png",
         "foil_full": "cards-foil/03_lovers.png",
         "foil_web": "cards-foil-web/03_lovers.png"
-      }
+      },
+      "situations": "Dating someone seriously, choosing a partner, whether to commit, a friendship that genuinely matters.",
+      "situations_reversed": "Drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love."
     },
     {
       "index": 4,
@@ -82,7 +90,9 @@
         "web": "cards-web/04_coffee.png",
         "foil_full": "cards-foil/04_coffee.png",
         "foil_web": "cards-foil-web/04_coffee.png"
-      }
+      },
+      "situations": "Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.",
+      "situations_reversed": "Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality."
     },
     {
       "index": 5,
@@ -95,7 +105,9 @@
         "web": "cards-web/05_death.png",
         "foil_full": "cards-foil/05_death.png",
         "foil_web": "cards-foil-web/05_death.png"
-      }
+      },
+      "situations": "A chapter closing, leaving a city or a marriage or a career, becoming someone your old friends would not recognise.",
+      "situations_reversed": "Clinging to who you used to be, keeping an old identity alive well past its expiry."
     },
     {
       "index": 6,
@@ -108,7 +120,9 @@
         "web": "cards-web/06_moon.png",
         "foil_full": "cards-foil/06_moon.png",
         "foil_web": "cards-foil-web/06_moon.png"
-      }
+      },
+      "situations": "Mixed signals, not knowing where you stand, waiting on news, a gut feeling you cannot prove.",
+      "situations_reversed": "Anxiety dressed up as instinct, inventing motives, spiralling at night over something unconfirmed."
     },
     {
       "index": 7,
@@ -121,7 +135,9 @@
         "web": "cards-web/07_strength.png",
         "foil_full": "cards-foil/07_strength.png",
         "foil_web": "cards-foil-web/07_strength.png"
-      }
+      },
+      "situations": "Keeping your temper with a difficult person, enduring a long hard stretch, restraint instead of force.",
+      "situations_reversed": "Snapping at last, patience running out, forcing something that needed waiting."
     },
     {
       "index": 8,
@@ -134,7 +150,9 @@
         "web": "cards-web/08_perseverance.png",
         "foil_full": "cards-foil/08_perseverance.png",
         "foil_web": "cards-foil-web/08_perseverance.png"
-      }
+      },
+      "situations": "Late in a long project, months of job hunting, studying, wanting to quit near the finish.",
+      "situations_reversed": "Grinding away at something already dead, stubbornness mistaken for commitment."
     },
     {
       "index": 9,
@@ -147,7 +165,9 @@
         "web": "cards-web/09_tea.png",
         "foil_full": "cards-foil/09_tea.png",
         "foil_web": "cards-foil-web/09_tea.png"
-      }
+      },
+      "situations": "Gossip reaching you, finding something out, a secret surfacing, what people say once you leave the room.",
+      "situations_reversed": "Spreading it further, drama you are feeding, talking about people instead of to them."
     },
     {
       "index": 10,
@@ -160,7 +180,9 @@
         "web": "cards-web/10_last_straw.png",
         "foil_full": "cards-foil/10_last_straw.png",
         "foil_web": "cards-foil-web/10_last_straw.png"
-      }
+      },
+      "situations": "The final incident, handing in your notice, ending it after one thing too many.",
+      "situations_reversed": "Threatening to leave and staying, raising your limit again, a last straw that keeps not being last."
     },
     {
       "index": 11,
@@ -173,7 +195,9 @@
         "web": "cards-web/11_audacity.png",
         "foil_full": "cards-foil/11_audacity.png",
         "foil_web": "cards-foil-web/11_audacity.png"
-      }
+      },
+      "situations": "Asking for the raise, making the first move, applying anyway, saying the bold thing out loud.",
+      "situations_reversed": "Recklessness, nerve without a plan, or somebody else's gall aimed squarely at you."
     },
     {
       "index": 12,
@@ -186,7 +210,9 @@
         "web": "cards-web/12_breast_pump.png",
         "foil_full": "cards-foil/12_breast_pump.png",
         "foil_web": "cards-foil-web/12_breast_pump.png"
-      }
+      },
+      "situations": "Caring for everyone else, new parenthood, being the one who always helps, running empty for others.",
+      "situations_reversed": "Resenting the people you keep giving to, martyrdom, keeping score of your own sacrifice."
     },
     {
       "index": 13,
@@ -199,7 +225,9 @@
         "web": "cards-web/13_bottle.png",
         "foil_full": "cards-foil/13_bottle.png",
         "foil_web": "cards-foil-web/13_bottle.png"
-      }
+      },
+      "situations": "Swallowing what you feel, not saying it, holding it down until it comes out sideways.",
+      "situations_reversed": "The blow up, crying at the wrong moment, drinking to keep it down, saying it all badly at once."
     },
     {
       "index": 14,
@@ -212,7 +240,9 @@
         "web": "cards-web/14_taco.png",
         "foil_full": "cards-foil/14_taco.png",
         "foil_web": "cards-foil-web/14_taco.png"
-      }
+      },
+      "situations": "A good meal, a small treat, cheap ordinary happiness, what to eat, plans with people you like.",
+      "situations_reversed": "Treating yourself instead of dealing with it, small pleasures used as avoidance."
     },
     {
       "index": 15,
@@ -225,7 +255,9 @@
         "web": "cards-web/15_gold_shoulder.png",
         "foil_full": "cards-foil/15_gold_shoulder.png",
         "foil_web": "cards-foil-web/15_gold_shoulder.png"
-      }
+      },
+      "situations": "Status, showing off, being seen with the right people, caring how it looks over how it is.",
+      "situations_reversed": "The ego cracking, humiliation, being found out as less impressive than the photographs."
     },
     {
       "index": 16,
@@ -238,7 +270,9 @@
         "web": "cards-web/16_child.png",
         "foil_full": "cards-foil/16_child.png",
         "foil_web": "cards-foil-web/16_child.png"
-      }
+      },
+      "situations": "Play, doing something purely for fun, what you loved at eight, taking yourself less seriously.",
+      "situations_reversed": "Sulking, tantrums, acting your shoe size, waiting for somebody to parent you."
     },
     {
       "index": 17,
@@ -251,7 +285,9 @@
         "web": "cards-web/17_mother.png",
         "foil_full": "cards-foil/17_mother.png",
         "foil_web": "cards-foil-web/17_mother.png"
-      }
+      },
+      "situations": "Looking after family, being the reliable one, nobody thinking to ask how you are.",
+      "situations_reversed": "Guilt for resting, smothering the people you love, care that has curdled into control."
     },
     {
       "index": 18,
@@ -264,7 +300,9 @@
         "web": "cards-web/18_mom_boss.png",
         "foil_full": "cards-foil/18_mom_boss.png",
         "foil_web": "cards-foil-web/18_mom_boss.png"
-      }
+      },
+      "situations": "Too many responsibilities, running everything, work and home both landing on you, delegating badly.",
+      "situations_reversed": "Micromanaging, refusing help, collapsing from insisting on doing all of it yourself."
     },
     {
       "index": 19,
@@ -277,7 +315,9 @@
         "web": "cards-web/19_hermit.png",
         "foil_full": "cards-foil/19_hermit.png",
         "foil_web": "cards-foil-web/19_hermit.png"
-      }
+      },
+      "situations": "Cancelling plans, needing time alone, stepping back from people, wanting quiet instead of the noise.",
+      "situations_reversed": "Isolation, not answering anyone for weeks, loneliness dressed up as solitude."
     },
     {
       "index": 20,
@@ -290,7 +330,9 @@
         "web": "cards-web/20_gardener.png",
         "foil_full": "cards-foil/20_gardener.png",
         "foil_web": "cards-foil-web/20_gardener.png"
-      }
+      },
+      "situations": "Slow progress, a new job or skill or relationship still growing, patience with something planted recently.",
+      "situations_reversed": "Neglect, giving up before it grew, expecting a harvest a week after planting."
     },
     {
       "index": 21,
@@ -303,7 +345,9 @@
         "web": "cards-web/21_cheese_fries.png",
         "foil_full": "cards-foil/21_cheese_fries.png",
         "foil_web": "cards-foil-web/21_cheese_fries.png"
-      }
+      },
+      "situations": "Indulgence, a night off, eating what you actually want, permission to enjoy something.",
+      "situations_reversed": "Overdoing it, comfort as anaesthetic, the regret that arrives after the binge."
     },
     {
       "index": 22,
@@ -316,7 +360,9 @@
         "web": "cards-web/22_slice.png",
         "foil_full": "cards-foil/22_slice.png",
         "foil_web": "cards-foil-web/22_slice.png"
-      }
+      },
+      "situations": "Cutting someone loose, ending a draining friendship, removing yourself from a group that costs you.",
+      "situations_reversed": "Still attached, unable to make the cut, going back to the thing you keep ending."
     },
     {
       "index": 23,
@@ -329,7 +375,9 @@
         "web": "cards-web/23_empress.png",
         "foil_full": "cards-foil/23_empress.png",
         "foil_web": "cards-foil-web/23_empress.png"
-      }
+      },
+      "situations": "Making something, a project blooming, money coming in, fertility, having enough to be generous.",
+      "situations_reversed": "Creative block, scarcity thinking, hoarding, nothing you make ever feeling good enough."
     },
     {
       "index": 24,
@@ -342,7 +390,9 @@
         "web": "cards-web/24_chicken_nugget.png",
         "foil_full": "cards-foil/24_chicken_nugget.png",
         "foil_web": "cards-foil-web/24_chicken_nugget.png"
-      }
+      },
+      "situations": "Wanting something easy, comfort food, keeping it simple, low effort care on a bad day.",
+      "situations_reversed": "Only ever comfort, avoiding anything difficult, the same safe thing every single night."
     },
     {
       "index": 25,
@@ -355,7 +405,9 @@
         "web": "cards-web/25_sun.png",
         "foil_full": "cards-foil/25_sun.png",
         "foil_web": "cards-foil-web/25_sun.png"
-      }
+      },
+      "situations": "Good news, things finally going well, feeling healthy again, a clear happy stretch.",
+      "situations_reversed": "Forced positivity, performing happiness you do not feel, good news that keeps not arriving."
     },
     {
       "index": 26,
@@ -368,7 +420,9 @@
         "web": "cards-web/26_high_priestess.png",
         "foil_full": "cards-foil/26_high_priestess.png",
         "foil_web": "cards-foil-web/26_high_priestess.png"
-      }
+      },
+      "situations": "Already knowing the answer underneath, a private instinct, something unsaid, trusting yourself over advice.",
+      "situations_reversed": "Ignoring what you already know, outsourcing the decision, a secret kept too long."
     },
     {
       "index": 27,
@@ -381,7 +435,9 @@
         "web": "cards-web/27_zoom_meeting.png",
         "foil_full": "cards-foil/27_zoom_meeting.png",
         "foil_web": "cards-foil-web/27_zoom_meeting.png"
-      }
+      },
+      "situations": "Pointless meetings, remote work, screens all day, digital life crowding out the actual one.",
+      "situations_reversed": "Hiding behind the screen, camera off in every sense, avoiding contact with actual people."
     },
     {
       "index": 28,
@@ -394,7 +450,9 @@
         "web": "cards-web/28_influencer.png",
         "foil_full": "cards-foil/28_influencer.png",
         "foil_web": "cards-foil-web/28_influencer.png"
-      }
+      },
+      "situations": "Curating how you appear, social media, comparing your life to posts, the personal brand.",
+      "situations_reversed": "Believing your own image, envying strangers online, the gap between the profile and the life."
     },
     {
       "index": 29,
@@ -407,7 +465,9 @@
         "web": "cards-web/29_life_of_the_party.png",
         "foil_full": "cards-foil/29_life_of_the_party.png",
         "foil_web": "cards-foil-web/29_life_of_the_party.png"
-      }
+      },
+      "situations": "Being the fun one, big social nights, everyone's favourite and nobody's confidant.",
+      "situations_reversed": "The comedown, lonely in a crowded room, going home alone after being on all night."
     },
     {
       "index": 30,
@@ -420,7 +480,9 @@
         "web": "cards-web/30_last_hurrah.png",
         "foil_full": "cards-foil/30_last_hurrah.png",
         "foil_web": "cards-foil-web/30_last_hurrah.png"
-      }
+      },
+      "situations": "One last night, a leaving do, the final round before things change, a goodbye that is also a party.",
+      "situations_reversed": "Dragging it out, one more that is never the last, refusing to let the ending happen."
     },
     {
       "index": 31,
@@ -433,7 +495,9 @@
         "web": "cards-web/31_dead_end_job.png",
         "foil_full": "cards-foil/31_dead_end_job.png",
         "foil_web": "cards-foil-web/31_dead_end_job.png"
-      }
+      },
+      "situations": "A job going nowhere, quitting, stuck in a role or a town or a relationship with no future.",
+      "situations_reversed": "Staying for the money, comfortable and wasted, waiting to be pushed instead of jumping."
     },
     {
       "index": 32,
@@ -446,7 +510,9 @@
         "web": "cards-web/32_fiddle_leaf_fig.png",
         "foil_full": "cards-foil/32_fiddle_leaf_fig.png",
         "foil_web": "cards-foil-web/32_fiddle_leaf_fig.png"
-      }
+      },
+      "situations": "Looking fine and not being fine, a life that photographs better than it lives.",
+      "situations_reversed": "Neglect behind the presentation, the thing quietly dying while it still looks green."
     },
     {
       "index": 33,
@@ -459,7 +525,9 @@
         "web": "cards-web/33_star.png",
         "foil_full": "cards-foil/33_star.png",
         "foil_web": "cards-foil-web/33_star.png"
-      }
+      },
+      "situations": "Recovery after a bad run, faith returning, the first good news in a while, reasons to keep going.",
+      "situations_reversed": "Losing hope, cynicism, believing honestly that it is never going to improve."
     },
     {
       "index": 34,
@@ -472,7 +540,9 @@
         "web": "cards-web/34_devil.png",
         "foil_full": "cards-foil/34_devil.png",
         "foil_web": "cards-foil-web/34_devil.png"
-      }
+      },
+      "situations": "The habit you keep going back to, addiction, the person who is bad for you, the cage with its door open.",
+      "situations_reversed": "Deeper in, choosing it again, telling yourself you could stop any time you wanted."
     },
     {
       "index": 35,
@@ -485,7 +555,9 @@
         "web": "cards-web/35_fair_weather_friend.png",
         "foil_full": "cards-foil/35_fair_weather_friend.png",
         "foil_web": "cards-foil-web/35_fair_weather_friend.png"
-      }
+      },
+      "situations": "Friends who vanish when it gets hard, one sided effort, who actually shows up for you.",
+      "situations_reversed": "Being that friend yourself, going quiet on someone who is in trouble."
     },
     {
       "index": 36,
@@ -498,7 +570,9 @@
         "web": "cards-web/36_tower.png",
         "foil_full": "cards-foil/36_tower.png",
         "foil_web": "cards-foil-web/36_tower.png"
-      }
+      },
+      "situations": "Sudden collapse, redundancy, a breakup out of nowhere, the business failing, everything changing at once.",
+      "situations_reversed": "The slow collapse you can see coming, propping up what should be allowed to fall."
     },
     {
       "index": 37,
@@ -511,7 +585,9 @@
         "web": "cards-web/37_drama_queen.png",
         "foil_full": "cards-foil/37_drama_queen.png",
         "foil_web": "cards-foil-web/37_drama_queen.png"
-      }
+      },
+      "situations": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.",
+      "situations_reversed": "A real crisis waved off as drama, nobody believing you on the one occasion it counts."
     },
     {
       "index": 38,
@@ -524,7 +600,9 @@
         "web": "cards-web/38_last_flying_fuck.png",
         "foil_full": "cards-foil/38_last_flying_fuck.png",
         "foil_web": "cards-foil-web/38_last_flying_fuck.png"
-      }
+      },
+      "situations": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.",
+      "situations_reversed": "Caring loudly about not caring, spite, energy spent proving you have moved on."
     },
     {
       "index": 39,
@@ -537,7 +615,9 @@
         "web": "cards-web/39_nap.png",
         "foil_full": "cards-foil/39_nap.png",
         "foil_web": "cards-foil-web/39_nap.png"
-      }
+      },
+      "situations": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.",
+      "situations_reversed": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down."
     }
   ]
 }

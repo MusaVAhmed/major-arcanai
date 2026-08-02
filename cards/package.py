@@ -95,6 +95,98 @@ REVERSED = {
     "tower": "Postponing the collapse. Controlled demolition beats waiting for lightning.",
 }
 
+# Situational expansions. NEVER shown to a seeker: these exist only so the
+# semantic shuffle can match a card against the everyday circumstances people
+# actually type. Card meanings are written as aphorisms ("Break free from
+# unhealthy cycles"), which sit nowhere near a concrete question in embedding
+# space. Keep each to roughly twenty words: padding a short well-placed vector
+# drags it off target (a long draft knocked Strength from rank 4 to 17).
+SITUATIONS = {
+    "zero_of_fucks": "Walking away without drama, starting over somewhere new, no longer auditioning for anyone's approval.",
+    "burned_bridge": "Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.",
+    "two_of_deez": "Making a decision nobody approves of, backing yourself, ignoring the group chat's opinion of your life.",
+    "lovers": "Dating someone seriously, choosing a partner, whether to commit, a friendship that genuinely matters.",
+    "coffee": "Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.",
+    "death": "A chapter closing, leaving a city or a marriage or a career, becoming someone your old friends would not recognise.",
+    "moon": "Mixed signals, not knowing where you stand, waiting on news, a gut feeling you cannot prove.",
+    "strength": "Keeping your temper with a difficult person, enduring a long hard stretch, restraint instead of force.",
+    "perseverance": "Late in a long project, months of job hunting, studying, wanting to quit near the finish.",
+    "tea": "Gossip reaching you, finding something out, a secret surfacing, what people say once you leave the room.",
+    "last_straw": "The final incident, handing in your notice, ending it after one thing too many.",
+    "audacity": "Asking for the raise, making the first move, applying anyway, saying the bold thing out loud.",
+    "breast_pump": "Caring for everyone else, new parenthood, being the one who always helps, running empty for others.",
+    "bottle": "Swallowing what you feel, not saying it, holding it down until it comes out sideways.",
+    "taco": "A good meal, a small treat, cheap ordinary happiness, what to eat, plans with people you like.",
+    "gold_shoulder": "Status, showing off, being seen with the right people, caring how it looks over how it is.",
+    "child": "Play, doing something purely for fun, what you loved at eight, taking yourself less seriously.",
+    "mother": "Looking after family, being the reliable one, nobody thinking to ask how you are.",
+    "mom_boss": "Too many responsibilities, running everything, work and home both landing on you, delegating badly.",
+    "hermit": "Cancelling plans, needing time alone, stepping back from people, wanting quiet instead of the noise.",
+    "gardener": "Slow progress, a new job or skill or relationship still growing, patience with something planted recently.",
+    "cheese_fries": "Indulgence, a night off, eating what you actually want, permission to enjoy something.",
+    "slice": "Cutting someone loose, ending a draining friendship, removing yourself from a group that costs you.",
+    "empress": "Making something, a project blooming, money coming in, fertility, having enough to be generous.",
+    "chicken_nugget": "Wanting something easy, comfort food, keeping it simple, low effort care on a bad day.",
+    "sun": "Good news, things finally going well, feeling healthy again, a clear happy stretch.",
+    "high_priestess": "Already knowing the answer underneath, a private instinct, something unsaid, trusting yourself over advice.",
+    "zoom_meeting": "Pointless meetings, remote work, screens all day, digital life crowding out the actual one.",
+    "influencer": "Curating how you appear, social media, comparing your life to posts, the personal brand.",
+    "life_of_the_party": "Being the fun one, big social nights, everyone's favourite and nobody's confidant.",
+    "last_hurrah": "One last night, a leaving do, the final round before things change, a goodbye that is also a party.",
+    "dead_end_job": "A job going nowhere, quitting, stuck in a role or a town or a relationship with no future.",
+    "fiddle_leaf_fig": "Looking fine and not being fine, a life that photographs better than it lives.",
+    "star": "Recovery after a bad run, faith returning, the first good news in a while, reasons to keep going.",
+    "devil": "The habit you keep going back to, addiction, the person who is bad for you, the cage with its door open.",
+    "fair_weather_friend": "Friends who vanish when it gets hard, one sided effort, who actually shows up for you.",
+    "tower": "Sudden collapse, redundancy, a breakup out of nowhere, the business failing, everything changing at once.",
+    "drama_queen": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.",
+    "last_flying_fuck": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.",
+    "nap": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.",
+}
+
+SITUATIONS_REV = {
+    "zero_of_fucks": "Performing indifference, pretending to be over it while checking on them nightly.",
+    "burned_bridge": "Regretting how you ended it, wanting to apologise, wondering whether to reach out again.",
+    "two_of_deez": "Fishing for compliments, posting for reassurance, asking six people until one of them agrees.",
+    "lovers": "Drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love.",
+    "coffee": "Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality.",
+    "death": "Clinging to who you used to be, keeping an old identity alive well past its expiry.",
+    "moon": "Anxiety dressed up as instinct, inventing motives, spiralling at night over something unconfirmed.",
+    "strength": "Snapping at last, patience running out, forcing something that needed waiting.",
+    "perseverance": "Grinding away at something already dead, stubbornness mistaken for commitment.",
+    "tea": "Spreading it further, drama you are feeding, talking about people instead of to them.",
+    "last_straw": "Threatening to leave and staying, raising your limit again, a last straw that keeps not being last.",
+    "audacity": "Recklessness, nerve without a plan, or somebody else's gall aimed squarely at you.",
+    "breast_pump": "Resenting the people you keep giving to, martyrdom, keeping score of your own sacrifice.",
+    "bottle": "The blow up, crying at the wrong moment, drinking to keep it down, saying it all badly at once.",
+    "taco": "Treating yourself instead of dealing with it, small pleasures used as avoidance.",
+    "gold_shoulder": "The ego cracking, humiliation, being found out as less impressive than the photographs.",
+    "child": "Sulking, tantrums, acting your shoe size, waiting for somebody to parent you.",
+    "mother": "Guilt for resting, smothering the people you love, care that has curdled into control.",
+    "mom_boss": "Micromanaging, refusing help, collapsing from insisting on doing all of it yourself.",
+    "hermit": "Isolation, not answering anyone for weeks, loneliness dressed up as solitude.",
+    "gardener": "Neglect, giving up before it grew, expecting a harvest a week after planting.",
+    "cheese_fries": "Overdoing it, comfort as anaesthetic, the regret that arrives after the binge.",
+    "slice": "Still attached, unable to make the cut, going back to the thing you keep ending.",
+    "empress": "Creative block, scarcity thinking, hoarding, nothing you make ever feeling good enough.",
+    "chicken_nugget": "Only ever comfort, avoiding anything difficult, the same safe thing every single night.",
+    "sun": "Forced positivity, performing happiness you do not feel, good news that keeps not arriving.",
+    "high_priestess": "Ignoring what you already know, outsourcing the decision, a secret kept too long.",
+    "zoom_meeting": "Hiding behind the screen, camera off in every sense, avoiding contact with actual people.",
+    "influencer": "Believing your own image, envying strangers online, the gap between the profile and the life.",
+    "life_of_the_party": "The comedown, lonely in a crowded room, going home alone after being on all night.",
+    "last_hurrah": "Dragging it out, one more that is never the last, refusing to let the ending happen.",
+    "dead_end_job": "Staying for the money, comfortable and wasted, waiting to be pushed instead of jumping.",
+    "fiddle_leaf_fig": "Neglect behind the presentation, the thing quietly dying while it still looks green.",
+    "star": "Losing hope, cynicism, believing honestly that it is never going to improve.",
+    "devil": "Deeper in, choosing it again, telling yourself you could stop any time you wanted.",
+    "fair_weather_friend": "Being that friend yourself, going quiet on someone who is in trouble.",
+    "tower": "The slow collapse you can see coming, propping up what should be allowed to fall.",
+    "drama_queen": "A real crisis waved off as drama, nobody believing you on the one occasion it counts.",
+    "last_flying_fuck": "Caring loudly about not caring, spite, energy spent proving you have moved on.",
+    "nap": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down.",
+}
+
 
 def normalize(src, canvas, box_frac=0.93):
     """Crop to ink bbox, stretch to one uniform art box, center on canvas.
@@ -137,6 +229,8 @@ def main():
             "name": c['name'],
             "meaning": MEANINGS[slug],
             "reversed": REVERSED[slug],
+            "situations": SITUATIONS[slug],
+            "situations_reversed": SITUATIONS_REV[slug],
             "image": {"full": f"cards/{fn}", "web": f"cards-web/{fn}"},
         })
         print('packed', fn)

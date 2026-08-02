@@ -90,14 +90,26 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   embeds to real points (max cosine for real questions 0.149–0.389 vs 0.066–0.323
   for word salad, fully overlapping), so a nonsense question still leans. Don't
   spend another session trying to gate it on similarity.
-- `attune.js` reads optional `sit` / `sitr` fields per card (situational
-  expansions: the everyday circumstances a face speaks to) and appends them to
-  the embedded document. The hook is live; the copy is not written yet. If it
-  ever is: write all 40 or none (expanded cards get systematically quieter on
-  unrelated questions, so a partial pass hands the unexpanded cards an unearned
-  advantage), keep each to ~20 words, and measure every one — a trial expansion
-  moved The Moon from rank 12 to 1 but knocked Strength from 4 to 17 by
-  diluting a short vector that was already well placed.
+- **Situational expansions** live in `package.py` as `SITUATIONS` /
+  `SITUATIONS_REV`, flow through `deck.json` into the page as `sit` / `sitr`,
+  and are appended to the embedded documents by `attune.js`. They are
+  MATCHING-ONLY and must never be rendered or put in the guidebook. Card
+  meanings are aphorisms; the expansions are the concrete circumstances people
+  actually type. Rules, learned the hard way: all 40 or none (a partial pass
+  makes expanded cards quieter on unrelated questions and hands the rest an
+  unearned edge), roughly 14 words each and never more than ~20 (a long draft
+  knocked Strength from rank 4 to 17 by dragging a well-placed short vector off
+  target), and re-run the dilution check after editing any of them — every card
+  must still rank first when queried with its own meaning.
+- Editing an expansion changes the corpus hash, so every cached vector on every
+  device silently rebuilds on next load. That is intended; no version bump.
+- Three knobs are tunable at runtime without a rebuild, on
+  `ARCANAI_ATTUNE.config`: `temp` (driven by the Back Room lean), `seatRatio`
+  (seat temperature as a fraction of selection temperature, 0.34), and
+  `faceMargin` (dead zone on the orientation call; 0 ships the hard rule,
+  ~0.04 hands about a third of cards back to the seeded coin). The Back Room
+  also exposes Faces and Seats chips so a seeker can take either decision away
+  from the deck; both persist in localStorage and default on.
 - Only the lightbox image (`data-big`) gets a `srcset` onto the 800×1280 set;
   spreads and gallery thumbs stay on the 500×800 web set — full-res everywhere
   would cost a phone megabytes per deal. `applyFoil()` rewrites `src` **and**
