@@ -37,6 +37,13 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   smoothed TILT drives a subtle 3D card tilt via the `--tiltY` CSS var on the
   `.t3d` wrappers (±5.6° max, skipped under reduced motion).
 - Card XI is *The Audacity* — the deck was renamed, the card was not.
+- Deals are seeded (entropy pool + question text + clock → mulberry32), not
+  `Math.random` — keep new randomness sources flowing through `stir()`/`makeRng`.
+  Card of the Day must stay date-deterministic.
+- The idle pile listens to pointer events (tap deals, rub shuffles) — a
+  synthetic `el.click()` no longer draws; dispatch pointerdown/up in tests.
+- Spread position labels live on the pick objects (`pick.label`), not in
+  `LABELS` lookups at render time — clarifiers and jumpers rely on this.
 - `audacity_*.png` and `samples/` were scrubbed from git history on request —
   they are gitignored; never re-add them.
 
