@@ -124,12 +124,29 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   turned over, which on a phone means `tapTop` in stack mode and on desktop a
   second click on the slot. Card
   meanings are aphorisms; the expansions are the concrete circumstances people
-  actually type. Rules, learned the hard way: all 40 or none (a partial pass
+  actually type. Rules, learned the hard way: all 46 or none (a partial pass
   makes expanded cards quieter on unrelated questions and hands the rest an
-  unearned edge), roughly 14 words each and never more than ~20 (a long draft
+  unearned edge — the number is "every card in the deck", not literally 46),
+  roughly 14 words each and never more than ~20 (a long draft
   knocked Strength from rank 4 to 17 by dragging a well-placed short vector off
   target), and re-run the dilution check after editing any of them — every card
   must still rank first when queried with its own meaning.
+- **The dilution check is a script now**, not a ritual: `cards/deck_dump.py`
+  (AST-reads the four dicts out of `package.py`, so it never imports PIL) piped
+  into `cards/dilution_check.mjs` (node + `@huggingface/transformers@3.3.3`,
+  same model and dtype as the page, `upText`/`revText` copied byte-for-byte from
+  `attune.js`). Give it a baseline to diff ranks against:
+  `python3 deck_dump.py > /tmp/new.json && git show HEAD:cards/package.py >
+  /tmp/base.py && python3 deck_dump.py /tmp/base.py > /tmp/base.json && EMB1=1
+  node dilution_check.mjs /tmp/new.json /tmp/base.json`. It also prints nearest
+  neighbours, new-vs-new collisions, and `QFILE=` real questions.
+- **Always pass `EMB1=1` before believing a rank change.** The page embeds the
+  whole corpus in one call and q8 pads every sequence to the longest in the
+  batch, so *adding* a long card perturbs unrelated vectors by 0.003–0.008 —
+  enough to swap two cards sitting 0.005 apart and look exactly like dilution.
+  Adding the six new cards "moved" Perseverance from rank 1 to 2 this way; at
+  batch-of-one the rank diff was exactly zero. Any change under ~0.01 is noise
+  until re-checked one text per forward pass. Do not rewrite copy over it.
 - Editing an expansion changes the corpus hash, so every cached vector on every
   device silently rebuilds on next load. That is intended; no version bump.
 - `corpusSig` in `attune.js` joins its inputs on **literal NUL bytes** — four
