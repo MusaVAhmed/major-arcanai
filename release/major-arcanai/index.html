@@ -32,7 +32,7 @@
                     letter-spacing:.3em; padding-left:.3em; text-transform:uppercase; margin-top:.5rem; user-select:none; }
   body.foil .mast .moonline { color:#8a6d2f; }
   /* ask the deck: the question (and your typing) seeds the shuffle */
-  .ask { max-width:24rem; margin:0 auto 1.4rem; }
+  .ask { max-width:24rem; margin:0 auto 1.4rem; position:relative; }
   .ask input {
     width:100%; background:none; border:0; border-bottom:1px solid var(--line);
     color:var(--bone); font-family:Georgia, serif; font-style:italic; font-size:16px;
@@ -41,6 +41,37 @@
   .ask input::placeholder { color:var(--dim); opacity:.8; }
   .ask input:focus { border-bottom-color:var(--dim); }
   body.spreadon .ask { display:none; }
+  /* ask out loud. voice.js injects #mic only where recording is possible and
+     sets body.canvoice, so nothing here exists on a browser that cannot. The
+     symmetric padding keeps the placeholder optically centred beside it. */
+  body.canvoice .ask input { padding-left:2.5rem; padding-right:2.5rem; }
+  /* 48px stays the touch target; the hairline ring on ::before is the visible
+     control, sized to clear the field's own underline. Bordering it this way
+     rather than the button itself is what lets the two disagree. */
+  #mic { position:absolute; right:0; top:50%; transform:translateY(-50%);
+         display:flex; align-items:center; justify-content:center;
+         border:0; padding:0; width:34px; min-height:48px; line-height:1;
+         color:var(--bone); opacity:.9; transition:color .2s, opacity .2s; }
+  #mic::before { content:''; position:absolute; left:50%; top:50%; width:30px; height:30px;
+                 transform:translate(-50%, -50%); border-radius:50%;
+                 border:1px solid var(--line); transition:border-color .2s, background .2s; }
+  #mic svg { display:block; width:17px; height:17px; position:relative; }
+  #mic:hover, #mic:focus-visible { border:0; opacity:1; }
+  #mic:hover::before, #mic:focus-visible::before { border-color:var(--bone); }
+  #mic.v-warm, #mic.v-think { color:#c9a44a; opacity:.75; }
+  #mic.v-live { color:#c9a44a; opacity:1; animation:micpulse 1.7s ease-in-out infinite; }
+  #mic.v-live::before, #mic.v-warm::before { border-color:#c9a44a; }
+  body.foil #mic.v-live::before, body.foil #mic.v-warm::before { border-color:var(--gold2); }
+  body.foil #mic.v-live, body.foil #mic.v-think, body.foil #mic.v-warm { color:var(--gold2); }
+  /* opacity only: a compositor-cheap breath, and the one thing safe to animate
+     next to the card layers on Android */
+  @keyframes micpulse { 0%, 100% { opacity:1; } 50% { opacity:.3; } }
+  /* absolute so a status line never shoves the table down mid-question */
+  #vsay { display:none; position:absolute; left:0; right:0; top:100%; margin-top:.35rem;
+          color:var(--dim); font-style:italic; font-size:.72rem; }
+  #vsay.show { display:block; }
+  body.novoice #mic, body.novoice #vsay { display:none; }
+  body.novoice .ask input { padding-left:.2rem; padding-right:.2rem; }
   #asked { display:none; color:var(--dim); font-style:italic; margin:-.4rem 0 1.2rem; }
   body.spreadon #asked.has { display:block; }
   #verdict { display:none; max-width:min(100%, 54ch); margin:1.8rem auto 0; font-style:italic;
@@ -194,6 +225,11 @@
             text-transform:uppercase; text-align:center; margin-bottom:1.1rem; }
   .spanel button { display:block; width:100%; margin-bottom:.7rem; position:relative; z-index:1; }
   .srow { display:block; margin-top:.6rem; cursor:pointer; position:relative; z-index:1; }
+  /* .srow, not .leanrow: speaking a question has nothing to do with attunement
+     and must survive it being switched off. Hidden until voice.js says the
+     browser can actually record, so the toggle is never a dead switch. */
+  .voicerow { display:none; }
+  body.canvoice .voicerow { display:block; }
   .srow .shead, .leanrow .shead { display:flex; justify-content:space-between; align-items:center; gap:.8rem;
                  font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em;
                  text-transform:uppercase; }
@@ -263,6 +299,11 @@
     .mast { max-width:min(36vw, 12rem); margin-bottom:.7rem; }
     .modes { margin-bottom:.9rem; }
     .ask { margin-bottom:.9rem; }
+    /* .ask gives up .5rem of its margin here, which is exactly the room the
+       status line was borrowing: measured at 800x480 it lands 4px inside the
+       top of #table. Shrink the line rather than the margin — height is the
+       scarce axis in here and the deck should not lose any of it. */
+    #vsay { margin-top:.15rem; font-size:.66rem; }
     .hint { margin-top:.9rem; }
     #table { min-height:0; }
     .stackwrap { max-width:min(76vw, 330px, calc(68dvh * 0.625)); }
@@ -273,6 +314,8 @@
     .card, .scard, .caption { transition:none; }
     .deck { animation:none; }
     .card.deal, #table.celtic .card.cdeal { animation:none; }
+    /* the dot still turns gold while it listens; it just stops breathing */
+    #mic.v-live { animation:none; }
   }
 </style>
 </head>
@@ -317,6 +360,12 @@
         <span class="sdesc">Which cards is always the deck's. Faces lets it turn a card upright or
           reversed to suit. Seats lets it decide which card belongs in which position.</span>
       </div>
+      <label class="srow voicerow">
+        <span class="shead">Ask out loud <input type="checkbox" id="voice"></span>
+        <span class="sdesc">Say the question instead of typing it. The first time you use it the
+          deck downloads its ears, about 40 MB, once. Nothing you say leaves the page &mdash;
+          there is nowhere for it to go.</span>
+      </label>
       <label class="srow">
         <span class="shead">Tells <input type="checkbox" id="tells"></span>
         <span class="sdesc">The deck notices how you wrote the question and answers without
@@ -461,7 +510,7 @@ const QT = {};
 function qtReset() {
   Object.assign(QT, {
     t0: 0, last: 0, prev: 0, peak: 0, churn: 0, troughs: 0, restarts: 0,
-    stall: 0, edits: 0, raw: 0, paste: false, ime: false,
+    stall: 0, edits: 0, raw: 0, paste: false, ime: false, spoke: false,
     dipAt: 0, dipTop: 0, dipFloor: 0,
     gN: 0, gSum: 0, gMax: 0, gLast: null,
     rubMs: 0, rubDist: 0,
@@ -511,6 +560,13 @@ qInput.addEventListener('beforeinput', e => {
   if (e.inputType === 'insertFromPaste') QT.paste = true;
 });
 qInput.addEventListener('compositionstart', () => { QT.ime = true; });
+/* A spoken question has no writing to read. The transcript lands in a single
+   event, which to the sampler is indistinguishable from the most decisive
+   question ever typed — it would fire `resolute` on every voice draw. Reset
+   and flag instead. The echo tell survives, correctly: it is about the
+   question and not about the hand, and the deck can absolutely recognise
+   something you have asked it before out loud. */
+qInput.addEventListener('arcanai:spoken', () => { qtReset(); QT.spoke = true; });
 
 /* the reading, taken at the instant of the deal so dwell is honest */
 function qtRead(q) {
@@ -524,7 +580,7 @@ function qtRead(q) {
     dwell: QT.t0 ? Math.round(now - QT.last) : 0,    // last keystroke to the tap
     stall: Math.round(QT.stall),                     // longest silence mid-question
     cps: wrote > 250 ? +(len / (wrote / 1000)).toFixed(2) : null,
-    paste: QT.paste, ime: QT.ime,
+    paste: QT.paste, ime: QT.ime, spoke: QT.spoke,
     // the hands, which have no input method to lie about
     restless: QT.gN ? +(QT.gSum / QT.gN).toFixed(2) : null,
     gmax: QT.gN ? +QT.gMax.toFixed(1) : null,
@@ -571,6 +627,8 @@ function deliverTell(name) {
 
 function tellFor(r, echo) {
   if (echo >= TELL_CFG.echoSim) return 'echo';
+  // said, not written: every signature below reads a hand that was never here
+  if (r.spoke) return null;
   if (r.restarts) return 'restart';
   if (r.troughs >= 2 || (r.len >= TELL_CFG.minLen && r.churn >= r.len * 0.5)) return 'circled';
   if (r.len >= TELL_CFG.minLen && r.dwell >= TELL_CFG.heldMs) return 'held';
@@ -609,7 +667,17 @@ async function fireTell(r, q) {
   let echo = 0;
   if (q && window.ARCANAI_ATTUNE) {
     const v = await ARCANAI_ATTUNE.vecFor(q, 250);
-    if (v) { echo = echoScore(v); rememberQ(v); }
+    if (v) {
+      echo = echoScore(v);
+      /* What the question was about, logged but not yet acted on. Free: the
+         anchors are already in memory and this vector is already in hand, so
+         it costs six dot products. Nothing reads r.dom except the log, which
+         is deliberate — the thresholds want a week of real questions before
+         anything in the reading is allowed to depend on them. */
+      const d = ARCANAI_ATTUNE.domainOf ? ARCANAI_ATTUNE.domainOf(v) : null;
+      if (d) { r.dom = d.k; r.lead = d.lead; r.domGap = d.gap; }
+      rememberQ(v);
+    }
   }
   r.echo = echo;
   r.tell = tellFor(r, echo);
@@ -746,6 +814,23 @@ for (const k in CHOOSE) {
   paint();
 }
 
+/* Ask out loud. The row is hidden until voice.js confirms the browser can
+   record, so this never presents a dead switch; the class it toggles is what
+   actually hides the dot. On by default — the 40 MB is only spent by someone
+   who taps it, and the Back Room says so before they do. */
+const voiceBox = document.getElementById('voice');
+let voiceOn = localStorage.getItem('arcanai-voice') !== '0';
+function applyVoice() {
+  voiceBox.checked = voiceOn;
+  document.body.classList.toggle('novoice', !voiceOn);
+}
+voiceBox.addEventListener('change', () => {
+  voiceOn = voiceBox.checked;
+  localStorage.setItem('arcanai-voice', voiceOn ? '1' : '0');
+  applyVoice(); buzz(6);
+});
+applyVoice();
+
 /* Tells: the deck's only reply to how the question was written. On by
    default, because it costs nothing on the draws where nothing is certain. */
 const tellsBox = document.getElementById('tells');
@@ -792,14 +877,15 @@ if (new URLSearchParams(location.search).has('tells') ||
   out.style.cssText = 'max-height:38vh;overflow:auto;text-align:left;margin:.5rem 0;' +
     'font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;opacity:.85';
   const KEYS = ['len', 'peak', 'churn', 'raw', 'troughs', 'restarts', 'edits',
-                'wrote', 'dwell', 'stall', 'cps', 'echo', 'restless', 'rubMs'];
+                'wrote', 'dwell', 'stall', 'cps', 'echo', 'dom', 'lead', 'domGap',
+                'restless', 'rubMs'];
   window.paintTellout = () => {
     const h = tellog();
     if (!h.length) { out.textContent = 'no readings yet. ask the deck something.'; return; }
     const rows = h.slice(-16).reverse().map(r =>
       (r.tell || '.').padEnd(9) +
       KEYS.map(k => k + '=' + (r[k] === null || r[k] === undefined ? '-' : r[k])).join(' ') +
-      (r.ime ? ' IME' : '') + (r.paste ? ' PASTE' : ''));
+      (r.ime ? ' IME' : '') + (r.paste ? ' PASTE' : '') + (r.spoke ? ' SPOKE' : ''));
     out.textContent = h.length + ' readings, newest first\n\n' + rows.join('\n');
   };
   paintTellout();
@@ -1580,5 +1666,6 @@ again.addEventListener('click', () => { if (nav.spread) history.back(); else idl
 if (!restoreSpread()) idle();
 </script>
 <script src="attune.js"></script>
+<script src="voice.js"></script>
 </body>
 </html>

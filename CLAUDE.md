@@ -18,8 +18,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
    black stock, crisp lines, no glow, no luster bands — the draw page's
    dynamic sheen is deliberately the only lighting → `cards-foil{,-web}/`.
 4. `python3 build_draw_page.py` — regenerates `index.html`, appends foil paths
-   to `deck.json`, and copies `cards/attune.js` (the semantic shuffle) into the
-   release. `cards/attune.js` is the source of truth; never edit the copy.
+   to `deck.json`, and copies `cards/attune.js` (the semantic shuffle) and
+   `cards/voice.js` (the ears) into the release. Both files in `cards/` are the
+   source of truth; never edit the copies under `release/`.
 5. `python3 masthead.py` — draw-page masthead images (classic + foil) built
    from the card back's ornament + Cinzel lettering → `release/.../assets/`.
    Rerun only if `back.png` or the title design changes.
@@ -103,6 +104,31 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   must still rank first when queried with its own meaning.
 - Editing an expansion changes the corpus hash, so every cached vector on every
   device silently rebuilds on next load. That is intended; no version bump.
+- `corpusSig` in `attune.js` joins its inputs on **literal NUL bytes** (six of
+  them, committed). Harmless as a hash delimiter and valid in a JS string, but
+  it makes `grep` call the file binary and makes exact-match edits on that line
+  bounce. Any tool that strips NULs silently changes the hash and rebuilds every
+  cached vector on every device — which is only ever a cost, never a bug.
+- **Anchors** (`ANCHORS` in `attune.js`): six prose descriptions of what a
+  question is *about*, embedded as their own corpus and cosined against the
+  question. `domainOf(v)` is synchronous and free — the vector is already in
+  hand and the anchors are already in memory, so it costs six dot products.
+  Rules, all measured on 27 questions:
+  - They are a **separate corpus**, never folded into `upText`/`revText`, so
+    the situational-expansion dilution rule does not apply and editing one
+    cannot move a card in the rankings.
+  - Every anchor must name a **subject, not a disposition**. The first draft
+    had `nerve` ("whether to do the frightening thing") and it robbed all five
+    others, because wanting to confess is a love question asked by a
+    frightened person. Swapping it for `change` took the set from 59% to 89%.
+  - Anchors want **breadth**, the opposite of the expansions: a deliberately
+    terse variant scored 67% against the shipped set's 89%.
+  - `domMin` (0.06) is the daylight the leader needs over the runner-up before
+    the deck claims to know. Gated, it lands 17/18. The 27 cases were written
+    in-repo, not typed by a seeker, so it is a sanity check and not a
+    calibration — tune it from the Readings log like `TELL_CFG`.
+  - Nothing in the reading depends on `dom` yet, deliberately. It is logged
+    (`dom`, `lead`, `domGap`) and otherwise inert.
 - Three knobs are tunable at runtime without a rebuild, on
   `ARCANAI_ATTUNE.config`: `temp` (driven by the Back Room lean), `seatRatio`
   (seat temperature as a fraction of selection temperature, 0.34), and
@@ -157,6 +183,51 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   drops its "shake it and one may jump" line there, because a seeker who asked
   for ten cards did not ask for one. `SHAKE_MAG` and `FLICK_RATE` still want
   tuning against a real wrist.
+- **Ask out loud** (`voice.js`, `Xenova/whisper-tiny.en` q8, ~40 MB, lazy):
+  nothing downloads until the dot beside `#q` is tapped, and the model fetch
+  starts *while* the seeker is still speaking — the only free time the feature
+  gets. Audio is decoded to 16 kHz mono, the mic track is stopped before
+  transcription begins, and the clip is discarded; nothing leaves the page.
+  `voice.js` injects its own button, so a browser that cannot record never
+  grows one, and sets `body.canvoice` so the Back Room row (`.srow voicerow`,
+  never `.leanrow` — speaking has nothing to do with attunement) is not a dead
+  switch. The toggle sets `body.novoice`, which is what actually hides the dot.
+- The mic button keeps a 48px touch target but wears its border on `::before`
+  as a 30px hairline ring, so the tap area and the visible control can
+  disagree — a 48px bordered circle beside a 35px field looks absurd. Its
+  width and `body.canvoice .ask input`'s **symmetric** padding are coupled: the
+  padding must exceed the button width or the question runs under the icon,
+  and it stays symmetric so the placeholder keeps its optical centre. Measured
+  at 360/412/800/1280, 6px clearance. `#vsay` is absolutely positioned so a
+  status line never shifts the table, and is shrunk inside the landscape-short
+  block where `.ask` gives up the margin it was borrowing.
+- **Auto-stop** (`VAD` in `voice.js`, exposed at `ARCANAI_VOICE.config` so it
+  can be tuned from a console on the phone, like `ARCANAI_ATTUNE.config`): an
+  `AnalyserNode` on the live stream, no extra model. Every level is measured
+  against the room — the first `calibMs` is sampled as the noise floor — because
+  a quiet bedroom and a kitchen with a fridge are orders of magnitude apart and
+  a fixed threshold either never fires in one or fires constantly in the other.
+  `startMul` (2.2) sits above `stopMul` (1.5) deliberately: with a single
+  threshold the level flaps across it on every syllable boundary and the
+  silence timer resets forever. Measured on a synthetic stream: `silenceMs`
+  1400 → stops 1383 ms after true silence, 700 → 762 ms, both inside one 50 ms
+  tick. `noSpeechMs` gives the tap back after 6 s rather than waiting out the
+  20 s cap. Still guesses against a real room.
+- **Whisper does not return nothing when given nothing.** Six seconds of a
+  silent stream transcribed to "you" — it fills quiet with the pleasantries
+  that fill quiet in its training data, and that sailed past the empty-string
+  guard and into `#q`. The real defence is the VAD flag: `heard` is tri-state,
+  and only `false` (the watcher ran and heard nobody) refuses to transcribe.
+  `null` must keep transcribing or the feature dies on any engine where the
+  analyser cannot build. `NOISE` is the second line, for audio that cleared the
+  level gate on a door slam and still had no words in it.
+- A transcript lands in one `input` event, so **a spoken question must not be
+  read as typing** — to the sampler it is the most decisive question ever
+  written and would fire `resolute` on every voice draw. `voice.js` dispatches
+  `arcanai:spoken` after the `input` event; the page resets `QT` and sets
+  `QT.spoke`, and `tellFor` returns null for every typing signature. The echo
+  tell still fires, correctly: it is about the question, not the hand, and the
+  deck can absolutely recognise something you have asked it before out loud.
 - The echo tell reuses `ARCANAI_ATTUNE.vecFor()`, which deliberately refuses to
   boot the model on its own, so a page with attunement off never pays 23 MB for
   a side feature. No echo without a reading, which is correct: the deck was not
