@@ -1,5 +1,5 @@
 {
-  "style_prompt": "Generate a black and white tarot card illustration, bold clean vector line art in a humorous gothic style: {SCENE}. Ornate decorative frame with a double-rule border and corner rose motifs, scattered stars and sparkles in the background, high contrast pure black ink on plain white background, no grayscale, no shading, no gradients, thick sticker-style outlines, whimsical sarcastic mood, centered composition, tall portrait orientation. Important: absolutely no text, no lettering, no numbers, no words anywhere in the image.",
+  "style_prompt": "Generate a black and white tarot card illustration, bold clean vector line art in a humorous gothic style: {SCENE}. Ornate decorative frame with a double-rule border and corner rose motifs, scattered stars and sparkles in the background, high contrast pure black ink on plain white background, no grayscale, no shading, no gradients, thick sticker-style outlines, whimsical sarcastic mood, centered composition, tall portrait orientation, no crescent moons anywhere in the image or its border. Important: absolutely no text, no lettering, no numbers, no words, no labels, and no squiggles, ruled lines or marks that imitate writing anywhere in the image.",
   "cards": [
     {
       "num": "0",
@@ -279,6 +279,48 @@
       "slug": "nap",
       "name": "The Nap",
       "scene": "skeleton tucked snugly into a bed, sleep mask pushed up on its skull, a small blank sign hanging on the bedpost",
+      "status": "generated"
+    },
+    {
+      "num": "XL",
+      "slug": "algorithm",
+      "name": "The Algorithm",
+      "scene": "skeleton with its wrists bound to the rim of one enormous spinning wheel built from blank rectangular phone screens, its body spread across the spokes, thumbs-up and thumbs-down symbols alternating around the rim, motion arcs showing the spin",
+      "status": "generated"
+    },
+    {
+      "num": "XLI",
+      "slug": "receipts",
+      "name": "The Receipts",
+      "scene": "skeleton holding up one end of an enormous blank receipt that unfurls down past its feet and coils into a heap on the floor, one bony finger raised as if making a point",
+      "status": "generated"
+    },
+    {
+      "num": "XLII",
+      "slug": "landlord",
+      "name": "The Landlord",
+      "scene": "skeleton in a too-small suit filling a doorway, one palm held out expectantly, the other dangling a heavy ring of oversized keys",
+      "status": "generated"
+    },
+    {
+      "num": "XLIII",
+      "slug": "waiting_room",
+      "name": "The Waiting Room",
+      "scene": "skeleton slumped sideways in a moulded plastic chair under a flickering strip light, holding a small blank paper ticket, an empty row of identical chairs beside it",
+      "status": "generated"
+    },
+    {
+      "num": "XLIV",
+      "slug": "slow_cooker",
+      "name": "The Slow Cooker",
+      "scene": "skeleton leaning both elbows on a kitchen counter watching a lidded slow cooker, steam curling from under the lid, a single round dial on the pot's front",
+      "status": "generated"
+    },
+    {
+      "num": "XLV",
+      "slug": "apology",
+      "name": "The Apology",
+      "scene": "skeleton down on one knee with its skull lowered, holding out a single wilting flower in both hands",
       "status": "generated"
     }
   ]

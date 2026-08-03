@@ -48,6 +48,12 @@ MEANINGS = {
     "drama_queen": "Not everything is a crisis. Check the story you're telling yourself.",
     "last_flying_fuck": "Watch it go. Some things no longer deserve your energy.",
     "nap": "Rest is productive. Lie down.",
+    "algorithm": "Some wheels turn without you. Play your hand and let the rest spin.",
+    "receipts": "The record speaks for itself. What was done gets weighed.",
+    "landlord": "There are terms, and they apply to you too.",
+    "waiting_room": "Nothing moves yet. That isn't failure — it's the pause before.",
+    "slow_cooker": "Low heat, long time. It cannot be hurried into being.",
+    "apology": "Say it plainly, without conditions. Repair starts there.",
 }
 
 
@@ -93,6 +99,12 @@ REVERSED = {
     "last_flying_fuck": "You let it go too fast. Some things deserved your care.",
     "nap": "Rest became hiding. Get up, hydrate, face one thing.",
     "tower": "Postponing the collapse. Controlled demolition beats waiting for lightning.",
+    "algorithm": "Taking the weather personally. The wheel was never aimed at you.",
+    "receipts": "Keeping score for a war you claim not to be fighting. Screenshots aren't intimacy.",
+    "landlord": "Control dressed up as order. You're the one who won't bend.",
+    "waiting_room": "You could have left the queue an hour ago. Stalling isn't waiting.",
+    "slow_cooker": "You cranked the heat to finish sooner. It's raw in the middle.",
+    "apology": "“Sorry you feel that way.” That's not an apology, that's an exit.",
 }
 
 # Situational expansions. NEVER shown to a seeker: these exist only so the
@@ -142,6 +154,12 @@ SITUATIONS = {
     "drama_queen": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.",
     "last_flying_fuck": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.",
     "nap": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.",
+    "algorithm": "Luck turning, being passed over, a system deciding without you, timing you do not control.",
+    "receipts": "Being proved right, a formal complaint, evidence, a fair outcome, consequences finally landing on someone.",
+    "landlord": "Rent, a boss or parent setting the terms, rules you did not write, an authority you answer to.",
+    "waiting_room": "Waiting on results, a visa, a court date, an offer, weeks where nothing can be done.",
+    "slow_cooker": "Physiotherapy, saving slowly, a long treatment, learning something properly, pacing yourself through months of it.",
+    "apology": "Owing an apology, being owed one, making amends, whether to forgive someone.",
 }
 
 SITUATIONS_REV = {
@@ -185,6 +203,12 @@ SITUATIONS_REV = {
     "drama_queen": "A real crisis waved off as drama, nobody believing you on the one occasion it counts.",
     "last_flying_fuck": "Caring loudly about not caring, spite, energy spent proving you have moved on.",
     "nap": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down.",
+    "algorithm": "Blaming yourself for bad luck, refreshing for a verdict, superstition, reading meaning into randomness.",
+    "receipts": "Keeping score, screenshotting arguments, litigating a friendship, needing to be proved right more than reconciled.",
+    "landlord": "Petty rules for their own sake, an authority abusing it, refusing to compromise on anything at all.",
+    "waiting_room": "Procrastinating and calling it patience, martyring yourself, waiting for permission that will never come.",
+    "slow_cooker": "Rushing it, quitting the course early, expecting results in a week, forcing what needs time.",
+    "apology": "A non apology, being pressured to forgive too fast, apologising to end the conversation.",
 }
 
 
@@ -210,8 +234,8 @@ def main():
     manifest = json.load(open(os.path.join(CARDS, 'manifest.json')))
     deck = {
         "name": "The Major ArcanAI",
-        "version": "1.3",
-        "description": "A 40-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Twelve classic major arcana anchor a deck of cards life actually deals you.",
+        "version": "1.4",
+        "description": "A 46-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Eleven classic major arcana anchor a deck of cards life actually deals you.",
         "card_size_px": {"full": FULL, "web": WEB},
         "back": {"full": "cards/back.png", "web": "cards-web/back.png"},
         "cards": [],
@@ -242,7 +266,7 @@ def main():
         json.dump(deck, f, indent=2)
 
     gb = ["# The Major ArcanAI\n",
-          "*A 40-card oracle deck of sarcastic skeletons — the cards life actually deals you.*\n",
+          "*A 46-card oracle deck of sarcastic skeletons — the cards life actually deals you.*\n",
           "## How to read\n",
           "Shuffle. Draw one card for a daily nudge, three for past / present / future,",
           "or five when things have truly gone sideways. The deck does not predict the",

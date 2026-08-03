@@ -1,6 +1,6 @@
 # The Major ArcanAI
 
-*A 40-card oracle deck of sarcastic skeletons — the cards life actually deals you.*
+*A 46-card oracle deck of sarcastic skeletons — the cards life actually deals you.*
 
 ## How to read
 
@@ -169,6 +169,30 @@ Watch it go. Some things no longer deserve your energy.
 **XXXIX — The Nap**  
 Rest is productive. Lie down.  
 *Reversed:* Rest became hiding. Get up, hydrate, face one thing.
+
+**XL — The Algorithm**  
+Some wheels turn without you. Play your hand and let the rest spin.  
+*Reversed:* Taking the weather personally. The wheel was never aimed at you.
+
+**XLI — The Receipts**  
+The record speaks for itself. What was done gets weighed.  
+*Reversed:* Keeping score for a war you claim not to be fighting. Screenshots aren't intimacy.
+
+**XLII — The Landlord**  
+There are terms, and they apply to you too.  
+*Reversed:* Control dressed up as order. You're the one who won't bend.
+
+**XLIII — The Waiting Room**  
+Nothing moves yet. That isn't failure — it's the pause before.  
+*Reversed:* You could have left the queue an hour ago. Stalling isn't waiting.
+
+**XLIV — The Slow Cooker**  
+Low heat, long time. It cannot be hurried into being.  
+*Reversed:* You cranked the heat to finish sooner. It's raw in the middle.
+
+**XLV — The Apology**  
+Say it plainly, without conditions. Repair starts there.  
+*Reversed:* “Sorry you feel that way.” That's not an apology, that's an exit.
 
 
 ---

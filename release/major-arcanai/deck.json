@@ -1,7 +1,7 @@
 {
   "name": "The Major ArcanAI",
-  "version": "1.3",
-  "description": "A 40-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Twelve classic major arcana anchor a deck of cards life actually deals you.",
+  "version": "1.4",
+  "description": "A 46-card humorous oracle deck of sarcastic skeletons in ornate black-and-white line art. Eleven classic major arcana anchor a deck of cards life actually deals you.",
   "card_size_px": {
     "full": [
       800,
@@ -25,14 +25,14 @@
       "name": "The Zero of Fucks",
       "meaning": "Let go of expectations and pressure. Step into freedom and a fresh start.",
       "reversed": "You claim you don't care. You absolutely do. Admit it.",
+      "situations": "Walking away without drama, starting over somewhere new, no longer auditioning for anyone's approval.",
+      "situations_reversed": "Performing indifference, pretending to be over it while checking on them nightly.",
       "image": {
         "full": "cards/00_zero_of_fucks.png",
         "web": "cards-web/00_zero_of_fucks.png",
         "foil_full": "cards-foil/00_zero_of_fucks.png",
         "foil_web": "cards-foil-web/00_zero_of_fucks.png"
-      },
-      "situations": "Walking away without drama, starting over somewhere new, no longer auditioning for anyone's approval.",
-      "situations_reversed": "Performing indifference, pretending to be over it while checking on them nightly."
+      }
     },
     {
       "index": 1,
@@ -40,14 +40,14 @@
       "name": "The Burned Bridge",
       "meaning": "Not everything is meant to be saved. Some endings are necessary.",
       "reversed": "You lit this one too soon. Some bridges deserve an apology and a rebuild.",
+      "situations": "Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.",
+      "situations_reversed": "Regretting how you ended it, wanting to apologise, wondering whether to reach out again.",
       "image": {
         "full": "cards/01_burned_bridge.png",
         "web": "cards-web/01_burned_bridge.png",
         "foil_full": "cards-foil/01_burned_bridge.png",
         "foil_web": "cards-foil-web/01_burned_bridge.png"
-      },
-      "situations": "Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.",
-      "situations_reversed": "Regretting how you ended it, wanting to apologise, wondering whether to reach out again."
+      }
     },
     {
       "index": 2,
@@ -55,14 +55,14 @@
       "name": "The Two of Deez",
       "meaning": "Stand confidently on your own. You don't need validation.",
       "reversed": "Fishing for validation again. Deez are not for external approval.",
+      "situations": "Making a decision nobody approves of, backing yourself, ignoring the group chat's opinion of your life.",
+      "situations_reversed": "Fishing for compliments, posting for reassurance, asking six people until one of them agrees.",
       "image": {
         "full": "cards/02_two_of_deez.png",
         "web": "cards-web/02_two_of_deez.png",
         "foil_full": "cards-foil/02_two_of_deez.png",
         "foil_web": "cards-foil-web/02_two_of_deez.png"
-      },
-      "situations": "Making a decision nobody approves of, backing yourself, ignoring the group chat's opinion of your life.",
-      "situations_reversed": "Fishing for compliments, posting for reassurance, asking six people until one of them agrees."
+      }
     },
     {
       "index": 3,
@@ -70,14 +70,14 @@
       "name": "The Lovers",
       "meaning": "Deep connection \u2014 romantic, platonic, or with yourself.",
       "reversed": "Disconnection. You're kissing distance from someone you stopped seeing.",
+      "situations": "Dating someone seriously, choosing a partner, whether to commit, a friendship that genuinely matters.",
+      "situations_reversed": "Drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love.",
       "image": {
         "full": "cards/03_lovers.png",
         "web": "cards-web/03_lovers.png",
         "foil_full": "cards-foil/03_lovers.png",
         "foil_web": "cards-foil-web/03_lovers.png"
-      },
-      "situations": "Dating someone seriously, choosing a partner, whether to commit, a friendship that genuinely matters.",
-      "situations_reversed": "Drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love."
+      }
     },
     {
       "index": 4,
@@ -85,14 +85,14 @@
       "name": "The Iced Coffee",
       "meaning": "Wake up. Face reality. Do what needs to be done.",
       "reversed": "Decaf energy. You're running on fumes and calling it fine.",
+      "situations": "Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.",
+      "situations_reversed": "Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality.",
       "image": {
         "full": "cards/04_coffee.png",
         "web": "cards-web/04_coffee.png",
         "foil_full": "cards-foil/04_coffee.png",
         "foil_web": "cards-foil-web/04_coffee.png"
-      },
-      "situations": "Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.",
-      "situations_reversed": "Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality."
+      }
     },
     {
       "index": 5,
@@ -100,14 +100,14 @@
       "name": "Death",
       "meaning": "Transformation through endings. Let the old version of you go.",
       "reversed": "Clinging to the old you. Rigor mortis is not a personality.",
+      "situations": "A chapter closing, leaving a city or a marriage or a career, becoming someone your old friends would not recognise.",
+      "situations_reversed": "Clinging to who you used to be, keeping an old identity alive well past its expiry.",
       "image": {
         "full": "cards/05_death.png",
         "web": "cards-web/05_death.png",
         "foil_full": "cards-foil/05_death.png",
         "foil_web": "cards-foil-web/05_death.png"
-      },
-      "situations": "A chapter closing, leaving a city or a marriage or a career, becoming someone your old friends would not recognise.",
-      "situations_reversed": "Clinging to who you used to be, keeping an old identity alive well past its expiry."
+      }
     },
     {
       "index": 6,
@@ -115,14 +115,14 @@
       "name": "The Moon",
       "meaning": "Things are unclear. Trust your intuition and wait.",
       "reversed": "The fog is self-made. Stop mistaking anxiety for intuition.",
+      "situations": "Mixed signals, not knowing where you stand, waiting on news, a gut feeling you cannot prove.",
+      "situations_reversed": "Anxiety dressed up as instinct, inventing motives, spiralling at night over something unconfirmed.",
       "image": {
         "full": "cards/06_moon.png",
         "web": "cards-web/06_moon.png",
         "foil_full": "cards-foil/06_moon.png",
         "foil_web": "cards-foil-web/06_moon.png"
-      },
-      "situations": "Mixed signals, not knowing where you stand, waiting on news, a gut feeling you cannot prove.",
-      "situations_reversed": "Anxiety dressed up as instinct, inventing motives, spiralling at night over something unconfirmed."
+      }
     },
     {
       "index": 7,
@@ -130,14 +130,14 @@
       "name": "Strength",
       "meaning": "Inner calm and patience will carry you through.",
       "reversed": "Forcing it. The lion calms down when you stop wrestling.",
+      "situations": "Keeping your temper with a difficult person, enduring a long hard stretch, restraint instead of force.",
+      "situations_reversed": "Snapping at last, patience running out, forcing something that needed waiting.",
       "image": {
         "full": "cards/07_strength.png",
         "web": "cards-web/07_strength.png",
         "foil_full": "cards-foil/07_strength.png",
         "foil_web": "cards-foil-web/07_strength.png"
-      },
-      "situations": "Keeping your temper with a difficult person, enduring a long hard stretch, restraint instead of force.",
-      "situations_reversed": "Snapping at last, patience running out, forcing something that needed waiting."
+      }
     },
     {
       "index": 8,
@@ -145,14 +145,14 @@
       "name": "Perseverance",
       "meaning": "Keep going. You're closer than you think.",
       "reversed": "Stubbornness isn't progress. Maybe it's the wrong staircase.",
+      "situations": "Late in a long project, months of job hunting, studying, wanting to quit near the finish.",
+      "situations_reversed": "Grinding away at something already dead, stubbornness mistaken for commitment.",
       "image": {
         "full": "cards/08_perseverance.png",
         "web": "cards-web/08_perseverance.png",
         "foil_full": "cards-foil/08_perseverance.png",
         "foil_web": "cards-foil-web/08_perseverance.png"
-      },
-      "situations": "Late in a long project, months of job hunting, studying, wanting to quit near the finish.",
-      "situations_reversed": "Grinding away at something already dead, stubbornness mistaken for commitment."
+      }
     },
     {
       "index": 9,
@@ -160,14 +160,14 @@
       "name": "The Tea",
       "meaning": "Truth is being revealed. Stay grounded.",
       "reversed": "The gossip turned toxic. Spill less, sip more.",
+      "situations": "Gossip reaching you, finding something out, a secret surfacing, what people say once you leave the room.",
+      "situations_reversed": "Spreading it further, drama you are feeding, talking about people instead of to them.",
       "image": {
         "full": "cards/09_tea.png",
         "web": "cards-web/09_tea.png",
         "foil_full": "cards-foil/09_tea.png",
         "foil_web": "cards-foil-web/09_tea.png"
-      },
-      "situations": "Gossip reaching you, finding something out, a secret surfacing, what people say once you leave the room.",
-      "situations_reversed": "Spreading it further, drama you are feeding, talking about people instead of to them."
+      }
     },
     {
       "index": 10,
@@ -175,14 +175,14 @@
       "name": "The Last Straw",
       "meaning": "You've reached your limit. Change is inevitable.",
       "reversed": "You keep declaring the last straw, then buying more straws.",
+      "situations": "The final incident, handing in your notice, ending it after one thing too many.",
+      "situations_reversed": "Threatening to leave and staying, raising your limit again, a last straw that keeps not being last.",
       "image": {
         "full": "cards/10_last_straw.png",
         "web": "cards-web/10_last_straw.png",
         "foil_full": "cards-foil/10_last_straw.png",
         "foil_web": "cards-foil-web/10_last_straw.png"
-      },
-      "situations": "The final incident, handing in your notice, ending it after one thing too many.",
-      "situations_reversed": "Threatening to leave and staying, raising your limit again, a last straw that keeps not being last."
+      }
     },
     {
       "index": 11,
@@ -190,14 +190,14 @@
       "name": "The Audacity",
       "meaning": "Be bold. Take the risk.",
       "reversed": "Bold in the wrong direction. Audacity without follow-through is just noise.",
+      "situations": "Asking for the raise, making the first move, applying anyway, saying the bold thing out loud.",
+      "situations_reversed": "Recklessness, nerve without a plan, or somebody else's gall aimed squarely at you.",
       "image": {
         "full": "cards/11_audacity.png",
         "web": "cards-web/11_audacity.png",
         "foil_full": "cards-foil/11_audacity.png",
         "foil_web": "cards-foil-web/11_audacity.png"
-      },
-      "situations": "Asking for the raise, making the first move, applying anyway, saying the bold thing out loud.",
-      "situations_reversed": "Recklessness, nerve without a plan, or somebody else's gall aimed squarely at you."
+      }
     },
     {
       "index": 12,
@@ -205,14 +205,14 @@
       "name": "The Breast Pump",
       "meaning": "You're overgiving. Rest and refill yourself.",
       "reversed": "Running on empty and still giving. Refill the well first.",
+      "situations": "Caring for everyone else, new parenthood, being the one who always helps, running empty for others.",
+      "situations_reversed": "Resenting the people you keep giving to, martyrdom, keeping score of your own sacrifice.",
       "image": {
         "full": "cards/12_breast_pump.png",
         "web": "cards-web/12_breast_pump.png",
         "foil_full": "cards-foil/12_breast_pump.png",
         "foil_web": "cards-foil-web/12_breast_pump.png"
-      },
-      "situations": "Caring for everyone else, new parenthood, being the one who always helps, running empty for others.",
-      "situations_reversed": "Resenting the people you keep giving to, martyrdom, keeping score of your own sacrifice."
+      }
     },
     {
       "index": 13,
@@ -220,14 +220,14 @@
       "name": "The Bottle",
       "meaning": "Unexpressed emotions will surface eventually.",
       "reversed": "It already burst. Clean up honestly instead of re-corking.",
+      "situations": "Swallowing what you feel, not saying it, holding it down until it comes out sideways.",
+      "situations_reversed": "The blow up, crying at the wrong moment, drinking to keep it down, saying it all badly at once.",
       "image": {
         "full": "cards/13_bottle.png",
         "web": "cards-web/13_bottle.png",
         "foil_full": "cards-foil/13_bottle.png",
         "foil_web": "cards-foil-web/13_bottle.png"
-      },
-      "situations": "Swallowing what you feel, not saying it, holding it down until it comes out sideways.",
-      "situations_reversed": "The blow up, crying at the wrong moment, drinking to keep it down, saying it all badly at once."
+      }
     },
     {
       "index": 14,
@@ -235,14 +235,14 @@
       "name": "The Taco",
       "meaning": "Find joy in small pleasures.",
       "reversed": "Comfort became avoidance. The taco cannot fix this one.",
+      "situations": "A good meal, a small treat, cheap ordinary happiness, what to eat, plans with people you like.",
+      "situations_reversed": "Treating yourself instead of dealing with it, small pleasures used as avoidance.",
       "image": {
         "full": "cards/14_taco.png",
         "web": "cards-web/14_taco.png",
         "foil_full": "cards-foil/14_taco.png",
         "foil_web": "cards-foil-web/14_taco.png"
-      },
-      "situations": "A good meal, a small treat, cheap ordinary happiness, what to eat, plans with people you like.",
-      "situations_reversed": "Treating yourself instead of dealing with it, small pleasures used as avoidance."
+      }
     },
     {
       "index": 15,
@@ -250,14 +250,14 @@
       "name": "The Gold Shoulder",
       "meaning": "Beware of ego and image obsession.",
       "reversed": "The mirror is winning. Look outward for once.",
+      "situations": "Status, showing off, being seen with the right people, caring how it looks over how it is.",
+      "situations_reversed": "The ego cracking, humiliation, being found out as less impressive than the photographs.",
       "image": {
         "full": "cards/15_gold_shoulder.png",
         "web": "cards-web/15_gold_shoulder.png",
         "foil_full": "cards-foil/15_gold_shoulder.png",
         "foil_web": "cards-foil-web/15_gold_shoulder.png"
-      },
-      "situations": "Status, showing off, being seen with the right people, caring how it looks over how it is.",
-      "situations_reversed": "The ego cracking, humiliation, being found out as less impressive than the photographs."
+      }
     },
     {
       "index": 16,
@@ -265,14 +265,14 @@
       "name": "The Child",
       "meaning": "Nurture your inner child.",
       "reversed": "Your inner child is running the meeting. Adult supervision required.",
+      "situations": "Play, doing something purely for fun, what you loved at eight, taking yourself less seriously.",
+      "situations_reversed": "Sulking, tantrums, acting your shoe size, waiting for somebody to parent you.",
       "image": {
         "full": "cards/16_child.png",
         "web": "cards-web/16_child.png",
         "foil_full": "cards-foil/16_child.png",
         "foil_web": "cards-foil-web/16_child.png"
-      },
-      "situations": "Play, doing something purely for fun, what you loved at eight, taking yourself less seriously.",
-      "situations_reversed": "Sulking, tantrums, acting your shoe size, waiting for somebody to parent you."
+      }
     },
     {
       "index": 17,
@@ -280,14 +280,14 @@
       "name": "The Mother",
       "meaning": "You also deserve care, not just others.",
       "reversed": "Martyr mode. Care that costs you everything isn't care.",
+      "situations": "Looking after family, being the reliable one, nobody thinking to ask how you are.",
+      "situations_reversed": "Guilt for resting, smothering the people you love, care that has curdled into control.",
       "image": {
         "full": "cards/17_mother.png",
         "web": "cards-web/17_mother.png",
         "foil_full": "cards-foil/17_mother.png",
         "foil_web": "cards-foil-web/17_mother.png"
-      },
-      "situations": "Looking after family, being the reliable one, nobody thinking to ask how you are.",
-      "situations_reversed": "Guilt for resting, smothering the people you love, care that has curdled into control."
+      }
     },
     {
       "index": 18,
@@ -295,14 +295,14 @@
       "name": "The Mom Boss",
       "meaning": "You're doing too much. Let go of control.",
       "reversed": "Delegation refused, burnout accepted. Put three of the six arms down.",
+      "situations": "Too many responsibilities, running everything, work and home both landing on you, delegating badly.",
+      "situations_reversed": "Micromanaging, refusing help, collapsing from insisting on doing all of it yourself.",
       "image": {
         "full": "cards/18_mom_boss.png",
         "web": "cards-web/18_mom_boss.png",
         "foil_full": "cards-foil/18_mom_boss.png",
         "foil_web": "cards-foil-web/18_mom_boss.png"
-      },
-      "situations": "Too many responsibilities, running everything, work and home both landing on you, delegating badly.",
-      "situations_reversed": "Micromanaging, refusing help, collapsing from insisting on doing all of it yourself."
+      }
     },
     {
       "index": 19,
@@ -310,14 +310,14 @@
       "name": "The Hermit",
       "meaning": "Withdraw and reflect.",
       "reversed": "Solitude curdled into hiding. Crack the door open.",
+      "situations": "Cancelling plans, needing time alone, stepping back from people, wanting quiet instead of the noise.",
+      "situations_reversed": "Isolation, not answering anyone for weeks, loneliness dressed up as solitude.",
       "image": {
         "full": "cards/19_hermit.png",
         "web": "cards-web/19_hermit.png",
         "foil_full": "cards-foil/19_hermit.png",
         "foil_web": "cards-foil-web/19_hermit.png"
-      },
-      "situations": "Cancelling plans, needing time alone, stepping back from people, wanting quiet instead of the noise.",
-      "situations_reversed": "Isolation, not answering anyone for weeks, loneliness dressed up as solitude."
+      }
     },
     {
       "index": 20,
@@ -325,14 +325,14 @@
       "name": "The Gardener",
       "meaning": "Growth takes time. Keep nurturing.",
       "reversed": "Overwatering. Some things only grow when you leave them alone.",
+      "situations": "Slow progress, a new job or skill or relationship still growing, patience with something planted recently.",
+      "situations_reversed": "Neglect, giving up before it grew, expecting a harvest a week after planting.",
       "image": {
         "full": "cards/20_gardener.png",
         "web": "cards-web/20_gardener.png",
         "foil_full": "cards-foil/20_gardener.png",
         "foil_web": "cards-foil-web/20_gardener.png"
-      },
-      "situations": "Slow progress, a new job or skill or relationship still growing, patience with something planted recently.",
-      "situations_reversed": "Neglect, giving up before it grew, expecting a harvest a week after planting."
+      }
     },
     {
       "index": 21,
@@ -340,14 +340,14 @@
       "name": "The Cheese Fries",
       "meaning": "You deserve enjoyment.",
       "reversed": "All reward, no task. Earn the fries.",
+      "situations": "Indulgence, a night off, eating what you actually want, permission to enjoy something.",
+      "situations_reversed": "Overdoing it, comfort as anaesthetic, the regret that arrives after the binge.",
       "image": {
         "full": "cards/21_cheese_fries.png",
         "web": "cards-web/21_cheese_fries.png",
         "foil_full": "cards-foil/21_cheese_fries.png",
         "foil_web": "cards-foil-web/21_cheese_fries.png"
-      },
-      "situations": "Indulgence, a night off, eating what you actually want, permission to enjoy something.",
-      "situations_reversed": "Overdoing it, comfort as anaesthetic, the regret that arrives after the binge."
+      }
     },
     {
       "index": 22,
@@ -355,14 +355,14 @@
       "name": "The Slice",
       "meaning": "Release toxic attachments.",
       "reversed": "You cut the wrong thread \u2014 or keep re-tying the one you cut.",
+      "situations": "Cutting someone loose, ending a draining friendship, removing yourself from a group that costs you.",
+      "situations_reversed": "Still attached, unable to make the cut, going back to the thing you keep ending.",
       "image": {
         "full": "cards/22_slice.png",
         "web": "cards-web/22_slice.png",
         "foil_full": "cards-foil/22_slice.png",
         "foil_web": "cards-foil-web/22_slice.png"
-      },
-      "situations": "Cutting someone loose, ending a draining friendship, removing yourself from a group that costs you.",
-      "situations_reversed": "Still attached, unable to make the cut, going back to the thing you keep ending."
+      }
     },
     {
       "index": 23,
@@ -370,14 +370,14 @@
       "name": "The Empress",
       "meaning": "You are creative and abundant.",
       "reversed": "Creative block by comparison. Make ugly things on purpose.",
+      "situations": "Making something, a project blooming, money coming in, fertility, having enough to be generous.",
+      "situations_reversed": "Creative block, scarcity thinking, hoarding, nothing you make ever feeling good enough.",
       "image": {
         "full": "cards/23_empress.png",
         "web": "cards-web/23_empress.png",
         "foil_full": "cards-foil/23_empress.png",
         "foil_web": "cards-foil-web/23_empress.png"
-      },
-      "situations": "Making something, a project blooming, money coming in, fertility, having enough to be generous.",
-      "situations_reversed": "Creative block, scarcity thinking, hoarding, nothing you make ever feeling good enough."
+      }
     },
     {
       "index": 24,
@@ -385,14 +385,14 @@
       "name": "The Chicken Nugget",
       "meaning": "Comfort and simplicity heal.",
       "reversed": "Comfort became the whole menu. Vary the diet.",
+      "situations": "Wanting something easy, comfort food, keeping it simple, low effort care on a bad day.",
+      "situations_reversed": "Only ever comfort, avoiding anything difficult, the same safe thing every single night.",
       "image": {
         "full": "cards/24_chicken_nugget.png",
         "web": "cards-web/24_chicken_nugget.png",
         "foil_full": "cards-foil/24_chicken_nugget.png",
         "foil_web": "cards-foil-web/24_chicken_nugget.png"
-      },
-      "situations": "Wanting something easy, comfort food, keeping it simple, low effort care on a bad day.",
-      "situations_reversed": "Only ever comfort, avoiding anything difficult, the same safe thing every single night."
+      }
     },
     {
       "index": 25,
@@ -400,14 +400,14 @@
       "name": "The Sun",
       "meaning": "Joy and truth are coming to light.",
       "reversed": "Forced positivity. It's okay to sit in the shade sometimes.",
+      "situations": "Good news, things finally going well, feeling healthy again, a clear happy stretch.",
+      "situations_reversed": "Forced positivity, performing happiness you do not feel, good news that keeps not arriving.",
       "image": {
         "full": "cards/25_sun.png",
         "web": "cards-web/25_sun.png",
         "foil_full": "cards-foil/25_sun.png",
         "foil_web": "cards-foil-web/25_sun.png"
-      },
-      "situations": "Good news, things finally going well, feeling healthy again, a clear happy stretch.",
-      "situations_reversed": "Forced positivity, performing happiness you do not feel, good news that keeps not arriving."
+      }
     },
     {
       "index": 26,
@@ -415,14 +415,14 @@
       "name": "The High Priestess",
       "meaning": "Trust your inner wisdom.",
       "reversed": "You already know. You've known for months. Stop asking for signs.",
+      "situations": "Already knowing the answer underneath, a private instinct, something unsaid, trusting yourself over advice.",
+      "situations_reversed": "Ignoring what you already know, outsourcing the decision, a secret kept too long.",
       "image": {
         "full": "cards/26_high_priestess.png",
         "web": "cards-web/26_high_priestess.png",
         "foil_full": "cards-foil/26_high_priestess.png",
         "foil_web": "cards-foil-web/26_high_priestess.png"
-      },
-      "situations": "Already knowing the answer underneath, a private instinct, something unsaid, trusting yourself over advice.",
-      "situations_reversed": "Ignoring what you already know, outsourcing the decision, a secret kept too long."
+      }
     },
     {
       "index": 27,
@@ -430,14 +430,14 @@
       "name": "The Zoom Meeting",
       "meaning": "Disconnect from the fake, reconnect with real life.",
       "reversed": "This could have been an email. So could your excuses.",
+      "situations": "Pointless meetings, remote work, screens all day, digital life crowding out the actual one.",
+      "situations_reversed": "Hiding behind the screen, camera off in every sense, avoiding contact with actual people.",
       "image": {
         "full": "cards/27_zoom_meeting.png",
         "web": "cards-web/27_zoom_meeting.png",
         "foil_full": "cards-foil/27_zoom_meeting.png",
         "foil_web": "cards-foil-web/27_zoom_meeting.png"
-      },
-      "situations": "Pointless meetings, remote work, screens all day, digital life crowding out the actual one.",
-      "situations_reversed": "Hiding behind the screen, camera off in every sense, avoiding contact with actual people."
+      }
     },
     {
       "index": 28,
@@ -445,14 +445,14 @@
       "name": "The Influencer",
       "meaning": "Be authentic \u2014 image isn't everything.",
       "reversed": "Performing a life instead of living one. Log off.",
+      "situations": "Curating how you appear, social media, comparing your life to posts, the personal brand.",
+      "situations_reversed": "Believing your own image, envying strangers online, the gap between the profile and the life.",
       "image": {
         "full": "cards/28_influencer.png",
         "web": "cards-web/28_influencer.png",
         "foil_full": "cards-foil/28_influencer.png",
         "foil_web": "cards-foil-web/28_influencer.png"
-      },
-      "situations": "Curating how you appear, social media, comparing your life to posts, the personal brand.",
-      "situations_reversed": "Believing your own image, envying strangers online, the gap between the profile and the life."
+      }
     },
     {
       "index": 29,
@@ -460,14 +460,14 @@
       "name": "The Life of the Party",
       "meaning": "Outward shine can hide inner loneliness.",
       "reversed": "The mask slipped. Let someone see the tear.",
+      "situations": "Being the fun one, big social nights, everyone's favourite and nobody's confidant.",
+      "situations_reversed": "The comedown, lonely in a crowded room, going home alone after being on all night.",
       "image": {
         "full": "cards/29_life_of_the_party.png",
         "web": "cards-web/29_life_of_the_party.png",
         "foil_full": "cards-foil/29_life_of_the_party.png",
         "foil_web": "cards-foil-web/29_life_of_the_party.png"
-      },
-      "situations": "Being the fun one, big social nights, everyone's favourite and nobody's confidant.",
-      "situations_reversed": "The comedown, lonely in a crowded room, going home alone after being on all night."
+      }
     },
     {
       "index": 30,
@@ -475,14 +475,14 @@
       "name": "The Last Hurrah",
       "meaning": "A final celebration before an ending.",
       "reversed": "The party's over and you're still holding the glass. Go home.",
+      "situations": "One last night, a leaving do, the final round before things change, a goodbye that is also a party.",
+      "situations_reversed": "Dragging it out, one more that is never the last, refusing to let the ending happen.",
       "image": {
         "full": "cards/30_last_hurrah.png",
         "web": "cards-web/30_last_hurrah.png",
         "foil_full": "cards-foil/30_last_hurrah.png",
         "foil_web": "cards-foil-web/30_last_hurrah.png"
-      },
-      "situations": "One last night, a leaving do, the final round before things change, a goodbye that is also a party.",
-      "situations_reversed": "Dragging it out, one more that is never the last, refusing to let the ending happen."
+      }
     },
     {
       "index": 31,
@@ -490,14 +490,14 @@
       "name": "The Dead End Job",
       "meaning": "Don't stay stuck in something meaningless.",
       "reversed": "The exit exists. You've just memorized the wallpaper.",
+      "situations": "A job going nowhere, quitting, stuck in a role or a town or a relationship with no future.",
+      "situations_reversed": "Staying for the money, comfortable and wasted, waiting to be pushed instead of jumping.",
       "image": {
         "full": "cards/31_dead_end_job.png",
         "web": "cards-web/31_dead_end_job.png",
         "foil_full": "cards-foil/31_dead_end_job.png",
         "foil_web": "cards-foil-web/31_dead_end_job.png"
-      },
-      "situations": "A job going nowhere, quitting, stuck in a role or a town or a relationship with no future.",
-      "situations_reversed": "Staying for the money, comfortable and wasted, waiting to be pushed instead of jumping."
+      }
     },
     {
       "index": 32,
@@ -505,14 +505,14 @@
       "name": "The Fiddle-Leaf Fig",
       "meaning": "Balance appearance with reality.",
       "reversed": "All price tag, no roots. Get real or get repotted.",
+      "situations": "Looking fine and not being fine, a life that photographs better than it lives.",
+      "situations_reversed": "Neglect behind the presentation, the thing quietly dying while it still looks green.",
       "image": {
         "full": "cards/32_fiddle_leaf_fig.png",
         "web": "cards-web/32_fiddle_leaf_fig.png",
         "foil_full": "cards-foil/32_fiddle_leaf_fig.png",
         "foil_web": "cards-foil-web/32_fiddle_leaf_fig.png"
-      },
-      "situations": "Looking fine and not being fine, a life that photographs better than it lives.",
-      "situations_reversed": "Neglect behind the presentation, the thing quietly dying while it still looks green."
+      }
     },
     {
       "index": 33,
@@ -520,14 +520,14 @@
       "name": "The Star",
       "meaning": "Hope and healing are ahead.",
       "reversed": "Hope deferred. Healing isn't linear \u2014 pour anyway.",
+      "situations": "Recovery after a bad run, faith returning, the first good news in a while, reasons to keep going.",
+      "situations_reversed": "Losing hope, cynicism, believing honestly that it is never going to improve.",
       "image": {
         "full": "cards/33_star.png",
         "web": "cards-web/33_star.png",
         "foil_full": "cards-foil/33_star.png",
         "foil_web": "cards-foil-web/33_star.png"
-      },
-      "situations": "Recovery after a bad run, faith returning, the first good news in a while, reasons to keep going.",
-      "situations_reversed": "Losing hope, cynicism, believing honestly that it is never going to improve."
+      }
     },
     {
       "index": 34,
@@ -535,14 +535,14 @@
       "name": "The Devil",
       "meaning": "Break free from unhealthy cycles.",
       "reversed": "Back in the cuffs, voluntarily. You know the way out; you've walked it before.",
+      "situations": "The habit you keep going back to, addiction, the person who is bad for you, the cage with its door open.",
+      "situations_reversed": "Deeper in, choosing it again, telling yourself you could stop any time you wanted.",
       "image": {
         "full": "cards/34_devil.png",
         "web": "cards-web/34_devil.png",
         "foil_full": "cards-foil/34_devil.png",
         "foil_web": "cards-foil-web/34_devil.png"
-      },
-      "situations": "The habit you keep going back to, addiction, the person who is bad for you, the cage with its door open.",
-      "situations_reversed": "Deeper in, choosing it again, telling yourself you could stop any time you wanted."
+      }
     },
     {
       "index": 35,
@@ -550,14 +550,14 @@
       "name": "The Fair Weather Friend",
       "meaning": "Reevaluate shallow relationships.",
       "reversed": "Plot twist: you might be the one holding the umbrella. Check.",
+      "situations": "Friends who vanish when it gets hard, one sided effort, who actually shows up for you.",
+      "situations_reversed": "Being that friend yourself, going quiet on someone who is in trouble.",
       "image": {
         "full": "cards/35_fair_weather_friend.png",
         "web": "cards-web/35_fair_weather_friend.png",
         "foil_full": "cards-foil/35_fair_weather_friend.png",
         "foil_web": "cards-foil-web/35_fair_weather_friend.png"
-      },
-      "situations": "Friends who vanish when it gets hard, one sided effort, who actually shows up for you.",
-      "situations_reversed": "Being that friend yourself, going quiet on someone who is in trouble."
+      }
     },
     {
       "index": 36,
@@ -565,14 +565,14 @@
       "name": "The Tower",
       "meaning": "Breakdown leads to breakthrough.",
       "reversed": "Postponing the collapse. Controlled demolition beats waiting for lightning.",
+      "situations": "Sudden collapse, redundancy, a breakup out of nowhere, the business failing, everything changing at once.",
+      "situations_reversed": "The slow collapse you can see coming, propping up what should be allowed to fall.",
       "image": {
         "full": "cards/36_tower.png",
         "web": "cards-web/36_tower.png",
         "foil_full": "cards-foil/36_tower.png",
         "foil_web": "cards-foil-web/36_tower.png"
-      },
-      "situations": "Sudden collapse, redundancy, a breakup out of nowhere, the business failing, everything changing at once.",
-      "situations_reversed": "The slow collapse you can see coming, propping up what should be allowed to fall."
+      }
     },
     {
       "index": 37,
@@ -580,14 +580,14 @@
       "name": "The Drama Queen",
       "meaning": "Not everything is a crisis. Check the story you're telling yourself.",
       "reversed": "Suppressed feelings staging a coup. A little drama is honest.",
+      "situations": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.",
+      "situations_reversed": "A real crisis waved off as drama, nobody believing you on the one occasion it counts.",
       "image": {
         "full": "cards/37_drama_queen.png",
         "web": "cards-web/37_drama_queen.png",
         "foil_full": "cards-foil/37_drama_queen.png",
         "foil_web": "cards-foil-web/37_drama_queen.png"
-      },
-      "situations": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.",
-      "situations_reversed": "A real crisis waved off as drama, nobody believing you on the one occasion it counts."
+      }
     },
     {
       "index": 38,
@@ -595,14 +595,14 @@
       "name": "The Last Flying Fuck",
       "meaning": "Watch it go. Some things no longer deserve your energy.",
       "reversed": "You let it go too fast. Some things deserved your care.",
+      "situations": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.",
+      "situations_reversed": "Caring loudly about not caring, spite, energy spent proving you have moved on.",
       "image": {
         "full": "cards/38_last_flying_fuck.png",
         "web": "cards-web/38_last_flying_fuck.png",
         "foil_full": "cards-foil/38_last_flying_fuck.png",
         "foil_web": "cards-foil-web/38_last_flying_fuck.png"
-      },
-      "situations": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.",
-      "situations_reversed": "Caring loudly about not caring, spite, energy spent proving you have moved on."
+      }
     },
     {
       "index": 39,
@@ -610,14 +610,104 @@
       "name": "The Nap",
       "meaning": "Rest is productive. Lie down.",
       "reversed": "Rest became hiding. Get up, hydrate, face one thing.",
+      "situations": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.",
+      "situations_reversed": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down.",
       "image": {
         "full": "cards/39_nap.png",
         "web": "cards-web/39_nap.png",
         "foil_full": "cards-foil/39_nap.png",
         "foil_web": "cards-foil-web/39_nap.png"
-      },
-      "situations": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.",
-      "situations_reversed": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down."
+      }
+    },
+    {
+      "index": 40,
+      "numeral": "XL",
+      "name": "The Algorithm",
+      "meaning": "Some wheels turn without you. Play your hand and let the rest spin.",
+      "reversed": "Taking the weather personally. The wheel was never aimed at you.",
+      "situations": "Luck turning, being passed over, a system deciding without you, timing you do not control.",
+      "situations_reversed": "Blaming yourself for bad luck, refreshing for a verdict, superstition, reading meaning into randomness.",
+      "image": {
+        "full": "cards/40_algorithm.png",
+        "web": "cards-web/40_algorithm.png",
+        "foil_full": "cards-foil/40_algorithm.png",
+        "foil_web": "cards-foil-web/40_algorithm.png"
+      }
+    },
+    {
+      "index": 41,
+      "numeral": "XLI",
+      "name": "The Receipts",
+      "meaning": "The record speaks for itself. What was done gets weighed.",
+      "reversed": "Keeping score for a war you claim not to be fighting. Screenshots aren't intimacy.",
+      "situations": "Being proved right, a formal complaint, evidence, a fair outcome, consequences finally landing on someone.",
+      "situations_reversed": "Keeping score, screenshotting arguments, litigating a friendship, needing to be proved right more than reconciled.",
+      "image": {
+        "full": "cards/41_receipts.png",
+        "web": "cards-web/41_receipts.png",
+        "foil_full": "cards-foil/41_receipts.png",
+        "foil_web": "cards-foil-web/41_receipts.png"
+      }
+    },
+    {
+      "index": 42,
+      "numeral": "XLII",
+      "name": "The Landlord",
+      "meaning": "There are terms, and they apply to you too.",
+      "reversed": "Control dressed up as order. You're the one who won't bend.",
+      "situations": "Rent, a boss or parent setting the terms, rules you did not write, an authority you answer to.",
+      "situations_reversed": "Petty rules for their own sake, an authority abusing it, refusing to compromise on anything at all.",
+      "image": {
+        "full": "cards/42_landlord.png",
+        "web": "cards-web/42_landlord.png",
+        "foil_full": "cards-foil/42_landlord.png",
+        "foil_web": "cards-foil-web/42_landlord.png"
+      }
+    },
+    {
+      "index": 43,
+      "numeral": "XLIII",
+      "name": "The Waiting Room",
+      "meaning": "Nothing moves yet. That isn't failure \u2014 it's the pause before.",
+      "reversed": "You could have left the queue an hour ago. Stalling isn't waiting.",
+      "situations": "Waiting on results, a visa, a court date, an offer, weeks where nothing can be done.",
+      "situations_reversed": "Procrastinating and calling it patience, martyring yourself, waiting for permission that will never come.",
+      "image": {
+        "full": "cards/43_waiting_room.png",
+        "web": "cards-web/43_waiting_room.png",
+        "foil_full": "cards-foil/43_waiting_room.png",
+        "foil_web": "cards-foil-web/43_waiting_room.png"
+      }
+    },
+    {
+      "index": 44,
+      "numeral": "XLIV",
+      "name": "The Slow Cooker",
+      "meaning": "Low heat, long time. It cannot be hurried into being.",
+      "reversed": "You cranked the heat to finish sooner. It's raw in the middle.",
+      "situations": "Physiotherapy, saving slowly, a long treatment, learning something properly, pacing yourself through months of it.",
+      "situations_reversed": "Rushing it, quitting the course early, expecting results in a week, forcing what needs time.",
+      "image": {
+        "full": "cards/44_slow_cooker.png",
+        "web": "cards-web/44_slow_cooker.png",
+        "foil_full": "cards-foil/44_slow_cooker.png",
+        "foil_web": "cards-foil-web/44_slow_cooker.png"
+      }
+    },
+    {
+      "index": 45,
+      "numeral": "XLV",
+      "name": "The Apology",
+      "meaning": "Say it plainly, without conditions. Repair starts there.",
+      "reversed": "\u201cSorry you feel that way.\u201d That's not an apology, that's an exit.",
+      "situations": "Owing an apology, being owed one, making amends, whether to forgive someone.",
+      "situations_reversed": "A non apology, being pressured to forgive too fast, apologising to end the conversation.",
+      "image": {
+        "full": "cards/45_apology.png",
+        "web": "cards-web/45_apology.png",
+        "foil_full": "cards-foil/45_apology.png",
+        "foil_web": "cards-foil-web/45_apology.png"
+      }
     }
   ]
 }

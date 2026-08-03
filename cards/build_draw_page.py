@@ -431,7 +431,7 @@ html = """<!doctype html>
     <div class="spanel">
       <div class="stitle">&#10022; The Back Room</div>
       <button id="daily" title="Card of the Day">&#10038; Card of the Day</button>
-      <button id="gallery">All 40 cards</button>
+      <button id="gallery">All 46 cards</button>
       <label class="srow">
         <span class="shead">Attuned shuffle <input type="checkbox" id="attuned"></span>
         <span class="sdesc">The deck reads your question and leans toward cards that share its
