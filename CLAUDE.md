@@ -18,9 +18,11 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
    black stock, crisp lines, no glow, no luster bands — the draw page's
    dynamic sheen is deliberately the only lighting → `cards-foil{,-web}/`.
 4. `python3 build_draw_page.py` — regenerates `index.html`, appends foil paths
-   to `deck.json`, and copies `cards/attune.js` (the semantic shuffle) and
-   `cards/voice.js` (the ears) into the release. Both files in `cards/` are the
-   source of truth; never edit the copies under `release/`.
+   to `deck.json`, and copies `cards/seats.js` (the positions), `cards/attune.js`
+   (the semantic shuffle) and `cards/voice.js` (the ears) into the release. All
+   three files in `cards/` are the source of truth; never edit the copies under
+   `release/`. A new sibling script needs three edits, not one: create it in
+   `cards/`, add its `shutil.copy`, add its `<script>` tag.
 5. `python3 masthead.py` — draw-page masthead images (classic + foil) built
    from the card back's ornament + Cinzel lettering → `release/.../assets/`.
    Rerun only if `back.png` or the title design changes.
@@ -49,6 +51,25 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   synthetic `el.click()` no longer draws; dispatch pointerdown/up in tests.
 - Spread position labels live on the pick objects (`pick.label`), not in
   `LABELS` lookups at render time — clarifiers and jumpers rely on this.
+  `pick.lens` rides along the same way and for the same reason: a card dealt
+  outside a spread (clarifier, jumper, Card of the Day) simply has no lens and
+  reads exactly as it did before seats existed. Both persist through
+  `saveSpread`/`restoreSpread`, or a tab switch would silently reframe a
+  reading.
+- **`seats.js` is the one definition of the positions**, read by two consumers
+  with opposite needs. `prose` is matching text: long, plain, embedded by
+  `attune.js` to decide which card belongs in which seat, and never displayed.
+  `lens` is display text: short, lowercase, ends in a colon, printed in front
+  of the card's meaning so the same card reads differently depending on where
+  it landed — "what's in the way: Keep going. You're closer than you think."
+  `label` exists only because the matching prose wants "Hopes and Fears" (an
+  ampersand embeds like punctuation) and the page wants "Hopes & Fears".
+  Editing `prose` changes `corpusSig` and rebuilds every cached vector on every
+  device; editing `lens` costs nothing. The extraction out of `attune.js` was
+  proven hash-neutral by diffing the derived `posText` before and after — do
+  the same if you ever reshape it. Both consumers degrade rather than throw if
+  the file is missing: the page falls back to bare labels, `attune.js` warns
+  and disables seating with selection untouched.
 - The draw page's CSS is **mobile-first**: base rules are phone portrait, and
   only `min-width` queries (640 / 1024) add desktop behaviour, plus one
   `(orientation: landscape) and (max-height: 560px)` block that sizes cards off
@@ -93,8 +114,15 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   spend another session trying to gate it on similarity.
 - **Situational expansions** live in `package.py` as `SITUATIONS` /
   `SITUATIONS_REV`, flow through `deck.json` into the page as `sit` / `sitr`,
-  and are appended to the embedded documents by `attune.js`. They are
-  MATCHING-ONLY and must never be rendered or put in the guidebook. Card
+  and are appended to the embedded documents by `attune.js`. They are written
+  for matching and stay out of the caption and the guidebook, where they would
+  flatten copy meant to land in one line. Two places print them, both
+  deliberate and both behind a deliberate second action: `openCardBox` shows
+  the showing face's expansion under the caption, and the gallery lightbox
+  shows both faces' because it is the reference view. Nowhere else. The card
+  box is reachable from every spread — a second tap on a card you already
+  turned over, which on a phone means `tapTop` in stack mode and on desktop a
+  second click on the slot. Card
   meanings are aphorisms; the expansions are the concrete circumstances people
   actually type. Rules, learned the hard way: all 40 or none (a partial pass
   makes expanded cards quieter on unrelated questions and hands the rest an
@@ -104,11 +132,104 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   must still rank first when queried with its own meaning.
 - Editing an expansion changes the corpus hash, so every cached vector on every
   device silently rebuilds on next load. That is intended; no version bump.
-- `corpusSig` in `attune.js` joins its inputs on **literal NUL bytes** (six of
-  them, committed). Harmless as a hash delimiter and valid in a JS string, but
-  it makes `grep` call the file binary and makes exact-match edits on that line
-  bounce. Any tool that strips NULs silently changes the hash and rebuilds every
-  cached vector on every device — which is only ever a cost, never a bug.
+- `corpusSig` in `attune.js` joins its inputs on **literal NUL bytes** — four
+  of them, committed, all on the `const s = MODEL + …` line. (The `posText` /
+  `ancText` line below it looks identical in an editor but carries ordinary
+  `\u0000` escape *text*; only the first line has real NULs. This note used to
+  say six, which is the two lines' escapes added together.) Harmless as a hash
+  delimiter and valid in a JS string, but it makes `grep` call the file binary
+  and makes exact-match edits on that line bounce. Any tool that strips NULs
+  silently changes the hash and rebuilds every cached vector on every device —
+  which is only ever a cost, never a bug. `tr -dc '\000' < cards/attune.js |
+  wc -c` should print 4.
+- **Resonance** (`resonanceOf` / `backgroundStats` in `attune.js`): how the
+  cards actually dealt relate to each other, which replaces counting theme
+  tags. Every pair of showing faces is cosined and **z-scored against a
+  background distribution** computed once at vector-build time and cached in
+  the `LS_KEY` blob (hence v3). Measured, and the numbers are the whole point:
+  - The background is every pair of faces belonging to *different* cards —
+    3120 pairs, mean **0.196**, sd **0.096**, range −0.10 to 0.63. A card's own
+    two faces are excluded because they are each other's nearest neighbours by
+    a mile and can never be dealt together; including them inflates the mean
+    and flattens every z the deck would ever report.
+  - Over 200 seeded three-card draws (`cards/resonance_bench.html`, seed
+    20260803): pair z runs p10 −0.92, p50 0.27, p90 1.62, max 4.52. Strongest
+    pair ≥ 1.0 in **56.5%** of spreads, tensest ≤ −1.0 in **23.5%**. Those two
+    plus a reversal clause and a cohesion fallback are what gets the fire rate
+    over 80% without any single line dominating.
+  - With three cards `revShare` is quantized to thirds, so ≥0.34, ≥0.5 and
+    ≥0.67 are the *same* 41.5% of spreads. Phrase reversal rules in counts
+    ("two of the three"), never in shares.
+  - **The verdict must not depend on `dom`.** On twelve colloquial questions
+    the anchor gate returned no domain for six of them. `domMin` was tuned on
+    27 questions written in-repo; real phrasing clears it about half the time.
+    Domain is a bonus clause when present, never a driver.
+- `resonanceOf` takes DECK indices and returns positions in the *drawn* array
+  (`i`, `j`, `loudest`, `quietest`), because callers want the seat and the
+  label, not the card number.
+- **The verdict** (`RESONANT` / `resonantVerdict` / `tagVerdict` in
+  `build_draw_page.py`). Eight rules over the resonance numbers, three lines
+  each. Where several fire the deck takes the one **furthest past its own
+  threshold**, not the first in priority order — priority let the commonest
+  rule win every time. Measured on the bench, 200 seeded three-card draws:
+  fire rate **94%**, commonest single line **13.3%** of firings, 22 of the 24
+  lines used.
+  - `GAPSCALE` (5) converts the odd-one-out / loudest-card cosine gaps into the
+    z-scores' units so they can be compared. It was 8 and that overcorrected:
+    `loud` took a third of all firings and the commonest line hit 14.9% against
+    a 15% ceiling — a pass on one seed and a fail on the next. At 5 those two
+    behave as the floor they are meant to be.
+  - `COHGAIN` (2.5) is why `chorus` and `scatter` ever win. Cohesion is a
+    *mean* of pair z-scores, so when a whole spread agrees some pair inside it
+    always agrees harder and `twin` took the line every time — at gain 1
+    `chorus` won once in 200 draws and two of its three variants had never been
+    seen. The gain applies to both tails of the same statistic; treating them
+    differently would be arbitrary. It is what lets a whole-spread observation
+    outrank a two-card one.
+  - The odd/loud rules are gated at a 0.08 cosine gap because the median gap is
+    0.10 — ungated, the deck calls a card "the least related" on a coin toss,
+    and it looks broken when the card is obviously on topic. The Last Straw
+    came up as least-related to "should I quit my job" during tuning.
+  - Line variants are chosen by `xmur3` over the card names, never `rng`: a
+    restored spread has to say what it said before the tab switch. `xmur3`'s
+    tap returns a **uint32**, not a float — `% bank.length`, never `* len`.
+  - `QV` (the question vector, kept from the deal) is what gates the whole
+    resonant path; without it `showVerdict` falls back to the nine tag strings,
+    unchanged. `draw()` restores `QV` on a restored spread too, via `vecFor`,
+    which refuses to boot the model on its own — so an unattuned deal still
+    never awaits.
+  - Verdict copy carrying a count must use the `{n}`, `{nOthers}` or `{revN}`
+    slots. A line that says "three" reads wrong the moment a Cross is dealt.
+- **Recurring-card memory** (`CARDLOG_KEY` / `logCard` / `priorSightings`).
+  Forty cards and a ten-card Cross is a quarter of the deck per reading, so
+  repeats get noticed; the deck notices first. Display and verdict only —
+  **nothing here may ever touch selection**, and `priorSightings` consumes no
+  rng, which the harness checks by comparing `shuffled(mulberry32(42))` with a
+  full log and with none.
+  - Logged on **reveal**, never on the deal: a card you closed the tab on was
+    never shown to you.
+  - Every entry carries `rid`, the id of its reading, which `saveSpread`
+    persists. That is what stops a restored spread from counting its own cards
+    twice, and what stops a card's own reading from counting as a prior
+    sighting. `priorSightings` counts *readings*, not entries, so a card and
+    its clarifier cannot inflate it.
+  - `seen` is computed once at the deal and deliberately **not** persisted:
+    `draw()` recomputes it, and a stored copy would be a second truth that goes
+    stale as the 30-day window slides.
+  - The `haunt` verdict sits *between* the resonant path and the tag counter,
+    because recurrence is counted from localStorage and needs no model. With
+    attunement off it is the only thing that can still speak — verified.
+  - **The Forget cards control is in the Back Room proper, not beside "Forget
+    questions" in the `?tells` panel**, deliberately departing from the
+    handoff: a seeker told that a card keeps coming back should not need a
+    debug flag to make it stop. It is a `.srow` (`#memrow`), never `.leanrow`
+    — card memory has nothing to do with attunement.
+  - The bench cannot exercise the three `haunt` lines (it never populates a
+    card log), so it reports 24 of 27 templates used. That is expected, not a
+    coverage gap.
+- Bumping `LS_KEY` orphans the previous ~320 KB blob on every device inside a
+  5 MB origin budget, so `boot()` sweeps any `arcanai-cardvecs-*` key that is
+  not the current one. Bump the key freely; the sweep is what makes it cheap.
 - **Anchors** (`ANCHORS` in `attune.js`): six prose descriptions of what a
   question is *about*, embedded as their own corpus and cosined against the
   question. `domainOf(v)` is synchronous and free — the vector is already in
@@ -253,4 +374,23 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   line self-kill the shell (exit 144). Kill by PID from `pgrep -a`. The
   bracket trick (`tellsr[v].py`) only saves you if the *unbracketed* string
   appears nowhere else on that command line — so never put the kill and the
-  relaunch of the same process in one command. Bit me twice again this way.
+  relaunch of the same process in one command. Bit me three times this way —
+  `pgrep -af "http.server 864" | xargs kill` is the same mistake wearing a
+  different hat.
+- `cards/resonance_bench.html` (not shipped) drives the **real** draw page in
+  an iframe rather than reimplementing selection — a harness with its own copy
+  of `weightedOrder` stops measuring the deck the moment either drifts. The
+  page's top-level bindings are `const`, so they are invisible as
+  `frame.contentWindow.X` but *are* in scope for `contentWindow.eval`, which is
+  how every probe reaches them. Serve the repo root, open
+  `/cards/resonance_bench.html`, press Run. Fixed `SEED`, so two runs of the
+  same build produce the same 200 spreads.
+- **Build hygiene**: after any change, run `build_draw_page.py` twice and
+  confirm `git diff` on `release/` shows only what you meant and nothing on the
+  second run. Catches the failure mode of having edited the generated
+  `release/major-arcanai/index.html` instead of the Python string it comes from.
+- **Missing-sibling check**: each of `seats.js`, `attune.js`, `voice.js` must be
+  removable without breaking the page. Serve a copy of `release/major-arcanai/`
+  with one of them deleted (symlink the image dirs, copy the rest) and confirm
+  a draw still completes — with `seats.js` gone the page falls back to bare
+  position labels and `attune.js` logs "seating disabled".

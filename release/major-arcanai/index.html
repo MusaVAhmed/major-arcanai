@@ -167,6 +167,19 @@
   .caption .cname { font-family:'Cinzel', Georgia, serif; font-size:1rem; letter-spacing:.12em; text-transform:uppercase; }
   .caption .cnum { color:var(--dim); font-style:italic; font-size:.8rem; }
   .caption .cmean { color:var(--dim); font-size:.95rem; line-height:1.5; margin-top:.4rem; }
+  /* the seat's framing, set inline ahead of the card copy and deliberately
+     subordinate to it: the card is what was dealt, the lens is only where it
+     landed. Inherits .cmean's size so the phone breakpoint shrinks both. */
+  .caption .clens { font-style:italic; opacity:.72; }
+  /* the deck mentioning it has dealt you this one before */
+  .caption .recur { font-size:.72rem; font-style:italic; color:var(--dim); opacity:.7;
+                    letter-spacing:.06em; margin-top:.35rem; }
+  /* the situational expansion, lightbox only — see openCardBox. `.sep` is the
+     reading box, where one expansion follows one caption and wants a rule to
+     divide them; the gallery prints two and would look ruled to death. */
+  #lightbox .csit { font-size:.85rem; line-height:1.5; font-style:italic; opacity:.75; margin-top:.45rem; }
+  #lightbox .csit.sep { margin-top:.7rem; padding-top:.7rem; font-style:normal;
+                        border-top:1px solid rgba(154,146,127,.25); }
   /* idle deck pile */
   .deck { position:relative; cursor:pointer; animation:breathe 2.6s ease-in-out infinite alternate; }
   .deck .pile { position:absolute; inset:0; border-radius:10px; background:#f2ecdd; border:1px solid #b9b19d;
@@ -190,6 +203,10 @@
   .dot.active { background:var(--bone); border-color:var(--bone); }
   body.foil .dot.active { background:var(--gold2); border-color:var(--gold2); }
   .stackwrap .caption { min-height:5.6rem; }
+  /* the hint gains a third clause once every card is turned over and wraps to
+     two lines in a 273px column — reserve both, or the caption jolts down at
+     the exact moment the reading completes */
+  .stackwrap .tap { min-height:2.4em; }
   /* a 140px floor drops a 320px phone to ONE giant column — scale the floor instead */
   #galleryview { display:none; grid-template-columns:repeat(auto-fill, minmax(clamp(6.5rem, 30vw, 10rem), 1fr));
                  gap:clamp(.7rem, 2vw, 1.1rem); max-width:72rem; margin:0 auto; }
@@ -381,6 +398,15 @@
         <span class="sdesc">A vibration, or a breath of light at the edge of the room. Phones
           that cannot buzz are given the light instead.</span>
       </div>
+      <div class="srow" id="memrow">
+        <span class="shead">What it remembers</span>
+        <div class="seg" role="group" aria-label="Card memory">
+          <button type="button" id="cardforget">Forget cards</button>
+        </div>
+        <span class="sdesc">The deck keeps a list of the cards it has shown you, so it can say
+          when one will not leave you alone. It stays in this browser, and it never changes
+          which cards you draw.</span>
+      </div>
     </div>
   </div>
   <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
@@ -420,10 +446,19 @@
   <p class="hint" id="hint">Tap the deck to draw.</p>
   <button id="again">Shuffle &amp; draw again</button>
 
+<script src="seats.js"></script>
 <script>
 const DECK = [{"n": "0", "name": "The Zero of Fucks", "meaning": "Let go of expectations and pressure. Step into freedom and a fresh start.", "r": "You claim you don't care. You absolutely do. Admit it.", "img": "cards-web/00_zero_of_fucks.png", "t": ["boundaries"], "sit": "Walking away without drama, starting over somewhere new, no longer auditioning for anyone's approval.", "sitr": "Performing indifference, pretending to be over it while checking on them nightly."}, {"n": "I", "name": "The Burned Bridge", "meaning": "Not everything is meant to be saved. Some endings are necessary.", "r": "You lit this one too soon. Some bridges deserve an apology and a rebuild.", "img": "cards-web/01_burned_bridge.png", "t": ["endings"], "sit": "Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.", "sitr": "Regretting how you ended it, wanting to apologise, wondering whether to reach out again."}, {"n": "II", "name": "The Two of Deez", "meaning": "Stand confidently on your own. You don't need validation.", "r": "Fishing for validation again. Deez are not for external approval.", "img": "cards-web/02_two_of_deez.png", "t": ["boundaries", "grit"], "sit": "Making a decision nobody approves of, backing yourself, ignoring the group chat's opinion of your life.", "sitr": "Fishing for compliments, posting for reassurance, asking six people until one of them agrees."}, {"n": "III", "name": "The Lovers", "meaning": "Deep connection \u2014 romantic, platonic, or with yourself.", "r": "Disconnection. You're kissing distance from someone you stopped seeing.", "img": "cards-web/03_lovers.png", "t": ["hope"], "sit": "Dating someone seriously, choosing a partner, whether to commit, a friendship that genuinely matters.", "sitr": "Drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love."}, {"n": "IV", "name": "The Iced Coffee", "meaning": "Wake up. Face reality. Do what needs to be done.", "r": "Decaf energy. You're running on fumes and calling it fine.", "img": "cards-web/04_coffee.png", "t": ["truth"], "sit": "Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.", "sitr": "Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality."}, {"n": "V", "name": "Death", "meaning": "Transformation through endings. Let the old version of you go.", "r": "Clinging to the old you. Rigor mortis is not a personality.", "img": "cards-web/05_death.png", "t": ["endings"], "sit": "A chapter closing, leaving a city or a marriage or a career, becoming someone your old friends would not recognise.", "sitr": "Clinging to who you used to be, keeping an old identity alive well past its expiry."}, {"n": "VI", "name": "The Moon", "meaning": "Things are unclear. Trust your intuition and wait.", "r": "The fog is self-made. Stop mistaking anxiety for intuition.", "img": "cards-web/06_moon.png", "t": ["truth"], "sit": "Mixed signals, not knowing where you stand, waiting on news, a gut feeling you cannot prove.", "sitr": "Anxiety dressed up as instinct, inventing motives, spiralling at night over something unconfirmed."}, {"n": "VII", "name": "Strength", "meaning": "Inner calm and patience will carry you through.", "r": "Forcing it. The lion calms down when you stop wrestling.", "img": "cards-web/07_strength.png", "t": ["grit"], "sit": "Keeping your temper with a difficult person, enduring a long hard stretch, restraint instead of force.", "sitr": "Snapping at last, patience running out, forcing something that needed waiting."}, {"n": "VIII", "name": "Perseverance", "meaning": "Keep going. You're closer than you think.", "r": "Stubbornness isn't progress. Maybe it's the wrong staircase.", "img": "cards-web/08_perseverance.png", "t": ["grit"], "sit": "Late in a long project, months of job hunting, studying, wanting to quit near the finish.", "sitr": "Grinding away at something already dead, stubbornness mistaken for commitment."}, {"n": "IX", "name": "The Tea", "meaning": "Truth is being revealed. Stay grounded.", "r": "The gossip turned toxic. Spill less, sip more.", "img": "cards-web/09_tea.png", "t": ["truth"], "sit": "Gossip reaching you, finding something out, a secret surfacing, what people say once you leave the room.", "sitr": "Spreading it further, drama you are feeding, talking about people instead of to them."}, {"n": "X", "name": "The Last Straw", "meaning": "You've reached your limit. Change is inevitable.", "r": "You keep declaring the last straw, then buying more straws.", "img": "cards-web/10_last_straw.png", "t": ["endings"], "sit": "The final incident, handing in your notice, ending it after one thing too many.", "sitr": "Threatening to leave and staying, raising your limit again, a last straw that keeps not being last."}, {"n": "XI", "name": "The Audacity", "meaning": "Be bold. Take the risk.", "r": "Bold in the wrong direction. Audacity without follow-through is just noise.", "img": "cards-web/11_audacity.png", "t": ["grit"], "sit": "Asking for the raise, making the first move, applying anyway, saying the bold thing out loud.", "sitr": "Recklessness, nerve without a plan, or somebody else's gall aimed squarely at you."}, {"n": "XII", "name": "The Breast Pump", "meaning": "You're overgiving. Rest and refill yourself.", "r": "Running on empty and still giving. Refill the well first.", "img": "cards-web/12_breast_pump.png", "t": ["care"], "sit": "Caring for everyone else, new parenthood, being the one who always helps, running empty for others.", "sitr": "Resenting the people you keep giving to, martyrdom, keeping score of your own sacrifice."}, {"n": "XIII", "name": "The Bottle", "meaning": "Unexpressed emotions will surface eventually.", "r": "It already burst. Clean up honestly instead of re-corking.", "img": "cards-web/13_bottle.png", "t": ["shadow"], "sit": "Swallowing what you feel, not saying it, holding it down until it comes out sideways.", "sitr": "The blow up, crying at the wrong moment, drinking to keep it down, saying it all badly at once."}, {"n": "XIV", "name": "The Taco", "meaning": "Find joy in small pleasures.", "r": "Comfort became avoidance. The taco cannot fix this one.", "img": "cards-web/14_taco.png", "t": ["comfort"], "sit": "A good meal, a small treat, cheap ordinary happiness, what to eat, plans with people you like.", "sitr": "Treating yourself instead of dealing with it, small pleasures used as avoidance."}, {"n": "XV", "name": "The Gold Shoulder", "meaning": "Beware of ego and image obsession.", "r": "The mirror is winning. Look outward for once.", "img": "cards-web/15_gold_shoulder.png", "t": ["image"], "sit": "Status, showing off, being seen with the right people, caring how it looks over how it is.", "sitr": "The ego cracking, humiliation, being found out as less impressive than the photographs."}, {"n": "XVI", "name": "The Child", "meaning": "Nurture your inner child.", "r": "Your inner child is running the meeting. Adult supervision required.", "img": "cards-web/16_child.png", "t": ["care"], "sit": "Play, doing something purely for fun, what you loved at eight, taking yourself less seriously.", "sitr": "Sulking, tantrums, acting your shoe size, waiting for somebody to parent you."}, {"n": "XVII", "name": "The Mother", "meaning": "You also deserve care, not just others.", "r": "Martyr mode. Care that costs you everything isn't care.", "img": "cards-web/17_mother.png", "t": ["care"], "sit": "Looking after family, being the reliable one, nobody thinking to ask how you are.", "sitr": "Guilt for resting, smothering the people you love, care that has curdled into control."}, {"n": "XVIII", "name": "The Mom Boss", "meaning": "You're doing too much. Let go of control.", "r": "Delegation refused, burnout accepted. Put three of the six arms down.", "img": "cards-web/18_mom_boss.png", "t": ["care", "shadow"], "sit": "Too many responsibilities, running everything, work and home both landing on you, delegating badly.", "sitr": "Micromanaging, refusing help, collapsing from insisting on doing all of it yourself."}, {"n": "XIX", "name": "The Hermit", "meaning": "Withdraw and reflect.", "r": "Solitude curdled into hiding. Crack the door open.", "img": "cards-web/19_hermit.png", "t": ["truth"], "sit": "Cancelling plans, needing time alone, stepping back from people, wanting quiet instead of the noise.", "sitr": "Isolation, not answering anyone for weeks, loneliness dressed up as solitude."}, {"n": "XX", "name": "The Gardener", "meaning": "Growth takes time. Keep nurturing.", "r": "Overwatering. Some things only grow when you leave them alone.", "img": "cards-web/20_gardener.png", "t": ["care", "hope"], "sit": "Slow progress, a new job or skill or relationship still growing, patience with something planted recently.", "sitr": "Neglect, giving up before it grew, expecting a harvest a week after planting."}, {"n": "XXI", "name": "The Cheese Fries", "meaning": "You deserve enjoyment.", "r": "All reward, no task. Earn the fries.", "img": "cards-web/21_cheese_fries.png", "t": ["comfort"], "sit": "Indulgence, a night off, eating what you actually want, permission to enjoy something.", "sitr": "Overdoing it, comfort as anaesthetic, the regret that arrives after the binge."}, {"n": "XXII", "name": "The Slice", "meaning": "Release toxic attachments.", "r": "You cut the wrong thread \u2014 or keep re-tying the one you cut.", "img": "cards-web/22_slice.png", "t": ["boundaries", "endings"], "sit": "Cutting someone loose, ending a draining friendship, removing yourself from a group that costs you.", "sitr": "Still attached, unable to make the cut, going back to the thing you keep ending."}, {"n": "XXIII", "name": "The Empress", "meaning": "You are creative and abundant.", "r": "Creative block by comparison. Make ugly things on purpose.", "img": "cards-web/23_empress.png", "t": ["grit", "hope"], "sit": "Making something, a project blooming, money coming in, fertility, having enough to be generous.", "sitr": "Creative block, scarcity thinking, hoarding, nothing you make ever feeling good enough."}, {"n": "XXIV", "name": "The Chicken Nugget", "meaning": "Comfort and simplicity heal.", "r": "Comfort became the whole menu. Vary the diet.", "img": "cards-web/24_chicken_nugget.png", "t": ["comfort"], "sit": "Wanting something easy, comfort food, keeping it simple, low effort care on a bad day.", "sitr": "Only ever comfort, avoiding anything difficult, the same safe thing every single night."}, {"n": "XXV", "name": "The Sun", "meaning": "Joy and truth are coming to light.", "r": "Forced positivity. It's okay to sit in the shade sometimes.", "img": "cards-web/25_sun.png", "t": ["hope", "truth"], "sit": "Good news, things finally going well, feeling healthy again, a clear happy stretch.", "sitr": "Forced positivity, performing happiness you do not feel, good news that keeps not arriving."}, {"n": "XXVI", "name": "The High Priestess", "meaning": "Trust your inner wisdom.", "r": "You already know. You've known for months. Stop asking for signs.", "img": "cards-web/26_high_priestess.png", "t": ["truth"], "sit": "Already knowing the answer underneath, a private instinct, something unsaid, trusting yourself over advice.", "sitr": "Ignoring what you already know, outsourcing the decision, a secret kept too long."}, {"n": "XXVII", "name": "The Zoom Meeting", "meaning": "Disconnect from the fake, reconnect with real life.", "r": "This could have been an email. So could your excuses.", "img": "cards-web/27_zoom_meeting.png", "t": ["image"], "sit": "Pointless meetings, remote work, screens all day, digital life crowding out the actual one.", "sitr": "Hiding behind the screen, camera off in every sense, avoiding contact with actual people."}, {"n": "XXVIII", "name": "The Influencer", "meaning": "Be authentic \u2014 image isn't everything.", "r": "Performing a life instead of living one. Log off.", "img": "cards-web/28_influencer.png", "t": ["image"], "sit": "Curating how you appear, social media, comparing your life to posts, the personal brand.", "sitr": "Believing your own image, envying strangers online, the gap between the profile and the life."}, {"n": "XXIX", "name": "The Life of the Party", "meaning": "Outward shine can hide inner loneliness.", "r": "The mask slipped. Let someone see the tear.", "img": "cards-web/29_life_of_the_party.png", "t": ["image"], "sit": "Being the fun one, big social nights, everyone's favourite and nobody's confidant.", "sitr": "The comedown, lonely in a crowded room, going home alone after being on all night."}, {"n": "XXX", "name": "The Last Hurrah", "meaning": "A final celebration before an ending.", "r": "The party's over and you're still holding the glass. Go home.", "img": "cards-web/30_last_hurrah.png", "t": ["endings"], "sit": "One last night, a leaving do, the final round before things change, a goodbye that is also a party.", "sitr": "Dragging it out, one more that is never the last, refusing to let the ending happen."}, {"n": "XXXI", "name": "The Dead End Job", "meaning": "Don't stay stuck in something meaningless.", "r": "The exit exists. You've just memorized the wallpaper.", "img": "cards-web/31_dead_end_job.png", "t": ["shadow", "endings"], "sit": "A job going nowhere, quitting, stuck in a role or a town or a relationship with no future.", "sitr": "Staying for the money, comfortable and wasted, waiting to be pushed instead of jumping."}, {"n": "XXXII", "name": "The Fiddle-Leaf Fig", "meaning": "Balance appearance with reality.", "r": "All price tag, no roots. Get real or get repotted.", "img": "cards-web/32_fiddle_leaf_fig.png", "t": ["image"], "sit": "Looking fine and not being fine, a life that photographs better than it lives.", "sitr": "Neglect behind the presentation, the thing quietly dying while it still looks green."}, {"n": "XXXIII", "name": "The Star", "meaning": "Hope and healing are ahead.", "r": "Hope deferred. Healing isn't linear \u2014 pour anyway.", "img": "cards-web/33_star.png", "t": ["hope"], "sit": "Recovery after a bad run, faith returning, the first good news in a while, reasons to keep going.", "sitr": "Losing hope, cynicism, believing honestly that it is never going to improve."}, {"n": "XXXIV", "name": "The Devil", "meaning": "Break free from unhealthy cycles.", "r": "Back in the cuffs, voluntarily. You know the way out; you've walked it before.", "img": "cards-web/34_devil.png", "t": ["shadow"], "sit": "The habit you keep going back to, addiction, the person who is bad for you, the cage with its door open.", "sitr": "Deeper in, choosing it again, telling yourself you could stop any time you wanted."}, {"n": "XXXV", "name": "The Fair Weather Friend", "meaning": "Reevaluate shallow relationships.", "r": "Plot twist: you might be the one holding the umbrella. Check.", "img": "cards-web/35_fair_weather_friend.png", "t": ["shadow", "boundaries"], "sit": "Friends who vanish when it gets hard, one sided effort, who actually shows up for you.", "sitr": "Being that friend yourself, going quiet on someone who is in trouble."}, {"n": "XXXVI", "name": "The Tower", "meaning": "Breakdown leads to breakthrough.", "r": "Postponing the collapse. Controlled demolition beats waiting for lightning.", "img": "cards-web/36_tower.png", "t": ["endings"], "sit": "Sudden collapse, redundancy, a breakup out of nowhere, the business failing, everything changing at once.", "sitr": "The slow collapse you can see coming, propping up what should be allowed to fall."}, {"n": "XXXVII", "name": "The Drama Queen", "meaning": "Not everything is a crisis. Check the story you're telling yourself.", "r": "Suppressed feelings staging a coup. A little drama is honest.", "img": "cards-web/37_drama_queen.png", "t": ["image"], "sit": "Overreacting, catastrophising, making it bigger than it is, a story you have told yourself too often.", "sitr": "A real crisis waved off as drama, nobody believing you on the one occasion it counts."}, {"n": "XXXVIII", "name": "The Last Flying Fuck", "meaning": "Watch it go. Some things no longer deserve your energy.", "r": "You let it go too fast. Some things deserved your care.", "img": "cards-web/38_last_flying_fuck.png", "t": ["boundaries", "endings"], "sit": "Letting go of what does not deserve you, boundaries, refusing to care about it any more.", "sitr": "Caring loudly about not caring, spite, energy spent proving you have moved on."}, {"n": "XXXIX", "name": "The Nap", "meaning": "Rest is productive. Lie down.", "r": "Rest became hiding. Get up, hydrate, face one thing.", "img": "cards-web/39_nap.png", "t": ["comfort", "care"], "sit": "Exhaustion, needing sleep, overwork, a day off, your body asking you to stop.", "sitr": "Sleeping to avoid it, oversleeping, tired no matter how long you stay lying down."}];
-const LABELS = {1:[''],3:['Past','Present','Future'],5:['The Situation','The Obstacle','The Advice','The Vibe','The Outcome'],
+/* Seat headings and the lens printed in front of a card's meaning both come
+   from seats.js, which attune.js also reads for its matching prose. The
+   literals below are the fallback for the one case where that file is missing
+   and the page must still deal: labels only, no lens, exactly as it read
+   before seats existed. */
+const SEATS = window.ARCANAI_SEATS || null;
+const LABELS = (SEATS && SEATS.labels) ||
+  {1:[''],3:['Past','Present','Future'],5:['The Situation','The Obstacle','The Advice','The Vibe','The Outcome'],
   10:['The Situation','What Crosses You','The Root','The Recent Past','The Crown','The Near Future','The Self','The House','Hopes & Fears','The Outcome']};
+const lensFor = (m, i) => (SEATS ? SEATS.lensFor(m, i) : '');
 const VERDICTS = {
   comfort: 'A cluster of comfort cards. Your coping strategy has a drive-thru window.',
   endings: 'Multiple endings in one spread. Something is already over \u2014 the deck is waiting for you to say it out loud.',
@@ -435,12 +470,74 @@ const VERDICTS = {
   hope: 'The gentle cards arrived as a group. Exhale \u2014 it gets lighter from here.',
   shadow: 'That is a cluster of bad habits. This spread is an intervention.',
 };
+/* The resonance verdict. The nine strings above count theme tags and need
+   three of one tag to say anything, which on a deck of thirty single-tagged
+   cards means a three-card draw almost never speaks — and when it does it says
+   the same sentence forever. These read the cards against each other instead.
+
+   Every threshold below was measured on 200 seeded three-card draws
+   (cards/resonance_bench.html); the fire rates are in CLAUDE.md. Slots:
+   {A} {B} card names, {seatA} {seatB} their positions, {Q} the card that fits
+   worst, {L} the one that fits best, {seat} where {L} landed, {revN} how many
+   came out reversed, as a word. */
+const RESONANT = {
+  twin: [
+    '{A} and {B}, in the same breath. The deck is not being subtle.',
+    '{A} sitting next to {B}. Two cards, one point \u2014 it did not need saying twice, and here we are.',
+    '{A} and {B} are the same card wearing different hats. Consider it underlined.',
+  ],
+  clash: [
+    '{A} in {seatA} and {B} in {seatB} do not agree, and the deck let both stand. That is the reading.',
+    '{A} wants one thing and {B} wants the opposite. Nobody is coming to settle that for you.',
+    '{A} and {B} in one spread is a contradiction you are already living.',
+  ],
+  chorus: [
+    'Every card here is a version of the same sentence. The deck has run out of ways to hint.',
+    'One message, dealt {n} ways. You did not need a spread, you needed a mirror.',
+    'The whole spread leans one way. Take the hint or don\u2019t \u2014 it will keep.',
+  ],
+  scatter: [
+    'Nothing here agrees with anything else. Either that was {n} questions, or you already knew.',
+    'Every card pulling a different direction. The deck is as confused as you are and considerably less invested.',
+    'No two of these belong together. Ask one thing at a time.',
+  ],
+  mirrored: [
+    '{revN} of these landed reversed. You asked a straight question and got the crooked answer.',
+    '{revN} reversals. Whatever you asked, the deck heard the version underneath it.',
+    '{revN} cards came back upside down. The deck is answering sideways on purpose.',
+  ],
+  upended: [
+    'All {revN} reversed. The deck did not misread you, it just declined to be nice about it.',
+    'Every card upside down. That is not a glitch, that is a tone.',
+    'Every single one inverted. Somebody is being told something.',
+  ],
+  odd: [
+    '{Q} has the least to do with what you asked, which is usually the one worth reading twice.',
+    '{Q} does not belong in this spread. Neither did the thing it is about, and yet.',
+    'Everything here answers you except {Q}. Sit with that one.',
+  ],
+  loud: [
+    '{L} in {seat} is the card that answers you. The other {nOthers} are furniture.',
+    'If you read one of these, read {L}. The deck put it exactly where it wanted it.',
+    '{L} is doing the work here. The rest showed up for the photograph.',
+  ],
+  haunt: [
+    '{H} again. The deck is not in the habit of repeating itself by accident.',
+    '{H} keeps turning up. At some point that stops being chance and starts being a note.',
+    'That is the {ord} time {H} has come up this month. It will keep coming until you do something about it.',
+  ],
+};
+const NUMWORD = ['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
+const numWord = n => NUMWORD[n] || String(n);
 const COARSE = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let mode = 1;
 let foil = localStorage.getItem('arcanai-foil') === '1';
 let TILT = 0;
 let CUR = [];    // picks currently on the table (desktop slots and stack both use it)
+/* the question's vector, kept from the deal so the verdict can score the cards
+   against it without a second await — null whenever there is nothing to score */
+let QV = null;
 const table = document.getElementById('table');
 const again = document.getElementById('again');
 const hint = document.getElementById('hint');
@@ -658,6 +755,46 @@ function rememberQ(v) {
   try { localStorage.setItem(QHIST_KEY, JSON.stringify(h)); } catch (_) {}
 }
 
+/* ---- which cards the deck has already shown you ----
+   Forty cards and a ten-card Cross means a quarter of the deck per reading and
+   repeats a seeker will absolutely notice. Rather than pretend otherwise, the
+   deck notices first. Display and verdict only: nothing here touches which
+   cards are selected, and it must stay that way.
+
+   Logged on REVEAL, never on the deal — a card you closed the tab on was never
+   shown to you. Every entry carries the id of the reading it belongs to, so a
+   spread restored from sessionStorage re-reveals its cards without counting
+   them twice, and so a card's own reading never counts as a prior sighting. */
+const CARDLOG_KEY = 'arcanai-cardlog';
+const CARDLOG_MAX = 240;      // a year of heavy use, ~15 KB
+const RECUR_DAYS = 30;
+let RID = '';                 // id of the reading on the table
+const cardlog = () => { try { return JSON.parse(localStorage.getItem(CARDLOG_KEY) || '[]'); } catch (_) { return []; } };
+function logCard(c) {
+  if (!RID || !c || !c.name) return;
+  const h = cardlog();
+  if (h.some(e => e.rid === RID && e.name === c.name)) return;
+  h.push({ name: c.name, rev: !!c.rev, seat: c.label || '', mode, ts: Date.now(), rid: RID });
+  while (h.length > CARDLOG_MAX) h.shift();
+  try { localStorage.setItem(CARDLOG_KEY, JSON.stringify(h)); } catch (_) {}
+}
+/* How many EARLIER readings inside the window showed this card. Counts
+   readings, not entries, so a card and its clarifier cannot inflate it. */
+function priorSightings(name) {
+  const cut = Date.now() - RECUR_DAYS * 864e5;
+  const rids = new Set();
+  cardlog().forEach(e => {
+    if (e.name === name && e.ts >= cut && e.rid !== RID) rids.add(e.rid || String(e.ts));
+  });
+  return rids.size;
+}
+const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth',
+             'seventh', 'eighth', 'ninth', 'tenth'];
+const ordWord = n => ORD[n] || (n + 'th');
+/* n is how many EARLIER readings had it, so this appearance is the (n+1)th */
+const recurNote = n => (n === 1 ? 'this one has come up before'
+                                : ordWord(Math.min(n + 1, 10)) + ' time this month');
+
 /* Fires after the deck has looked at the question, so it lands as a response
    rather than as feedback on the tap. The echo check rides on the vector the
    reading already computed; with attunement off there is no vector and no
@@ -842,6 +979,19 @@ tellsBox.addEventListener('change', () => {
   if (tellsOn) deliverTell('resolute'); else buzz(6);   // show what one is like
 });
 
+/* The card log is the deck's memory of you, so the control that erases it sits
+   in the Back Room proper rather than in the ?tells panel beside "Forget
+   questions": a seeker who is told the same card keeps coming back should not
+   need a debug flag to make it stop. */
+const cardForget = document.getElementById('cardforget');
+cardForget.addEventListener('click', () => {
+  localStorage.removeItem(CARDLOG_KEY);
+  CUR.forEach(c => { c.seen = 0; });
+  cardForget.textContent = 'Forgotten';
+  setTimeout(() => { cardForget.textContent = 'Forget cards'; }, 1600);
+  buzz(6);
+});
+
 const tmBtns = [1, 2, 3].map(i => document.getElementById('tm' + i));
 function applyTellMode() {
   tmBtns.forEach((b, i) => b.classList.toggle('active', i + 1 === tellMode));
@@ -997,11 +1147,14 @@ galleryBtn.addEventListener('click', () => closeSettingsThen(() => {
       cell.innerHTML = `<img data-src="${c.img}" alt="${c.name}" loading="lazy" width="500" height="800">
         <div class="gname">${c.name}</div><div class="gnum">${c.n}</div>`;
       cell.addEventListener('click', () => {
+        // the gallery is the reference view, so both faces get their expansion
         lightbox.innerHTML = `<img data-src="${c.img}" data-big="1" alt="${c.name}"
             sizes="(min-width: 500px) 380px, 88vw">
           <div class="caption"><div class="cname">${c.name}</div><div class="cnum">${c.n}</div>
           <div class="cmean">${c.meaning}</div>
-          <div class="cmean"><span class="revtag">Reversed:</span> ${c.r}</div></div>`;
+          ${c.sit ? `<div class="csit">${c.sit}</div>` : ''}
+          <div class="cmean"><span class="revtag">Reversed:</span> ${c.r}</div>
+          ${c.sitr ? `<div class="csit">${c.sitr}</div>` : ''}</div>`;
         lightbox.classList.add('open');
         pushNav('lightbox');
         applyFoil();
@@ -1020,9 +1173,15 @@ function cardHTML(frontImg, alt) {
   return `<div class="t3d"><div class="card"><div class="face back"><img data-src="cards-web/back.png" alt="card back"><span class="sheen"><span class="glint"></span></span></div>
     <div class="face front">${front}<span class="sheen"><span class="glint"></span></span></div></div></div>`;
 }
+/* The lens rides on the pick object next to its label, the same way position
+   labels do, so anything that deals itself a card outside a spread — the
+   clarifier, the jumper, the Card of the Day — simply has no lens and reads
+   exactly as it always did. It runs into the meaning as one sentence:
+   "what's in the way: Keep going. You're closer than you think." */
 const capHTML = c => `<div class="cname">${c.name}</div>
   <div class="cnum">${c.n}${c.rev ? ' &middot; <span class="revtag">reversed</span>' : ''}</div>
-  <div class="cmean">${c.rev ? c.r : c.meaning}</div>`;
+  <div class="cmean">${c.lens ? `<span class="clens">${c.lens}</span> ` : ''}${c.rev ? c.r : c.meaning}</div>
+  ${c.seen ? `<div class="recur">${recurNote(c.seen)}</div>` : ''}`;
 
 /* `wipe` means a reading actually ended, and the question ends with it: asking
    the deck the same thing again until it says something kinder is the one
@@ -1030,6 +1189,7 @@ const capHTML = c => `<div class="cname">${c.name}</div>
    of a reading, so that path keeps what you have typed. */
 function idle(wipe) {
   again.style.display = 'none';
+  QV = null;          // nothing on the table, nothing to score against
   if (wipe) {
     qInput.value = '';
     askedEl.textContent = '';
@@ -1122,10 +1282,22 @@ async function draw(opts = {}) {
     picks = seated.map((c, i) => {
       // -1 from the model means the two faces were too close to call
       const face = sem && choose.face ? sem.rev[IDX.get(c.name)] : -1;
-      return { ...c, rev: face === -1 ? rng() < .5 : face === 1, label: LABELS[mode][i] || '' };
+      return { ...c, rev: face === -1 ? rng() < .5 : face === 1,
+               label: LABELS[mode][i] || '', lens: lensFor(mode, i) || '' };
     });
   }
+  /* A restored spread gets its vector back too, or a reading would lose its
+     verdict on a tab switch. vecFor refuses to boot the model on its own, so
+     this stays free when attunement is off and never awaits an ordinary deal. */
+  QV = sem ? sem.v
+    : ((attuned && q && window.ARCANAI_ATTUNE && ARCANAI_ATTUNE.ready)
+        ? await ARCANAI_ATTUNE.vecFor(q, 450) : null);
   const rst = opts.restore || null;
+  /* the reading's own id, restored with it so a tab switch does not turn one
+     reading into two in the card log */
+  RID = (rst && rst.rid) || ('r' + Date.now().toString(36) + (ENT >>> 0).toString(36));
+  // how many earlier readings showed each of these — computed once, at the deal
+  picks.forEach(p => { p.seen = priorSightings(p.name); });
   CUR = picks;
   document.body.classList.add('spreadon');
   document.body.classList.toggle('crossmode', picks.length >= 10);
@@ -1165,6 +1337,7 @@ async function draw(opts = {}) {
       cardEl.classList.add('flipped');
       slot.classList.add('revealed');
       buzz(12);
+      logCard(c);
       saveSpread();
       if ([...table.children].every(s => s.classList.contains('revealed'))) {
         again.style.display = 'inline-block';
@@ -1177,7 +1350,9 @@ async function draw(opts = {}) {
         if (celtic && COARSE) selectCeltic(slot, c);
         return;
       }
-      if (!celtic) return;
+      // outside the Cross there is no select-then-zoom step: the card is
+      // already big and already captioned, so a second click is the closer look
+      if (!celtic) { openCardBox(c); return; }
       if (!COARSE || slot.classList.contains('sel')) openCardBox(c);
       else selectCeltic(slot, c);
     });
@@ -1236,8 +1411,10 @@ function saveSpread() {
   const stacked = table.classList.contains('stackmode');
   try {
     sessionStorage.setItem(SKEY, JSON.stringify({
-      mode, q: qInput.value,
-      picks: CUR.map(p => ({ name: p.name, rev: !!p.rev, label: p.label || '' })),
+      mode, q: qInput.value, rid: RID,
+      // `seen` is deliberately not stored: draw() recomputes it from the card
+      // log, and a stored copy would be a second truth that can go stale
+      picks: CUR.map(p => ({ name: p.name, rev: !!p.rev, label: p.label || '', lens: p.lens || '' })),
       revealed: stacked ? [...S.revealed]
         : [...table.children].filter(s => s.classList.contains('revealed')).map(s => +s.dataset.ci),
       order: stacked ? S.order : null,
@@ -1250,7 +1427,8 @@ function restoreSpread() {
   if (!st || !st.picks || !st.picks.length) return false;
   const byName = {};
   DECK.forEach(c => { byName[c.name] = c; });
-  const picks = st.picks.map(p => byName[p.name] && { ...byName[p.name], rev: p.rev, label: p.label }).filter(Boolean);
+  const picks = st.picks.map(p => byName[p.name] &&
+    { ...byName[p.name], rev: p.rev, label: p.label, lens: p.lens || '' }).filter(Boolean);
   if (picks.length !== st.picks.length) return false;
   if ([1,3,5,10].includes(st.mode)) {
     mode = st.mode;
@@ -1270,24 +1448,144 @@ function selectCeltic(slot, c) {
   buzz(4);
 }
 
-/* celtic cards are small: a click on a revealed one zooms it in the lightbox */
+/* the closer look at one card, reachable from every spread: a second tap on a
+   card you have already turned over. Celtic cards are small enough that this
+   started as a zoom; it is now also the only place the situational expansion
+   is ever shown. */
 function openCardBox(c) {
+  /* The situational expansion gets shown here and nowhere else. It is written
+     for the embedding model — the concrete circumstances behind an aphorism —
+     and it stays out of the caption and the guidebook, where it would flatten
+     copy that is meant to land in one line. In the box, where a seeker has
+     deliberately asked for more of a card, it is the more. */
+  const sit = (c.rev ? c.sitr : c.sit) || '';
   lightbox.innerHTML = `<img data-src="${c.img}" data-big="1" alt="${c.name}"
       sizes="(min-width: 500px) 380px, 88vw"${c.rev ? ' style="transform:rotate(180deg)"' : ''}>
-    <div class="caption">${capHTML(c)}</div>`;
+    <div class="caption">${capHTML(c)}${sit ? `<div class="csit sep">${sit}</div>` : ''}</div>`;
   lightbox.classList.add('open');
   pushNav('lightbox');
   applyFoil();
 }
 
-/* when a spread clusters on a theme, the deck editorializes */
-function showVerdict() {
+/* ---- the verdict: what the deck makes of the spread as a whole ---- */
+
+/* The tag counter, unchanged, and now only the fallback: it is what speaks
+   when there are no embeddings to speak with. */
+function tagVerdict() {
   const counts = {};
   CUR.forEach(p => (p.t || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
   let best = null;
   for (const t in counts) if (counts[t] >= 3 && (!best || counts[t] > counts[best])) best = t;
-  if (!best) return;
-  verdictEl.textContent = VERDICTS[best];
+  return best ? VERDICTS[best] : '';
+}
+
+/* Recomputed on every call rather than cached at draw time, because a
+   clarifier lands in CUR after the deal and the verdict should account for a
+   card the seeker asked for. Synchronous and cheap: 3 pairs for a three-card
+   spread, 45 for a Cross with a clarifier on it. */
+function resonance() {
+  if (!QV || !window.ARCANAI_ATTUNE || CUR.length < 3) return null;
+  const idxs = CUR.map(c => IDX.get(c.name));
+  if (idxs.some(i => i === undefined)) return null;
+  return ARCANAI_ATTUNE.resonanceOf(idxs, CUR.map(c => !!c.rev), QV);
+}
+
+/* Which observation is worth making. Where several rules fire the deck takes
+   the one furthest past its own threshold, so a spread with a startling pair
+   talks about the pair and a spread with nothing but reversals talks about
+   those — priority order would have let the commonest rule win every time.
+
+   The gap rules need scaling into z's units because cosine gaps live around
+   0.1 and the z-scores live around 1 — without it the odd-one-out could never
+   win an argument with anything. GAPSCALE was 8 on the first pass and that
+   overcorrected: `loud` took a third of all firings and the commonest single
+   line landed at 14.9% against a 15% ceiling, which is a pass on one seed and
+   a fail on the next. At 5 these two behave as what they are, the floor that
+   speaks when nothing more interesting fired. */
+const GAPSCALE = 5;
+/* Cohesion is a mean of pair z-scores, so its margins are inherently smaller
+   than any single pair's: when a whole spread agrees, some pair inside it
+   always agrees harder, and `twin` was taking the line every time. At gain 1
+   `chorus` won once in 200 draws and two of its three variants had never been
+   seen. This is the knob that lets a whole-spread observation outrank a
+   two-card one. It applies to `scatter` as well — same statistic, other tail,
+   and treating the two ends of one measure differently would be arbitrary. */
+const COHGAIN = 2.5;
+function resonantVerdict(res) {
+  const n = CUR.length;
+  const revN = CUR.filter(c => c.rev).length;
+  const gapOf = (k) => {
+    if (k === null || !res.qsims || n < 2) return null;
+    const others = res.qsims.reduce((a, s, i) => (i === k ? a : a + s), 0) / (n - 1);
+    return res.qsims[k] - others;
+  };
+  const loudGap = gapOf(res.loudest), quietGap = gapOf(res.quietest);
+  const cands = [];
+  const add = (rule, margin, slots) => { if (margin > 0) cands.push({ rule, margin, slots }); };
+
+  if (res.strongest) add('twin', res.strongest.z - 1.5, {
+    A: CUR[res.strongest.i].name, B: CUR[res.strongest.j].name });
+  if (res.tensest) add('clash', -1.0 - res.tensest.z, {
+    A: CUR[res.tensest.i].name, seatA: CUR[res.tensest.i].label || 'this spread',
+    B: CUR[res.tensest.j].name, seatB: CUR[res.tensest.j].label || 'this spread' });
+  if (res.cohesion !== null) {
+    add('chorus', (res.cohesion - 1.0) * COHGAIN, {});
+    add('scatter', (-0.4 - res.cohesion) * COHGAIN, {});
+  }
+  // reversal density has no continuous margin, so it gets a flat one: enough
+  // to speak when nothing else does, never enough to outshout a real finding
+  if (revN === n) add('upended', 0.8, {});
+  else if (revN / n >= 0.5) add('mirrored', 0.2, {});
+  /* A card on its third visit outranks most findings about a single spread,
+     because it is a finding about all of them. Fixed margin: recurrence has no
+     natural scale, and it should lose to a genuinely startling pair. */
+  const haunt = hauntSlots();
+  if (haunt) add('haunt', 1.2, haunt);
+  if (quietGap !== null) add('odd', (-quietGap - 0.08) * GAPSCALE, { Q: CUR[res.quietest].name });
+  if (loudGap !== null) add('loud', (loudGap - 0.08) * GAPSCALE, {
+    L: CUR[res.loudest].name, seat: CUR[res.loudest].label || 'this spread' });
+
+  if (!cands.length) return '';
+  cands.sort((a, b) => b.margin - a.margin);
+  return renderLine(cands[0].rule, cands[0].slots);
+}
+
+/* The card the deck has shown you most often lately, if any has earned the
+   remark. Lives outside resonantVerdict because recurrence is counted from
+   localStorage and needs no model — a seeker with attunement switched off
+   should still be told when the same card will not leave them alone. */
+function hauntSlots() {
+  let hx = -1;
+  CUR.forEach((c, i) => { if ((c.seen || 0) >= 2 && (hx < 0 || c.seen > CUR[hx].seen)) hx = i; });
+  return hx < 0 ? null
+    : { H: CUR[hx].name, ord: ordWord(Math.min(CUR[hx].seen + 1, 10)) };
+}
+function hauntVerdict() {
+  const slots = hauntSlots();
+  return slots ? renderLine('haunt', slots) : '';
+}
+
+/* The variant is chosen from the cards themselves, never from rng: a restored
+   spread must say what it said before the tab switch. */
+function renderLine(rule, slots) {
+  const bank = RESONANT[rule];
+  if (!bank) return '';
+  const key = rule + '\u00b7' + CUR.map(c => c.name + (c.rev ? '!' : '')).join('\u00b7');
+  const line = bank[xmur3(key)() % bank.length];   // xmur3's tap yields a uint32
+  const all = { n: numWord(CUR.length), nOthers: numWord(CUR.length - 1),
+                revN: numWord(CUR.filter(c => c.rev).length), ...slots };
+  return line.replace(/\{(\w+)\}/g, (m, k) => (k in all ? all[k] : m))
+             .replace(/^./, s => s.toUpperCase());
+}
+
+/* when a spread has something to say about itself, the deck editorializes */
+function showVerdict() {
+  const res = resonance();
+  // haunt sits between the two because it needs no model but says more than a
+  // tag count: with attunement off it is the only thing that can still speak
+  const line = (res && resonantVerdict(res)) || hauntVerdict() || tagVerdict();
+  if (!line) return;
+  verdictEl.textContent = line;
   verdictEl.classList.add('show');
 }
 
@@ -1326,7 +1624,8 @@ function addClarifierSlot(slot, parent) {
   const cardEl = ns.querySelector('.card');
   const flip = () => {
     if (ns.classList.contains('revealed')) return;
-    cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12); showVerdict(); saveSpread();
+    cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12);
+    logCard(c); showVerdict(); saveSpread();
   };
   cardEl.addEventListener('click', () => {
     const inCeltic = table.classList.contains('celtic');
@@ -1335,7 +1634,7 @@ function addClarifierSlot(slot, parent) {
       if (inCeltic && COARSE) selectCeltic(ns, c);
       return;
     }
-    if (!inCeltic) return;
+    if (!inCeltic) { openCardBox(c); return; }
     if (!COARSE || ns.classList.contains('sel')) openCardBox(c);
     else selectCeltic(ns, c);
   });
@@ -1431,7 +1730,9 @@ function updateStackUI() {
   S.wrap.classList.toggle('revealed', seen);
   S.wrap.querySelector('#scap').innerHTML = seen ? capHTML(S.picks[i]) : '';
   S.wrap.querySelector('#shint').textContent = seen
-    ? (S.revealed.size === S.picks.length ? 'swipe to fidget · hold for a clarifier' : 'swipe for next · hold for a clarifier')
+    ? (S.revealed.size === S.picks.length
+        ? 'tap to look closer · swipe to fidget · hold for a clarifier'
+        : 'swipe for next · hold for a clarifier')
     : 'tap or flick your wrist to reveal · swipe for next';
   const done = S.revealed.size === S.picks.length;
   again.style.display = done ? 'inline-block' : 'none';
@@ -1542,10 +1843,13 @@ function flingNext(dir, dy = 0) {
 
 function tapTop() {
   const i = topIdx();
-  if (S.revealed.has(i)) return;
+  // a second tap on a card you have already turned over is the closer look —
+  // the only route to the card box on a phone, where 3 and 5 use the stack
+  if (S.revealed.has(i)) { openCardBox(S.picks[i]); return; }
   topEl().querySelector('.card').classList.add('flipped');
   S.revealed.add(i);
   buzz(12);
+  logCard(S.picks[i]);
   updateStackUI();
   saveSpread();
 }

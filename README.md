@@ -2,7 +2,7 @@
 
 ![Finnegan the orca reading your future](assets/orca_tarot.png)
 
-A 40-card sarcastic skeleton tarot deck — twelve real major arcana (The Lovers,
+A 40-card sarcastic skeleton tarot deck — eleven real major arcana (The Lovers,
 Death, The Tower…) anchoring the cards life actually deals you (*The Two of
 Deez, The Breast Pump, The Zoom Meeting, The Last Flying Fuck*). Ornate
 black-and-white line art with Cinzel lettering, plus a gold-foil-on-black

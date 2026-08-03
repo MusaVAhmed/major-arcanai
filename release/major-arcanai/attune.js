@@ -14,11 +14,13 @@
    Classic script, no build step. Loads after the inline DECK exists.
    Exposes window.ARCANAI_ATTUNE:
      .ready        → true once card vectors are computed
-     .readFor(q, mode, timeoutMs) → Promise<{w, rev, pos, su, sr, dom, stats} | null>
+     .readFor(q, mode, timeoutMs) → Promise<{w, rev, pos, su, sr, v, dom, stats} | null>
      .weightsFor(q, timeoutMs)    → Promise<Float64Array(40) | null>
      .vecFor(q, timeoutMs)        → Promise<Float32Array(384) | null>
      .domainOf(vec)               → {k, top, gap, all} | null   (synchronous)
      .domainFor(q, timeoutMs)     → Promise<same | null>
+     .resonanceOf(idxs, revs, qv) → how the dealt cards relate (synchronous)
+     .bg           → the background cosine distribution they are scored against
      .config       → { temp, strength } tuning knobs
 
    Failure of any kind (offline, old browser, CDN down) resolves to
@@ -27,37 +29,19 @@
 (() => {
   const MODEL = 'Xenova/all-MiniLM-L6-v2';
   const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/transformers.min.js';
-  const LS_KEY = 'arcanai-cardvecs-v2';
+  /* v3 adds the background cosine distribution to the cached blob. */
+  const LS_KEY = 'arcanai-cardvecs-v3';
 
   /* What each seat in a spread is asking of the card that lands there.
      Matching prose, not labels: "The Outcome" alone is too thin a string
-     to sit anywhere useful in the embedding space. */
-  const POSITIONS = {
-    3: [
-      ['Past', 'What is behind this. The history you are still carrying, what already happened.'],
-      ['Present', 'Where you stand now. The current state of it, the shape of today.'],
-      ['Future', 'What is coming. The next stretch of road, where this is heading.'],
-    ],
-    5: [
-      ['The Situation', 'The heart of the matter. Where you actually are right now, the plain facts of it.'],
-      ['The Obstacle', 'What stands in the way. The friction, the block, the thing working against you.'],
-      ['The Advice', 'What to do about it. The counsel, the move to make, the practical step.'],
-      ['The Vibe', 'The mood and atmosphere around this. How it feels, the emotional weather.'],
-      ['The Outcome', 'Where this lands if nothing changes. The result, the destination, how it ends.'],
-    ],
-    10: [
-      ['The Situation', 'The heart of the matter. Where you actually are, not where you say you are.'],
-      ['What Crosses You', 'The force working with or against it. The complication cutting across the situation.'],
-      ['The Root', 'What drives this from underneath. The cause, the part you do not say out loud.'],
-      ['The Recent Past', 'What is on its way out. What just happened and is already fading.'],
-      ['The Crown', 'The best available outcome. What you are consciously reaching for, your aim and hope.'],
-      ['The Near Future', 'The next beat. Days and weeks, what arrives soon.'],
-      ['The Self', 'How you are showing up in this story. Your own conduct, stance and behaviour.'],
-      ['The House', 'Your environment. The people around you, the room, the group chat.'],
-      ['Hopes and Fears', 'What you long for and what you dread, which are usually the same thing.'],
-      ['The Outcome', 'Where this lands if nothing changes. The final result, how it ends.'],
-    ],
-  };
+     to sit anywhere useful in the embedding space.
+
+     This used to live here. It now lives in seats.js, because the renderer
+     needs the same seats to print a lens in front of the card copy and two
+     copies of the truth is one copy too many. The pairs handed back are
+     byte-identical to what was here, so corpusSig is unchanged and no cached
+     vector rebuilds on account of the move. */
+  const POSITIONS = (window.ARCANAI_SEATS || {}).matching || null;
 
   /* What kind of question this is. A SEPARATE corpus from the cards — never
      folded into upText/revText — so adding, cutting or rewording an anchor
@@ -128,11 +112,19 @@
     vecFor,
     domainOf,
     domainFor,
+    resonanceOf,
+    get bg() { return bg; },
   });
 
   if (typeof DECK === 'undefined') {
     console.warn('🔮 attune: DECK not found; load attune.js after the deck script.');
     return;
+  }
+  /* Seats are optional. Without them the deck still chooses the cards and
+     their faces; it just deals them left to right like an ordinary shuffle,
+     which is what it did before seating existed. */
+  if (!POSITIONS) {
+    console.warn('🔮 attune: seats.js not found; seating disabled, selection unaffected.');
   }
 
   /* Each face of each card is its own document. `sit` and `sitr` are optional
@@ -141,7 +133,7 @@
      the same neighbourhood as the concrete things people actually ask. */
   const upText = DECK.map((c) => `${c.name}. ${c.meaning}${c.sit ? ' ' + c.sit : ''}`);
   const revText = DECK.map((c) => `${c.name}, reversed. ${c.r || ''}${c.sitr ? ' ' + c.sitr : ''}`);
-  const posModes = Object.keys(POSITIONS);
+  const posModes = POSITIONS ? Object.keys(POSITIONS) : [];
   const posText = posModes.map((m) => POSITIONS[m].map((p) => `${p[0]}. ${p[1]}`));
   const ancText = ANCHORS.map((a) => a[1]);
 
@@ -155,7 +147,7 @@
   })();
 
   let embedFn = null;        // (texts) => Promise<vectors>
-  let vUp = null, vRev = null, vAnc = null;
+  let vUp = null, vRev = null, vAnc = null, bg = null;
   const vPos = {};           // mode -> Array<Float32Array>
   const qCache = new Map();  // normalized question -> Float32Array
   let bootPromise = null;
@@ -183,23 +175,35 @@
       try {
         cached = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
       } catch (_) {}
+      /* Bumping LS_KEY orphans the previous blob: ~320 KB of dead weight in a
+         5 MB origin budget, on every device that ever loaded the old version,
+         forever. Sweep our own leavings — nobody else's. */
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('arcanai-cardvecs-') === 0 && k !== LS_KEY) localStorage.removeItem(k);
+        }
+      } catch (_) {}
       if (cached && cached.sig === corpusSig) {
         vUp = unpack(cached.up);
         vRev = unpack(cached.rev);
         vAnc = unpack(cached.anc);
         posModes.forEach((m) => { vPos[m] = unpack(cached.pos[m]); });
+        bg = cached.bg || null;
       } else {
         vUp = await embedFn(upText);
         vRev = await embedFn(revText);
         vAnc = await embedFn(ancText);
         for (let i = 0; i < posModes.length; i++) vPos[posModes[i]] = await embedFn(posText[i]);
+        bg = backgroundStats();
         try {
           const pos = {};
           posModes.forEach((m) => { pos[m] = pack(vPos[m]); });
           localStorage.setItem(LS_KEY, JSON.stringify(
-            { sig: corpusSig, up: pack(vUp), rev: pack(vRev), anc: pack(vAnc), pos }));
+            { sig: corpusSig, up: pack(vUp), rev: pack(vRev), anc: pack(vAnc), pos, bg }));
         } catch (_) {}
       }
+      if (!bg) bg = backgroundStats();   // a v3 blob written before this line existed
       A.ready = true;
       console.log('🔮 attune: semantic shuffle armed (' + MODEL + ')');
     })().catch((e) => {
@@ -237,6 +241,94 @@
     // keyword shuffle's weighting scale.
     return Float64Array.from(exps, (e) => 1 + strength * ((e / Z) * sims.length - 1) * 0.5)
       .map((w) => Math.min(8, Math.max(0.25, w)));
+  }
+
+  /* The null distribution for "how alike are two card faces you might be
+     dealt together". Raw cosines between these documents sit in a narrow band
+     high up the scale — every card is short second-person life advice, so
+     nothing here is ever really far from anything — which makes an absolute
+     threshold meaningless and a z-score against this the only honest way to
+     say two cards agree. Computed once when the vectors are built, cached
+     beside them, ~3k dot products.
+
+     The population is deliberately the one a spread samples from: every pair
+     of faces belonging to DIFFERENT cards. A card's upright and reversed
+     sides are each other's nearest neighbours by a mile and can never be
+     dealt together, so including them would inflate the mean and flatten
+     every z-score the deck ever reports. */
+  function backgroundStats() {
+    if (!vUp || !vRev) return null;
+    const faces = [];
+    for (let i = 0; i < vUp.length; i++) { faces.push([i, vUp[i]]); faces.push([i, vRev[i]]); }
+    let sum = 0, sum2 = 0, k = 0, min = 1, max = -1;
+    for (let a = 0; a < faces.length; a++) {
+      for (let b = a + 1; b < faces.length; b++) {
+        if (faces[a][0] === faces[b][0]) continue;
+        const c = dot(faces[a][1], faces[b][1]);
+        sum += c; sum2 += c * c; k++;
+        if (c < min) min = c;
+        if (c > max) max = c;
+      }
+    }
+    if (!k) return null;
+    const mean = sum / k;
+    return {
+      mean: +mean.toFixed(5),
+      sd: +Math.sqrt(Math.max(1e-12, sum2 / k - mean * mean)).toFixed(5),
+      n: k, min: +min.toFixed(4), max: +max.toFixed(4),
+    };
+  }
+
+  /* How the cards actually dealt relate to EACH OTHER, which the deck has
+     never before had an opinion about: the old verdict counted theme tags and
+     needed three of one tag to say anything, so a three-card draw almost never
+     spoke and when it did it said the same sentence forever.
+
+     `idxs` are DECK indices in seat order, `revs` their showing faces, `qv`
+     the question vector if there is one. Every index in the RESULT — i, j,
+     loudest, quietest — is a position in that drawn array, not a deck index,
+     because callers want the seat and the label, not the card number.
+
+     Returns null rather than guessing when the vectors are not up. */
+  function resonanceOf(idxs, revs, qv) {
+    if (!A.ready || !vUp || !bg || !idxs || !idxs.length) return null;
+    const n = idxs.length;
+    const face = idxs.map((ci, k) => (revs[k] ? vRev[ci] : vUp[ci]));
+    if (face.some((f) => !f)) return null;
+    const z = (c) => (c - bg.mean) / bg.sd;
+
+    const pairs = [];
+    let strongest = null, tensest = null, zsum = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const p = { i, j, cos: +dot(face[i], face[j]).toFixed(4) };
+        p.z = +z(p.cos).toFixed(2);
+        zsum += p.z;
+        pairs.push(p);
+        if (!strongest || p.z > strongest.z) strongest = p;
+        if (!tensest || p.z < tensest.z) tensest = p;
+      }
+    }
+
+    /* Loudest is the card that answers the question best, quietest the one
+       that does not fit — the odd card out is usually the interesting one. */
+    let loudest = null, quietest = null, qsims = null;
+    if (qv) {
+      qsims = face.map((fv) => dot(qv, fv));
+      qsims.forEach((s, k) => {
+        if (loudest === null || s > qsims[loudest]) loudest = k;
+        if (quietest === null || s < qsims[quietest]) quietest = k;
+      });
+    }
+
+    return {
+      pairs, strongest, tensest, loudest, quietest,
+      qsims: qsims ? qsims.map((s) => +s.toFixed(4)) : null,
+      /* mean pair z: how much this spread agrees with itself overall */
+      cohesion: pairs.length ? +(zsum / pairs.length).toFixed(2) : null,
+      revShare: +(revs.filter(Boolean).length / n).toFixed(2),
+      bg,
+    };
   }
 
   /* What the question is ABOUT, which is a different question from what the
@@ -302,8 +394,11 @@
       const faces = vUp.map((cv, i) => (rev[i] === 1 ? vRev[i] : cv));
       const pos = (vPos[mode] || []).map((pv) => faces.map((cv) => dot(pv, cv)));
 
-      // su/sr ride along: the face decision is only legible with both sides visible
-      return { w: simsToWeights(sims), rev, pos, su, sr, dom: domainOf(v), stats: A.lastStats };
+      /* su/sr ride along: the face decision is only legible with both sides
+         visible. `v` rides along so the caller can score the cards it ends up
+         dealing against the same question without a second await — the vector
+         is already in hand and resonanceOf is synchronous. */
+      return { w: simsToWeights(sims), rev, pos, su, sr, v, dom: domainOf(v), stats: A.lastStats };
     } catch (_) {
       return null;
     }
