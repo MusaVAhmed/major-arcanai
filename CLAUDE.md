@@ -78,7 +78,30 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
 - `#table` carries `--n` (card count, set in `draw()`, `idle()`, and after a
   clarifier). From 640px up, `.slot` width is `min(clamp(...), (100% - gaps)/--n)`
   so a five-card spread stays on one row. Any new code that appends a slot must
-  update `--n`.
+  update `--n` — **except when the table is laid out**, where `--n` is the row's
+  column count and must stay at the dealt count so a clarifier wraps to a second
+  row instead of squeezing the spread.
+- **Laid out vs the stack** (`#table.laid` + `.celtic`/`.row`, `laidPref`,
+  `swapView`). "Laid out" is the Cross's way of reading — every card small and on
+  the table at once, its caption suppressed and pulled into `#ccap` by
+  `selectSlot`, a second tap on a selected card opening the box. `.laid` carries
+  all of that; `.celtic` and `.row` are only the two shapes it comes in. The
+  Cross is always laid out, on every screen. Three and Five are laid out **on
+  touch only, and only by preference**: `laidPref`
+  (`localStorage['arcanai-spreadview']`, grid by default) picks between the row
+  and the swipeable stack, and `#vswap` swaps them mid-reading.
+  - The swap goes out through `saveSpread` and back through `draw`'s restore
+    path — the same road a tab switch travels — so the cards, the faces, which
+    are turned over, the clarifiers and the reading's `rid` all survive it, and
+    nothing re-deals. Both views index `revealed` into `CUR`, which is what makes
+    the two halves of that round trip compatible; keep it that way. A clarifier
+    comes back at the end of the row rather than beside its parent, exactly as it
+    already did on a tab switch.
+  - `.row` sets `min-height:0`: `#table`'s 280px floor exists to stop the idle
+    pile jumping, and under one row of 60px cards it is a hole above the reading.
+  - The swap is offered only where both views exist — touch, more than one card,
+    fewer than ten (`body.canswap`). Desktop never sees it and never gets `.laid`
+    outside the Cross.
 - **Semantic attuned shuffle** (`attune.js`, transformers.js +
   `Xenova/all-MiniLM-L6-v2`, ~23 MB from the HF CDN, browser-cached): the
   question is embedded and cosine-matched against card text. `draw()` is
@@ -121,8 +144,9 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   the showing face's expansion under the caption, and the gallery lightbox
   shows both faces' because it is the reference view. Nowhere else. The card
   box is reachable from every spread — a second tap on a card you already
-  turned over, which on a phone means `tapTop` in stack mode and on desktop a
-  second click on the slot. Card
+  turned over, which means `tapTop` in stack mode, a second tap on an already
+  selected card when the spread is laid out, and a second click on the slot on
+  desktop. Card
   meanings are aphorisms; the expansions are the concrete circumstances people
   actually type. Rules, learned the hard way: all 46 or none (a partial pass
   makes expanded cards quieter on unrelated questions and hands the rest an

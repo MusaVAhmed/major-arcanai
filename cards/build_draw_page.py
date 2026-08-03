@@ -195,20 +195,46 @@ html = """<!doctype html>
            gap:1.6rem; justify-content:center; flex-wrap:wrap; perspective:1600px; min-height:280px; }
   #table.stackmode { display:block; }
   #table img { -webkit-user-drag:none; user-select:none; -webkit-touch-callout:none; }
-  /* Celtic Cross (desktop): cross of six + staff of four */
+  /* "laid out": every card small and on the table at once, its reading pulled
+     out into #ccap below. The Cross has always read this way; on touch, Three
+     and Five opt into it too. .celtic and .row are only the two shapes. */
+  #table.laid .slot { width:100%; }
+  #table.laid .caption, #table.laid .tap { display:none; }
+  #table.laid .poslabel { font-size:.55rem; letter-spacing:.14em; margin-bottom:.4rem; min-height:2.2em; }
+  /* selected card ring + detail panel below the grid */
+  #table.laid .slot.sel .card { box-shadow:0 0 0 2px #c9a44a; border-radius:10px; }
+  body.foil #table.laid .slot.sel .card { box-shadow:0 0 0 2px var(--gold2); }
+  /* Celtic Cross: cross of six + staff of four */
   #table.celtic { display:grid; grid-template-columns:repeat(4, min(19vw, 128px));
     gap:.8rem .5rem; justify-content:center; align-items:start;
     grid-template-areas: ". p5 . p10" "p4 p1 p6 p9" ". p2 . p8" ". p3 . p7"; }
-  #table.celtic .slot { width:100%; }
-  #table.celtic .caption, #table.celtic .tap { display:none; }
-  #table.celtic .poslabel { font-size:.55rem; letter-spacing:.14em; margin-bottom:.4rem; min-height:2.2em; }
-  /* mobile cross: selected card ring + detail panel below the grid */
-  #table.celtic .slot.sel .card { box-shadow:0 0 0 2px #c9a44a; border-radius:10px; }
-  body.foil #table.celtic .slot.sel .card { box-shadow:0 0 0 2px var(--gold2); }
+  /* Three and Five laid out: one row, the whole spread in a glance. Sized off
+     --n so a clarifier simply wraps to a second row instead of squeezing the
+     spread — hence addClarifierSlot leaves --n alone here. */
+  #table.row { --rgap: clamp(.3rem, 1.6vw, .6rem);
+    display:grid; grid-template-columns:repeat(var(--n, 3), minmax(0, 1fr));
+    gap:.7rem var(--rgap); justify-content:center; align-items:start;
+    width:100%; margin-inline:auto;
+    max-width:calc(var(--n, 3) * 128px + (var(--n, 3) - 1) * var(--rgap));
+    /* the 280px floor is there to stop the idle pile jumping; one row of small
+       cards is half that, and the floor becomes a hole above the reading */
+    min-height:0; }
+  /* two lines reserved: "The Situation" wraps in a 60px column and the cards
+     below it would otherwise sit at five different heights */
+  #table.row .poslabel { line-height:1.15; min-height:2.6em; }
   #ccap { display:none; max-width:22rem; margin:1.3rem auto 0; opacity:1; }
   #ccap.show { display:block; }
   #ccap .poslabel { margin-bottom:.35rem; }
   body.gallery #ccap { display:none !important; }
+  /* the view swap: only ever offered where both views exist — touch, and a
+     spread of more than one card that is not the Cross */
+  #viewswap { display:none; margin:1.2rem auto 0; }
+  body.spreadon.canswap #viewswap { display:block; }
+  body.gallery #viewswap { display:none !important; }
+  #vswap { font-family:Georgia, 'Times New Roman', serif; font-size:.78rem; font-style:italic;
+           text-transform:none; letter-spacing:.04em; color:var(--dim); border:none;
+           border-bottom:1px solid var(--line); padding:.25rem .5rem; min-height:44px; }
+  #vswap:hover { border-color:var(--bone); color:var(--bone); }
   .slot.p1{grid-area:p1} .slot.p2{grid-area:p2} .slot.p3{grid-area:p3} .slot.p4{grid-area:p4}
   .slot.p5{grid-area:p5} .slot.p6{grid-area:p6} .slot.p7{grid-area:p7} .slot.p8{grid-area:p8}
   .slot.p9{grid-area:p9} .slot.p10{grid-area:p10}
@@ -378,6 +404,7 @@ html = """<!doctype html>
                  calc((100% - (var(--n, 1) - 1) * var(--gap)) / var(--n, 1)));
     }
     #table.celtic { grid-template-columns:repeat(4, clamp(84px, 9.5vw, 128px)); gap:1rem .9rem; }
+    #table.row { --rgap:.9rem; }
     .caption .cname { font-size:.9rem; }
     .caption .cmean { font-size:.85rem; }
   }
@@ -403,6 +430,10 @@ html = """<!doctype html>
     .stackwrap { max-width:min(76vw, 330px, calc(68dvh * 0.625)); }
     .slot, .slot.single { width:min(60vw, 320px, calc(68dvh * 0.625)); }
     #table.celtic { grid-template-columns:repeat(4, min(18vh, 128px)); }
+    /* width is plentiful in here, so the row has to be capped off height
+       instead or a five-card spread runs off the bottom of the screen */
+    #table.row { max-width:calc(var(--n, 3) * min(22vh, 128px)
+                                + (var(--n, 3) - 1) * var(--rgap)); }
   }
   @media (prefers-reduced-motion: reduce) {
     .card, .scard, .caption { transition:none; }
@@ -491,6 +522,7 @@ html = """<!doctype html>
   <div id="asked"></div>
   <div id="table" aria-live="polite"></div>
   <div id="ccap" class="caption" aria-live="polite"></div>
+  <div id="viewswap"><button type="button" id="vswap"></button></div>
   <div id="verdict" aria-live="polite"></div>
   <details id="crossguide">
     <summary>&#10022; How to read the Cross</summary>
@@ -610,6 +642,11 @@ const COARSE = matchMedia('(pointer: coarse)').matches || new URLSearchParams(lo
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let mode = 1;
 let foil = localStorage.getItem('arcanai-foil') === '1';
+/* Which way a multi-card spread reads on touch: all of it laid out at once (the
+   Cross's way, and the default), or one card at a time on the swipeable stack.
+   A preference, not a property of the reading — so it lives in localStorage and
+   a restored spread comes back in whichever view is current. */
+let laidPref = localStorage.getItem('arcanai-spreadview') !== 'stack';
 let TILT = 0;
 let CUR = [];    // picks currently on the table (desktop slots and stack both use it)
 /* the question's vector, kept from the deal so the verdict can score the cards
@@ -623,6 +660,7 @@ const qInput = document.getElementById('q');
 const askedEl = document.getElementById('asked');
 const verdictEl = document.getElementById('verdict');
 const ccap = document.getElementById('ccap');
+const vswap = document.getElementById('vswap');
 const buzz = ms => { if (navigator.vibrate) navigator.vibrate(ms); };
 
 /* ---- seeded randomness: the question and your hands are the shuffle ----
@@ -1284,8 +1322,9 @@ function idle(wipe) {
   ccap.classList.remove('show');
   CUR = [];
   sessionStorage.removeItem(SKEY);
+  document.body.classList.remove('canswap');
   table.classList.remove('stackmode');
-  table.classList.remove('celtic');
+  table.classList.remove('celtic', 'row', 'laid');
   table.innerHTML = '';
   table.style.setProperty('--n', 1);
   const slot = document.createElement('div');
@@ -1383,11 +1422,16 @@ async function draw(opts = {}) {
   verdictEl.classList.remove('show');
   hint.style.display = 'none';
   table.innerHTML = '';
-  table.classList.remove('celtic');
+  table.classList.remove('celtic', 'row', 'laid');
   const n = picks.length;
   table.style.setProperty('--n', n);   // wide screens shrink cards to fit one row
   ccap.classList.remove('show');
-  if (COARSE && n > 1 && n < 10) {   // the Cross uses the grid even on touch
+  /* Three and Five are the only spreads with two ways to read them, and only on
+     touch: the Cross is always laid out, One has nothing to swap between. */
+  const swappable = COARSE && n > 1 && n < 10;
+  document.body.classList.toggle('canswap', swappable);
+  updateSwapLabel();
+  if (swappable && !laidPref) {
     buildStack(picks, !!rst);
     if (rst) {
       S.revealed = new Set(rst.revealed || []);
@@ -1400,7 +1444,12 @@ async function draw(opts = {}) {
   }
   table.classList.remove('stackmode');
   const celtic = n >= 10;
+  /* the Cross is laid out on every screen; Three and Five only on touch, and
+     only because the seeker has not asked for the stack instead */
+  const laid = celtic || (swappable && laidPref);
   if (celtic) table.classList.add('celtic');
+  else if (laid) table.classList.add('row');
+  if (laid) table.classList.add('laid');
   picks.forEach((c, i) => {
     const slot = document.createElement('div');
     slot.className = 'slot' + (n === 1 ? ' single' : '') + (celtic && i < 10 ? ' p' + (i + 1) : '');
@@ -1424,14 +1473,15 @@ async function draw(opts = {}) {
     cardEl.addEventListener('click', () => {
       if (!slot.classList.contains('revealed')) {
         flip();
-        if (celtic && COARSE) selectCeltic(slot, c);
+        if (laid && COARSE) selectSlot(slot, c);
         return;
       }
-      // outside the Cross there is no select-then-zoom step: the card is
-      // already big and already captioned, so a second click is the closer look
-      if (!celtic) { openCardBox(c); return; }
+      // where the cards are full size there is no select-then-read step: the
+      // card is already big and already captioned, so a second click is the
+      // closer look
+      if (!laid) { openCardBox(c); return; }
       if (!COARSE || slot.classList.contains('sel')) openCardBox(c);
-      else selectCeltic(slot, c);
+      else selectSlot(slot, c);
     });
     attachHold(cardEl, () => { if (slot.classList.contains('revealed')) addClarifierSlot(slot, c); });
     if (rst && (rst.revealed || []).includes(i)) {
@@ -1451,7 +1501,7 @@ async function draw(opts = {}) {
       slot.querySelector('.tap').style.display = 'none';
     }
   });
-  if (celtic && COARSE) {
+  if (laid && COARSE) {
     ccap.innerHTML = '<div class="cmean">tap each card to reveal \\u00b7 tap a revealed card to read it \\u00b7 hold one for a clarifier</div>';
     ccap.classList.add('show');
   }
@@ -1516,8 +1566,32 @@ function restoreSpread() {
   return true;
 }
 
-/* mobile cross: highlight the tapped card and show its reading below the grid */
-function selectCeltic(slot, c) {
+/* ---- the view swap: the whole spread at once, or one card at a time ----
+   A reading already in progress has to survive it — which cards, which faces,
+   which of them are turned over, any clarifiers, and the reading's own id — so
+   the swap goes out through saveSpread and comes back through draw's restore
+   path, the same road a tab switch already travels. `restore` is also what
+   suppresses the deal animation, which is right: nothing was dealt. */
+function updateSwapLabel() {
+  vswap.textContent = laidPref ? '\\u2726 take them one at a time'
+                               : '\\u2726 lay them all out';
+}
+function swapView() {
+  laidPref = !laidPref;
+  try { localStorage.setItem('arcanai-spreadview', laidPref ? 'grid' : 'stack'); } catch (_) {}
+  buzz(6);
+  updateSwapLabel();
+  if (!CUR.length) return;
+  saveSpread();
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(SKEY)); } catch (_) {}
+  draw({ picks: CUR, restore: st || { rid: RID, revealed: [] } });
+}
+vswap.addEventListener('click', swapView);
+updateSwapLabel();
+
+/* laid out on touch: highlight the tapped card and show its reading below */
+function selectSlot(slot, c) {
   table.querySelectorAll('.slot.sel').forEach(s => s.classList.remove('sel'));
   slot.classList.add('sel');
   ccap.innerHTML = `<div class="poslabel">${c.label}</div>` + capHTML(c);
@@ -1705,20 +1779,22 @@ function addClarifierSlot(slot, parent) {
     logCard(c); showVerdict(); saveSpread();
   };
   cardEl.addEventListener('click', () => {
-    const inCeltic = table.classList.contains('celtic');
+    const laid = table.classList.contains('laid');
     if (!ns.classList.contains('revealed')) {
       flip();
-      if (inCeltic && COARSE) selectCeltic(ns, c);
+      if (laid && COARSE) selectSlot(ns, c);
       return;
     }
-    if (!inCeltic) { openCardBox(c); return; }
+    if (!laid) { openCardBox(c); return; }
     if (!COARSE || ns.classList.contains('sel')) openCardBox(c);
-    else selectCeltic(ns, c);
+    else selectSlot(ns, c);
   });
   attachHold(cardEl, () => { if (ns.classList.contains('revealed')) addClarifierSlot(ns, c); });
   cardEl.classList.add('deal');
   slot.insertAdjacentElement('afterend', ns);
-  if (!table.classList.contains('celtic')) table.style.setProperty('--n', table.children.length);
+  /* Laid out, --n is the row's column count and must not follow the card count:
+     a clarifier belongs on a second row, not squeezed into the first. */
+  if (!table.classList.contains('laid')) table.style.setProperty('--n', table.children.length);
   if (!COARSE) { ns.querySelector('.tap').style.display = 'none'; setTimeout(flip, REDUCED ? 0 : 500); }
   saveSpread();
   applyFoil();
@@ -1920,8 +1996,8 @@ function flingNext(dir, dy = 0) {
 
 function tapTop() {
   const i = topIdx();
-  // a second tap on a card you have already turned over is the closer look —
-  // the only route to the card box on a phone, where 3 and 5 use the stack
+  // a second tap on a card you have already turned over is the closer look,
+  // the same second tap the laid-out views ask for
   if (S.revealed.has(i)) { openCardBox(S.picks[i]); return; }
   topEl().querySelector('.card').classList.add('flipped');
   S.revealed.add(i);
