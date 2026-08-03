@@ -197,9 +197,6 @@
      subordinate to it: the card is what was dealt, the lens is only where it
      landed. Inherits .cmean's size so the phone breakpoint shrinks both. */
   .caption .clens { font-style:italic; opacity:.72; }
-  /* the deck mentioning it has dealt you this one before */
-  .caption .recur { font-size:.72rem; font-style:italic; color:var(--dim); opacity:.7;
-                    letter-spacing:.06em; margin-top:.35rem; }
   /* the situational expansion, lightbox only — see openCardBox. `.sep` is the
      reading box, where one expansion follows one caption and wants a rule to
      divide them; the gallery prints two and would look ruled to death. */
@@ -429,15 +426,6 @@
         <span class="sdesc">A vibration, or a breath of light at the edge of the room. Phones
           that cannot buzz are given the light instead.</span>
       </div>
-      <div class="srow" id="memrow">
-        <span class="shead">What it remembers</span>
-        <div class="seg" role="group" aria-label="Card memory">
-          <button type="button" id="cardforget">Forget cards</button>
-        </div>
-        <span class="sdesc">The deck keeps a list of the cards it has shown you, so it can say
-          when one will not leave you alone. It stays in this browser, and it never changes
-          which cards you draw.</span>
-      </div>
     </div>
   </div>
   <div class="ask"><input id="q" type="text" maxlength="140" autocomplete="off"
@@ -553,11 +541,6 @@ const RESONANT = {
     'If you read one of these, read {L}. The deck put it exactly where it wanted it.',
     '{L} is doing the work here. The rest showed up for the photograph.',
   ],
-  haunt: [
-    '{H} again. The deck is not in the habit of repeating itself by accident.',
-    '{H} keeps turning up. At some point that stops being chance and starts being a note.',
-    'That is the {ord} time {H} has come up this month. It will keep coming until you do something about it.',
-  ],
 };
 const NUMWORD = ['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
 const numWord = n => NUMWORD[n] || String(n);
@@ -572,6 +555,8 @@ let foil = localStorage.getItem('arcanai-foil') === '1';
 let laidPref = localStorage.getItem('arcanai-spreadview') !== 'stack';
 let TILT = 0;
 let CUR = [];    // picks currently on the table (desktop slots and stack both use it)
+/* whether the spread on the table was drawn with the question still in the box */
+let SPENT = false;
 /* the question's vector, kept from the deal so the verdict can score the cards
    against it without a second await — null whenever there is nothing to score */
 let QV = null;
@@ -793,45 +778,12 @@ function rememberQ(v) {
   try { localStorage.setItem(QHIST_KEY, JSON.stringify(h)); } catch (_) {}
 }
 
-/* ---- which cards the deck has already shown you ----
-   Forty cards and a ten-card Cross means a quarter of the deck per reading and
-   repeats a seeker will absolutely notice. Rather than pretend otherwise, the
-   deck notices first. Display and verdict only: nothing here touches which
-   cards are selected, and it must stay that way.
-
-   Logged on REVEAL, never on the deal — a card you closed the tab on was never
-   shown to you. Every entry carries the id of the reading it belongs to, so a
-   spread restored from sessionStorage re-reveals its cards without counting
-   them twice, and so a card's own reading never counts as a prior sighting. */
-const CARDLOG_KEY = 'arcanai-cardlog';
-const CARDLOG_MAX = 240;      // a year of heavy use, ~15 KB
-const RECUR_DAYS = 30;
-let RID = '';                 // id of the reading on the table
-const cardlog = () => { try { return JSON.parse(localStorage.getItem(CARDLOG_KEY) || '[]'); } catch (_) { return []; } };
-function logCard(c) {
-  if (!RID || !c || !c.name) return;
-  const h = cardlog();
-  if (h.some(e => e.rid === RID && e.name === c.name)) return;
-  h.push({ name: c.name, rev: !!c.rev, seat: c.label || '', mode, ts: Date.now(), rid: RID });
-  while (h.length > CARDLOG_MAX) h.shift();
-  try { localStorage.setItem(CARDLOG_KEY, JSON.stringify(h)); } catch (_) {}
-}
-/* How many EARLIER readings inside the window showed this card. Counts
-   readings, not entries, so a card and its clarifier cannot inflate it. */
-function priorSightings(name) {
-  const cut = Date.now() - RECUR_DAYS * 864e5;
-  const rids = new Set();
-  cardlog().forEach(e => {
-    if (e.name === name && e.ts >= cut && e.rid !== RID) rids.add(e.rid || String(e.ts));
-  });
-  return rids.size;
-}
-const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth',
-             'seventh', 'eighth', 'ninth', 'tenth'];
-const ordWord = n => ORD[n] || (n + 'th');
-/* n is how many EARLIER readings had it, so this appearance is the (n+1)th */
-const recurNote = n => (n === 1 ? 'this one has come up before'
-                                : ordWord(Math.min(n + 1, 10)) + ' time this month');
+/* The deck used to keep a log of the cards it had shown you so it could remark
+   when one kept coming back. It was removed: a reading is about the cards on
+   the table, and being told the deck has been counting reads as nagging rather
+   than as noticing. Sweep the key so the old log does not sit in localStorage
+   forever on devices that used it. */
+try { localStorage.removeItem('arcanai-cardlog'); } catch (_) {}
 
 /* Fires after the deck has looked at the question, so it lands as a response
    rather than as feedback on the tap. The echo check rides on the vector the
@@ -1017,19 +969,6 @@ tellsBox.addEventListener('change', () => {
   if (tellsOn) deliverTell('resolute'); else buzz(6);   // show what one is like
 });
 
-/* The card log is the deck's memory of you, so the control that erases it sits
-   in the Back Room proper rather than in the ?tells panel beside "Forget
-   questions": a seeker who is told the same card keeps coming back should not
-   need a debug flag to make it stop. */
-const cardForget = document.getElementById('cardforget');
-cardForget.addEventListener('click', () => {
-  localStorage.removeItem(CARDLOG_KEY);
-  CUR.forEach(c => { c.seen = 0; });
-  cardForget.textContent = 'Forgotten';
-  setTimeout(() => { cardForget.textContent = 'Forget cards'; }, 1600);
-  buzz(6);
-});
-
 const tmBtns = [1, 2, 3].map(i => document.getElementById('tm' + i));
 function applyTellMode() {
   tmBtns.forEach((b, i) => b.classList.toggle('active', i + 1 === tellMode));
@@ -1151,8 +1090,16 @@ for (const n of [1,3,5,10]) {
     mode = n;
     for (const k of [1,3,5,10]) document.getElementById('m'+k).classList.toggle('active', k === n);
     closeGallery();
-    idle();   // an explicit spread-type switch arms a fresh deal; only
-              // browser reloads/tab switches preserve the reading
+    /* An explicit spread-type switch arms a fresh deal; only browser reloads
+       and tab switches preserve the reading. Whether it also wipes the question
+       turns on whether that question has been spent. Typed one and changed your
+       mind about One versus Cross before drawing? Keep it — losing what you
+       typed for that is infuriating. Already drew with it? Wipe it. `.ask` is
+       hidden for the whole reading, so a question that survives its own spread
+       is one you cannot see, will not remember typing, and will find silently
+       attached to the next reading — which reads as the deck asking on your
+       behalf. */
+    idle(SPENT);
   });
 }
 
@@ -1218,13 +1165,12 @@ function cardHTML(frontImg, alt) {
    "what's in the way: Keep going. You're closer than you think." */
 const capHTML = c => `<div class="cname">${c.name}</div>
   <div class="cnum">${c.n}${c.rev ? ' &middot; <span class="revtag">reversed</span>' : ''}</div>
-  <div class="cmean">${c.lens ? `<span class="clens">${c.lens}</span> ` : ''}${c.rev ? c.r : c.meaning}</div>
-  ${c.seen ? `<div class="recur">${recurNote(c.seen)}</div>` : ''}`;
+  <div class="cmean">${c.lens ? `<span class="clens">${c.lens}</span> ` : ''}${c.rev ? c.r : c.meaning}</div>`;
 
 /* `wipe` means a reading actually ended, and the question ends with it: asking
    the deck the same thing again until it says something kinder is the one
-   thing tarot is genuinely strict about. Switching spread type is not the end
-   of a reading, so that path keeps what you have typed. */
+   thing tarot is genuinely strict about. Switching spread type passes `SPENT`
+   rather than a constant — see the mode buttons. */
 function idle(wipe) {
   again.style.display = 'none';
   QV = null;          // nothing on the table, nothing to score against
@@ -1234,6 +1180,7 @@ function idle(wipe) {
     askedEl.classList.remove('has');
     qtReset();          // the next question is a new question, not a continuation
   }
+  SPENT = false;
   hint.style.display = '';
   hint.textContent = COARSE
     ? (mode === 10 ? 'Rub the deck to shuffle \u00b7 tap to lay the Cross.'
@@ -1332,11 +1279,11 @@ async function draw(opts = {}) {
     : ((attuned && q && window.ARCANAI_ATTUNE && ARCANAI_ATTUNE.ready)
         ? await ARCANAI_ATTUNE.vecFor(q, 450) : null);
   const rst = opts.restore || null;
-  /* the reading's own id, restored with it so a tab switch does not turn one
-     reading into two in the card log */
-  RID = (rst && rst.rid) || ('r' + Date.now().toString(36) + (ENT >>> 0).toString(36));
-  // how many earlier readings showed each of these — computed once, at the deal
-  picks.forEach(p => { p.seen = priorSightings(p.name); });
+  /* Whether the spread now on the table was drawn with the question that is
+     still sitting in the box. `.ask` is hidden for the whole reading, so a
+     question that outlives its spread is one you cannot see and will not
+     remember typing — see the spread-type switch in the mode buttons. */
+  SPENT = !!q;
   CUR = picks;
   document.body.classList.add('spreadon');
   document.body.classList.toggle('crossmode', picks.length >= 10);
@@ -1386,7 +1333,6 @@ async function draw(opts = {}) {
       cardEl.classList.add('flipped');
       slot.classList.add('revealed');
       buzz(12);
-      logCard(c);
       saveSpread();
       if ([...table.children].every(s => s.classList.contains('revealed'))) {
         again.style.display = 'inline-block';
@@ -1461,9 +1407,7 @@ function saveSpread() {
   const stacked = table.classList.contains('stackmode');
   try {
     sessionStorage.setItem(SKEY, JSON.stringify({
-      mode, q: qInput.value, rid: RID,
-      // `seen` is deliberately not stored: draw() recomputes it from the card
-      // log, and a stored copy would be a second truth that can go stale
+      mode, q: qInput.value,
       picks: CUR.map(p => ({ name: p.name, rev: !!p.rev, label: p.label || '', lens: p.lens || '' })),
       revealed: stacked ? [...S.revealed]
         : [...table.children].filter(s => s.classList.contains('revealed')).map(s => +s.dataset.ci),
@@ -1491,7 +1435,7 @@ function restoreSpread() {
 
 /* ---- the view swap: the whole spread at once, or one card at a time ----
    A reading already in progress has to survive it — which cards, which faces,
-   which of them are turned over, any clarifiers, and the reading's own id — so
+   which of them are turned over, and any clarifiers — so
    the swap goes out through saveSpread and comes back through draw's restore
    path, the same road a tab switch already travels. `restore` is also what
    suppresses the deal animation, which is right: nothing was dealt. */
@@ -1508,7 +1452,7 @@ function swapView() {
   saveSpread();
   let st = null;
   try { st = JSON.parse(sessionStorage.getItem(SKEY)); } catch (_) {}
-  draw({ picks: CUR, restore: st || { rid: RID, revealed: [] } });
+  draw({ picks: CUR, restore: st || { revealed: [] } });
 }
 vswap.addEventListener('click', swapView);
 updateSwapLabel();
@@ -1610,11 +1554,6 @@ function resonantVerdict(res) {
   // to speak when nothing else does, never enough to outshout a real finding
   if (revN === n) add('upended', 0.8, {});
   else if (revN / n >= 0.5) add('mirrored', 0.2, {});
-  /* A card on its third visit outranks most findings about a single spread,
-     because it is a finding about all of them. Fixed margin: recurrence has no
-     natural scale, and it should lose to a genuinely startling pair. */
-  const haunt = hauntSlots();
-  if (haunt) add('haunt', 1.2, haunt);
   if (quietGap !== null) add('odd', (-quietGap - 0.08) * GAPSCALE, { Q: CUR[res.quietest].name });
   if (loudGap !== null) add('loud', (loudGap - 0.08) * GAPSCALE, {
     L: CUR[res.loudest].name, seat: CUR[res.loudest].label || 'this spread' });
@@ -1622,21 +1561,6 @@ function resonantVerdict(res) {
   if (!cands.length) return '';
   cands.sort((a, b) => b.margin - a.margin);
   return renderLine(cands[0].rule, cands[0].slots);
-}
-
-/* The card the deck has shown you most often lately, if any has earned the
-   remark. Lives outside resonantVerdict because recurrence is counted from
-   localStorage and needs no model — a seeker with attunement switched off
-   should still be told when the same card will not leave them alone. */
-function hauntSlots() {
-  let hx = -1;
-  CUR.forEach((c, i) => { if ((c.seen || 0) >= 2 && (hx < 0 || c.seen > CUR[hx].seen)) hx = i; });
-  return hx < 0 ? null
-    : { H: CUR[hx].name, ord: ordWord(Math.min(CUR[hx].seen + 1, 10)) };
-}
-function hauntVerdict() {
-  const slots = hauntSlots();
-  return slots ? renderLine('haunt', slots) : '';
 }
 
 /* The variant is chosen from the cards themselves, never from rng: a restored
@@ -1655,9 +1579,7 @@ function renderLine(rule, slots) {
 /* when a spread has something to say about itself, the deck editorializes */
 function showVerdict() {
   const res = resonance();
-  // haunt sits between the two because it needs no model but says more than a
-  // tag count: with attunement off it is the only thing that can still speak
-  const line = (res && resonantVerdict(res)) || hauntVerdict() || tagVerdict();
+  const line = (res && resonantVerdict(res)) || tagVerdict();
   if (!line) return;
   verdictEl.textContent = line;
   verdictEl.classList.add('show');
@@ -1699,7 +1621,7 @@ function addClarifierSlot(slot, parent) {
   const flip = () => {
     if (ns.classList.contains('revealed')) return;
     cardEl.classList.add('flipped'); ns.classList.add('revealed'); buzz(12);
-    logCard(c); showVerdict(); saveSpread();
+    showVerdict(); saveSpread();
   };
   cardEl.addEventListener('click', () => {
     const laid = table.classList.contains('laid');
@@ -1925,7 +1847,6 @@ function tapTop() {
   topEl().querySelector('.card').classList.add('flipped');
   S.revealed.add(i);
   buzz(12);
-  logCard(S.picks[i]);
   updateStackUI();
   saveSpread();
 }

@@ -212,9 +212,12 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   `build_draw_page.py`). Eight rules over the resonance numbers, three lines
   each. Where several fire the deck takes the one **furthest past its own
   threshold**, not the first in priority order — priority let the commonest
-  rule win every time. Measured on the bench, 200 seeded three-card draws:
-  fire rate **94%**, commonest single line **13.3%** of firings, 22 of the 24
-  lines used.
+  rule win every time. Measured on the bench, 200 seeded three-card draws at 46
+  cards: fire rate **95.5%**, commonest single line **9.9%** of firings, **24 of
+  24** lines used, nothing falling through to the tag counter. (The older 94% /
+  13.3% / 22-of-24 figures in this file were measured at 40 cards and before the
+  `haunt` rule existed; both bench runs since the deck grew agree on the numbers
+  above.)
   - `GAPSCALE` (5) converts the odd-one-out / loudest-card cosine gaps into the
     z-scores' units so they can be compared. It was 8 and that overcorrected:
     `loud` took a third of all firings and the commonest line hit 14.9% against
@@ -241,33 +244,22 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     never awaits.
   - Verdict copy carrying a count must use the `{n}`, `{nOthers}` or `{revN}`
     slots. A line that says "three" reads wrong the moment a Cross is dealt.
-- **Recurring-card memory** (`CARDLOG_KEY` / `logCard` / `priorSightings`).
-  Forty cards and a ten-card Cross is a quarter of the deck per reading, so
-  repeats get noticed; the deck notices first. Display and verdict only —
-  **nothing here may ever touch selection**, and `priorSightings` consumes no
-  rng, which the harness checks by comparing `shuffled(mulberry32(42))` with a
-  full log and with none.
-  - Logged on **reveal**, never on the deal: a card you closed the tab on was
-    never shown to you.
-  - Every entry carries `rid`, the id of its reading, which `saveSpread`
-    persists. That is what stops a restored spread from counting its own cards
-    twice, and what stops a card's own reading from counting as a prior
-    sighting. `priorSightings` counts *readings*, not entries, so a card and
-    its clarifier cannot inflate it.
-  - `seen` is computed once at the deal and deliberately **not** persisted:
-    `draw()` recomputes it, and a stored copy would be a second truth that goes
-    stale as the 30-day window slides.
-  - The `haunt` verdict sits *between* the resonant path and the tag counter,
-    because recurrence is counted from localStorage and needs no model. With
-    attunement off it is the only thing that can still speak — verified.
-  - **The Forget cards control is in the Back Room proper, not beside "Forget
-    questions" in the `?tells` panel**, deliberately departing from the
-    handoff: a seeker told that a card keeps coming back should not need a
-    debug flag to make it stop. It is a `.srow` (`#memrow`), never `.leanrow`
-    — card memory has nothing to do with attunement.
-  - The bench cannot exercise the three `haunt` lines (it never populates a
-    card log), so it reports 24 of 27 templates used. That is expected, not a
-    coverage gap.
+- **Recurring-card memory was removed** (was `CARDLOG_KEY` / `logCard` /
+  `priorSightings` / the `haunt` verdict / the "Forget cards" Back Room row).
+  The deck logged every card it revealed so it could remark when one kept
+  coming back. It read as nagging rather than as noticing, and the owner asked
+  for it gone. Do not reintroduce it without asking.
+  - `boot()` now sweeps `arcanai-cardlog` so the old log does not sit in
+    localStorage forever on devices that used it. That one line is all that
+    remains of the feature; it can go once the deck has no returning users on
+    an old build, which is never, so leave it.
+  - `RID` went with it — its only consumer was tying card-log entries to a
+    reading. `saveSpread` no longer persists `rid`; an old stored spread simply
+    carries a field nothing reads.
+  - The bench used to report 24 of 27 templates because it could never populate
+    a card log and so could never fire the three `haunt` lines. It now reports
+    **24 of 24**, with fire rate and distribution unchanged (95.5%, commonest
+    9.9%) — verified before and after, since `haunt` never won a bench spread.
 - Bumping `LS_KEY` orphans the previous ~320 KB blob on every device inside a
   5 MB origin budget, so `boot()` sweeps any `arcanai-cardvecs-*` key that is
   not the current one. Bump the key freely; the sweep is what makes it cheap.
@@ -334,10 +326,20 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   keeps the buzz: a vibration is not visual motion.
 - `idle(wipe)`: **finishing a reading wipes the question**, because asking the
   deck the same thing again until it says something kinder is the one thing
-  tarot is strict about. Only the two end-of-reading paths pass `true` (the
-  again button and the popstate off a spread). A spread-type switch also calls
-  `idle()` and must NOT wipe — losing what you typed just for changing One to
-  Cross is infuriating.
+  tarot is strict about. The two end-of-reading paths pass `true` (the again
+  button and the popstate off a spread). A spread-type switch passes **`SPENT`**,
+  which is the whole subtlety, and it is a two-sided rule — both sides were
+  reported as bugs:
+  - Typed a question and changed your mind about One versus Cross *before*
+    drawing? It survives. Losing what you typed for that is infuriating.
+  - Already *drew* with it? It is wiped, exactly as finishing would. `.ask` is
+    `display:none` for the whole reading, so a question that outlives its own
+    spread is one you cannot see and will not remember typing, and it gets
+    silently attached to the next reading — which reads as the deck having
+    asked on your behalf.
+  - `SPENT` is set in `draw()` from the question it actually used, so
+    `silentQ` deals (Card of the Day, the jumper) do **not** spend a question
+    the seeker typed and never asked.
 - **A flick is not a shake.** A wrist flick throws as much linear acceleration
   as a deliberate shake, so the card jumper cannot be told apart by force: it
   is gated on rotation being *low* (`|rate| < FLICK_RATE`) as well as force
