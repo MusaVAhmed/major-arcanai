@@ -428,6 +428,38 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   how every probe reaches them. Serve the repo root, open
   `/cards/resonance_bench.html`, press Run. Fixed `SEED`, so two runs of the
   same build produce the same 200 spreads.
+- `cards/reader_bench.html` (not shipped) is the **WP4 model bake-off**. One
+  candidate at a time through a fixed set of card/seat/question cases chosen for
+  contradiction *risk*, reporting download size, load time, tok/s, and every
+  line so voice can be hand-judged. Cases are read live from the built page's
+  `DECK` and from `seats.js`, so they cannot drift from what ships. Notes:
+  - **Inference runs in a Worker.** Not a nicety: 135M on the wasm backend
+    froze the tab so hard it stopped answering CDP. Same reason `speak.js` will
+    need one.
+  - The sanity gate (echo / arithmetic / counting) is **necessary but not
+    sufficient** — SmolLM2-135M-Instruct q4 passed 3/3 and then failed the card
+    task completely, echoing the prompt back and looping. Judge the lines, not
+    the gate.
+  - **The handoff's 300 MB download cap was lifted on 2026-08-03**, because it
+    left only SmolLM2 standing and the small models are the ones that cannot
+    hold the voice. Size is reported and weighed, never capped. D5 is untouched:
+    it is a consent rule, not a size cap, so the download size must still be
+    shown before the first byte. The real ceiling is now phone RAM and WebGPU's
+    `maxStorageBufferBindingSize`, not policy.
+  - **D1 compliance and voice trade off against each other**, measured on Gemini
+    Nano across 12 cases picked for contradiction risk. The handoff's prompt let
+    the model answer the *question* instead of re-voicing the *card* (3/12 D1
+    failures, e.g. The Lovers reversed on "is he cheating on me" returned "you're
+    drifting, not cheating" — the deck adjudicating an affair it never mentioned).
+    Forbidding that fixed all three and flattened the voice: avg words 14.6 → 8.3,
+    two near-verbatim copies, "Stop. Literally. A nap is the practical solution."
+    became "Consider stillness. A pause unlocks potential." Both prompts ship in
+    the bench; the question is which model needs the least leash.
+  - The `count` check is deliberately tolerant of list formatting; an
+    intolerant regex disqualified a model whose arithmetic was fine.
+  - **`first-callback` is not TTFT.** The streamer's first `put` fires during
+    prompt processing. Fix with a `TextStreamer` and `skip_prompt` before
+    judging any model on criterion 4.
 - **Build hygiene**: after any change, run `build_draw_page.py` twice and
   confirm `git diff` on `release/` shows only what you meant and nothing on the
   second run. Catches the failure mode of having edited the generated

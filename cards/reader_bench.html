@@ -1,0 +1,448 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ArcanAI — reader bench (WP4)</title>
+<!--
+  Not shipped. Serve the repo root and open /cards/reader_bench.html.
+
+  The WP4 model bake-off. Loads one candidate at a time, runs a fixed set of
+  card/seat/question cases through the reader prompt, and reports download
+  size, load time, first-token latency, tokens per second, and every line it
+  produced so the voice can be judged by a human. Nothing here decides
+  anything: the handoff requires reporting to the Commander before a model is
+  locked, and criterion 1 (never contradicts the card's meaning) and criterion
+  5 (voice) are both hand-judged. This page's job is to make that judging cheap
+  and repeatable.
+
+  WHY THE CASES LOOK LIKE THIS. They are chosen for contradiction RISK, not for
+  being easy: reversed faces (whose copy is second-person and punchy and so the
+  easiest to over-write), cards whose meaning is a flat refusal that a model
+  loves to soften, a comfort card dealt into The Obstacle so the seat pulls
+  against the card, the same card in two seats to prove the seat actually moves
+  the line, and a question from a different domain than the card. A model that
+  passes on easy cases tells you nothing.
+
+  DETERMINISM. Cases are read live from the built page's DECK and from
+  seats.js, so they cannot drift from what ships. Generation is greedy
+  (do_sample false) so two runs of the same build and model are comparable.
+
+  RUNNING IT ON A PHONE, which is the point — Tier 2 is the tier that reaches
+  phones, and desktop numbers do not transfer. Per CLAUDE.md:
+      cloudflared tunnel --url http://localhost:8642 --protocol http2
+  then open /cards/reader_bench.html on the handset. Expect a large download
+  per model; they are cached by the browser afterwards.
+-->
+<style>
+  body { font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; background:#141311;
+         color:#e9e3d3; margin:0; padding:1rem 1.2rem 4rem; }
+  h1 { font-size:1rem; letter-spacing:.08em; text-transform:uppercase; color:#9a927f; }
+  h2 { font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; color:#9a927f;
+       margin:1.6rem 0 .5rem; border-top:1px solid #3b372c; padding-top:.8rem; }
+  button, select { font:inherit; background:#23201a; color:#e9e3d3; border:1px solid #3b372c;
+                   padding:.45rem .8rem; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  pre { white-space:pre-wrap; word-break:break-word; }
+  table { border-collapse:collapse; width:100%; margin-top:.5rem; }
+  td, th { border:1px solid #3b372c; padding:.35rem .5rem; vertical-align:top; text-align:left; }
+  th { color:#9a927f; font-weight:normal; }
+  .gold { color:#c9a44a; }
+  .bad  { color:#e0705f; }
+  .warn { color:#d8b45e; }
+  .ok   { color:#8fbf7f; }
+  .dim  { color:#9a927f; }
+  .mean { color:#9a927f; font-style:italic; }
+  iframe { position:fixed; left:-9999px; width:900px; height:1200px; }
+  #cfg { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin:.8rem 0; }
+</style>
+
+<h1>Reader bench &middot; WP4 bake-off</h1>
+
+<div id="cfg">
+  <select id="model"></select>
+  <select id="dtype">
+    <option value="q4">q4</option>
+    <option value="q4f16">q4f16</option>
+  </select>
+  <select id="device">
+    <option value="webgpu">webgpu</option>
+    <option value="wasm">wasm (correctness only — NOT a perf number)</option>
+  </select>
+  <select id="prompt">
+    <option value="A">prompt A — handoff verbatim</option>
+    <option value="B">prompt B — anti-invention</option>
+  </select>
+  <button id="go">Run</button>
+  <button id="sanity">Sanity only</button>
+  <span id="status" class="dim">idle</span>
+</div>
+
+<div id="env" class="dim"></div>
+<div id="out"></div>
+<iframe id="f" src="../release/major-arcanai/index.html"></iframe>
+
+<script type="module">
+/* Same CDN and version as attune.js, deliberately: the library is then fetched
+   once and shared with the page's MiniLM rather than pulling a second copy. */
+const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/transformers.min.js';
+
+/* ---- inference runs in a Worker ----
+   Not a nicety. A 135M model on the wasm backend blocks the main thread hard
+   enough that the tab stops answering at all — which is the same reason the
+   handoff requires speak.js to use a Worker so generation cannot stutter the
+   card flip, the deal, or the gyro foil. Doing it here too means the bench
+   measures the arrangement that will actually ship, and means a phone running
+   this page stays usable while it downloads half a gigabyte.
+
+   Inlined as a Blob so this file stays a single self-contained page with no
+   build step, matching the rest of the project. */
+const WORKER_SRC = `
+import { pipeline, env } from '${CDN}';
+env.allowLocalModels = false;
+let gen = null;
+self.onmessage = async (e) => {
+  const m = e.data;
+  try {
+    if (m.cmd === 'load') {
+      /* Byte accounting: sum the HIGH-WATER 'loaded' per file. The 'done'
+         events do not reliably carry a total, and summing raw progress events
+         double-counts, which is how this first read 0.0 MB. Download size is
+         selection criterion 3, so it has to be right. */
+      const seen = new Map();
+      const total = () => { let s = 0; seen.forEach((v) => { s += v; }); return s; };
+      const t0 = performance.now();
+      gen = await pipeline('text-generation', m.model, {
+        dtype: m.dtype, device: m.device,
+        progress_callback: (p) => {
+          if (p.file && (p.loaded || p.total)) {
+            seen.set(p.file, Math.max(seen.get(p.file) || 0, p.loaded || 0, p.total || 0));
+          }
+          self.postMessage({ type: 'progress', status: p.status, file: p.file,
+                             pct: p.progress, bytes: total() });
+        },
+      });
+      self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0), bytes: total() });
+    } else if (m.cmd === 'gen') {
+      let first = null;
+      const streamer = { put: () => { if (first === null) first = performance.now(); }, end: () => {} };
+      const s = performance.now();
+      const r = await gen([{ role: 'system', content: m.system },
+                           { role: 'user', content: m.user }],
+                          { max_new_tokens: m.maxTok, do_sample: false, streamer });
+      const done = performance.now();
+      const txt = (r[0] && r[0].generated_text && r[0].generated_text.at(-1)
+                   ? r[0].generated_text.at(-1).content : '') || '';
+      const toks = Math.max(1, Math.round(txt.length / 4));
+      self.postMessage({ type: 'gen', id: m.id, txt: txt.trim(),
+        ttft: first ? Math.round(first - s) : null,
+        totalMs: Math.round(done - s),
+        tps: +(toks / ((done - s) / 1000)).toFixed(1) });
+    }
+  } catch (err) {
+    self.postMessage({ type: 'error', message: String(err && err.message || err) });
+  }
+};
+`;
+
+function spawnWorker(onProgress) {
+  const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+  const w = new Worker(url, { type: 'module' });
+  URL.revokeObjectURL(url);
+  const waiters = new Map();
+  let fatal = null;
+  w.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === 'progress') { onProgress(m); return; }
+    if (m.type === 'error') {
+      fatal = new Error(m.message);
+      waiters.forEach(({ reject }) => reject(fatal));
+      waiters.clear();
+      return;
+    }
+    const key = m.type === 'loaded' ? 'load' : 'gen:' + m.id;
+    const p = waiters.get(key);
+    if (p) { waiters.delete(key); p.resolve(m); }
+  };
+  w.onerror = (e) => {
+    fatal = new Error('worker failed: ' + (e.message || 'unknown'));
+    waiters.forEach(({ reject }) => reject(fatal));
+    waiters.clear();
+  };
+  const send = (key, msg) => new Promise((resolve, reject) => {
+    if (fatal) return reject(fatal);
+    waiters.set(key, { resolve, reject });
+    w.postMessage(msg);
+  });
+  return {
+    load: (model, dtype, device) => send('load', { cmd: 'load', model, dtype, device }),
+    gen: (() => { let n = 0; return (system, user, maxTok) => {
+      const id = ++n; return send('gen:' + id, { cmd: 'gen', id, system, user, maxTok }); }; })(),
+    kill: () => w.terminate(),
+  };
+}
+
+/* The candidate list. The first four are the handoff's; the rest were added on
+   2026-08-03 when the Commander lifted criterion 3's "under 300MB strongly
+   preferred". That cap is GONE — it was eliminating everything except SmolLM2,
+   and the small models are precisely the ones that cannot hold the deck's
+   voice (SmolLM2-135M q4 does not rewrite at all; it echoes the prompt back
+   and loops).
+
+   Size is still REPORTED, and must be: D5 is a consent rule, not a size cap —
+   "show the download size before the first byte" — and it survives untouched.
+
+   What actually bounds this now is the handset, not policy. A 1GB+ model has
+   to fit in the phone's RAM and inside WebGPU's maxStorageBufferBindingSize;
+   past roughly a gigabyte, expect OOM or an adapter refusal on mobile rather
+   than a slow-but-working run. Numbers below are the q4f16 export, which is
+   the one worth trying first in every case. */
+const MODELS = [
+  'HuggingFaceTB/SmolLM2-360M-Instruct',        // q4f16 260 MB
+  'HuggingFaceTB/SmolLM2-135M-Instruct',        // q4f16 112 MB — measured unusable, kept as the floor
+  'onnx-community/Qwen2.5-0.5B-Instruct',       // q4f16 461 MB
+  'onnx-community/Qwen3-0.6B-ONNX',             // q4f16 543 MB
+  'onnx-community/gemma-3-1b-it-ONNX',          // q4f16 728 MB
+  'onnx-community/Llama-3.2-1B-Instruct',       // q4f16 1039 MB (external .onnx_data)
+  'HuggingFaceTB/SmolLM2-1.7B-Instruct',        // q4f16 1057 MB
+  'onnx-community/Qwen2.5-1.5B-Instruct',       // q4f16 1165 MB
+  'onnx-community/Qwen3-1.7B-ONNX',             // q4f16 1360 MB
+];
+
+/* Prompt A is the handoff's text, verbatim, so the bench measures the design as
+   specified. Prompt B is the revision that came out of the Gemini Nano
+   validation on 2026-08-03: A's failures all clustered on the model answering
+   the QUESTION instead of re-voicing the CARD, and B forbids exactly that.
+   B fixed every D1 failure and cost most of the voice, which is the tradeoff
+   the bake-off now has to weigh per model. Keep both; the interesting result is
+   which model needs the least of B's leash to stay honest. */
+const SYS = {
+  A: "You rewrite a single line of a sarcastic oracle deck. You never invent " +
+     "meanings. You are given the card's meaning and you rewrite it to speak to " +
+     "one specific position in the spread and one specific question. Under 25 " +
+     "words. No preamble. No quotes. Dry, blunt, funny. Second person.",
+  B: "You rewrite one line of a sarcastic oracle deck.\n" +
+     "You are given a card's MEANING. You rewrite that meaning so it speaks to one position in a spread.\n" +
+     "The question is context for tone only. NEVER answer it. Never predict what will happen. " +
+     "Never assert anything about the seeker or anyone else. Never give advice the meaning does not already give.\n" +
+     "Every claim you make must already be present in the meaning. Keep the meaning's stance: if the " +
+     "meaning says something is good, it stays good; if it turns from bad to good, keep the turn.\n" +
+     "Under 20 words. No preamble. No quotation marks. No markdown. No ellipses. Dry, blunt, funny. Second person.",
+};
+
+/* [card name, reversed, spread mode, seat index, question] — see the header
+   comment for why each one is here. */
+const CASES = [
+  ['The Dead End Job',     0, 3, 2, 'should I quit my job'],
+  ['The Dead End Job',     0, 5, 1, 'should I quit my job'],
+  ['The Cheese Fries',     0, 5, 1, 'should I quit my job'],
+  ['The Cheese Fries',     0, 3, 1, 'am I looking after myself'],
+  ['The Last Flying Fuck', 1, 5, 2, 'how do I say no to my sister without a row'],
+  ['The Lovers',           1, 5, 4, 'is he cheating on me'],
+  ['The Moon',             0, 5, 1, 'does he still think about me'],
+  ['The Apology',          1, 3, 2, 'should I text him back'],
+  ['The Tower',            0, 5, 4, 'should I move to another city'],
+  ['The Nap',              0, 5, 2, 'why do I feel stuck all the time'],
+  ['The Waiting Room',     1, 3, 0, 'will the grief ever ease off'],
+  ['The Audacity',         0, 5, 3, 'am I the problem'],
+];
+
+/* The numeric sanity check the handoff insists on. There are ONNX Runtime Web
+   overflow bugs that produce fluent-looking garbage at fp16 and q4f16 on
+   WebGPU, so "it loaded and emitted English" is not a pass. None of these is
+   about the deck; they are about whether the numerics survived quantisation.
+   A model failing any of them must not be judged on its card lines at all. */
+const SANITY = [
+  { id: 'echo',   prompt: 'Repeat exactly this and nothing else: the quick brown fox',
+    test: t => /quick brown fox/i.test(t), why: 'cannot follow a trivial instruction' },
+  { id: 'arith',  prompt: 'What is 2 + 2? Answer with the number only.',
+    test: t => /\b4\b|four/i.test(t), why: 'arithmetic broken — classic overflow symptom' },
+  /* Deliberately tolerant of formatting. SmolLM2-135M answers this as
+     "1. 2 / 2. 3 / 3. 4" — a mangled numbered list, not corrupted numerics,
+     and an intolerant regex disqualified a model whose arithmetic was fine.
+     The gate is for overflow garbage, so it asks only that 1, 2 and 3 appear
+     in order somewhere in the digit stream. */
+  { id: 'count',  prompt: 'List the first three positive integers, comma separated.',
+    test: t => /1[\s\S]*2[\s\S]*3/.test(t.replace(/[^0-9]/g, '')) ||
+               /one[\s\S]*two[\s\S]*three/i.test(t), why: 'sequence broken' },
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+const fmtMB = b => (b / 1048576).toFixed(1) + ' MB';
+
+const modelSel = $('model');
+MODELS.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; modelSel.appendChild(o); });
+
+/* ---- environment, reported up front because it is half the result ---- */
+(async () => {
+  const bits = [];
+  bits.push('UA: ' + navigator.userAgent);
+  bits.push('cores: ' + (navigator.hardwareConcurrency ?? '?') +
+            ' · deviceMemory: ' + (navigator.deviceMemory ?? '?'));
+  if (!('gpu' in navigator)) bits.push('<span class="bad">navigator.gpu ABSENT — no WebGPU. Any webgpu run will fail or silently fall back; do not report its numbers.</span>');
+  else {
+    try {
+      const a = await navigator.gpu.requestAdapter();
+      if (!a) bits.push('<span class="bad">navigator.gpu present but requestAdapter() returned NULL — no adapter. Perf numbers from this machine are meaningless.</span>');
+      else bits.push('<span class="ok">adapter: ' + esc([a.info?.vendor, a.info?.architecture, a.info?.description].filter(Boolean).join(' / ') || 'unnamed') +
+                     '</span> · shader-f16: ' + (a.features?.has('shader-f16') ? 'yes' : '<span class="warn">NO — q4f16 will be slow or unavailable</span>'));
+    } catch (e) { bits.push('<span class="bad">adapter error: ' + esc(e.message) + '</span>'); }
+  }
+  bits.push('Chrome Prompt API (Tier 1): ' + ('LanguageModel' in self
+    ? '<span class="ok">present</span> — availability: ' + esc(await LanguageModel.availability().catch(e => 'ERR ' + e.message))
+    : 'absent'));
+  $('env').innerHTML = bits.join('<br>');
+})();
+
+/* ---- cases are read from the built page so they cannot drift ---- */
+function buildCases() {
+  const w = $('f').contentWindow;
+  let DECK, SEATS;
+  try { DECK = w.eval('DECK'); SEATS = w.ARCANAI_SEATS; }
+  catch (e) { throw new Error('could not read DECK from the draw page — is release/major-arcanai/index.html built? ' + e.message); }
+  if (!SEATS) throw new Error('seats.js did not load in the draw page');
+  const byName = {}; DECK.forEach(c => { byName[c.name] = c; });
+  return CASES.map(([name, rev, mode, si, q]) => {
+    const c = byName[name];
+    if (!c) throw new Error('unknown card in CASES: ' + name);
+    const seat = SEATS.seats[mode][si];
+    return {
+      name, rev: !!rev, seat: seat.label || seat.name, q,
+      meaning: rev ? c.r : c.meaning,
+      user: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
+            `Its meaning: ${rev ? c.r : c.meaning}\n` +
+            `In practice: ${rev ? c.sitr : c.sit}\n` +
+            `Position: ${seat.label || seat.name}, ${seat.prose}\n` +
+            `They asked: ${q}\n` +
+            `Rewrite the meaning for this position.`,
+    };
+  });
+}
+
+/* ---- automatic flags. These do NOT judge the reading; they catch the
+   mechanical failures a post-filter would have to catch in speak.js, so the
+   human only has to judge contradiction and voice. ---- */
+const PREAMBLE = /^(here('s| is)\b|sure\b|okay\b|ok\b|certainly\b|of course\b|rewritten\b|rewrite:|response:|output:|answer:)/i;
+const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+function flags(text, kase, cap) {
+  const f = [];
+  const words = text ? text.trim().split(/\s+/).length : 0;
+  if (!text.trim()) f.push('EMPTY');
+  if (words > cap) f.push('OVER' + cap);
+  if (PREAMBLE.test(text.trim())) f.push('PREAMBLE');
+  if (/^["'“]/.test(text.trim())) f.push('WRAPPED-QUOTES');
+  if (/["“”]/.test(text)) f.push('quotes');
+  if (/[*_]{1,2}\w/.test(text)) f.push('MARKDOWN');
+  if (/\.\.\.|…/.test(text)) f.push('ellipsis');
+  if (/\n/.test(text.trim())) f.push('MULTILINE');
+  if (new RegExp('^' + kase.seat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:', 'i').test(text.trim())) f.push('SEAT-LABEL-LEAK');
+  const a = norm(text), b = norm(kase.meaning);
+  if (a && b && (a === b || (b.length > 12 && a.includes(b)) || (a.length > 12 && b.includes(a)))) f.push('NEAR-COPY');
+  // a 4-gram repeated three times is a degenerate loop, not a sentence
+  const t = a.split(' ');
+  for (let i = 0; i + 4 <= t.length; i++) {
+    const g = t.slice(i, i + 4).join(' ');
+    if (g.length > 8 && a.split(g).length - 1 >= 3) { f.push('REPETITION-LOOP'); break; }
+  }
+  // an English prompt should not come back mostly non-Latin
+  const nonLatin = (text.match(/[^\x00-\x7F]/g) || []).length;
+  if (text.length > 10 && nonLatin / text.length > 0.1) f.push('CHARSET-GARBAGE');
+  return { words, flags: f };
+}
+
+let running = false;
+async function run(sanityOnly) {
+  if (running) return;
+  running = true; $('go').disabled = $('sanity').disabled = true;
+  const model = modelSel.value, dtype = $('dtype').value, device = $('device').value;
+  const which = $('prompt').value;
+  const status = m => { $('status').textContent = m; };
+  const out = $('out');
+  const head = document.createElement('div');
+  head.innerHTML = `<h2>${esc(model)} · ${esc(dtype)} · ${esc(device)} · prompt ${esc(which)}` +
+    (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
+  out.prepend(head);
+  const live = head.querySelector('#live');
+
+  let worker = null;
+  try {
+    status('spawning worker…');
+    worker = spawnWorker(p => {
+      live.textContent = `${p.status || ''} ${p.file || ''} ` +
+        `${p.pct ? p.pct.toFixed(0) + '%' : ''} · ${fmtMB(p.bytes || 0)} so far`;
+    });
+
+    status('loading model…');
+    const { loadMs, bytes } = await worker.load(model, dtype, device);
+    live.innerHTML = `<span class="ok">loaded</span> in ${loadMs} ms · download ${fmtMB(bytes)}`;
+
+    const call = (system, user, maxTok) => worker.gen(system, user, maxTok);
+
+    /* sanity FIRST: a model that fails here must not be judged on its lines */
+    status('sanity…');
+    const sane = [];
+    for (const s of SANITY) {
+      const r = await call('You answer in as few words as possible.', s.prompt, 24);
+      sane.push({ id: s.id, pass: s.test(r.txt), why: s.why, got: r.txt });
+    }
+    const passed = sane.filter(s => s.pass).length;
+    let html = `<p>load <b>${loadMs} ms</b> · download <b>${fmtMB(bytes)}</b> · ` +
+      `sanity <b class="${passed === SANITY.length ? 'ok' : 'bad'}">${passed}/${SANITY.length}</b></p>` +
+      `<table><tr><th>check</th><th>pass</th><th>got</th></tr>` +
+      sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : 'bad'}">${s.pass ? 'pass' : 'FAIL — ' + esc(s.why)}</td><td>${esc(s.got)}</td></tr>`).join('') +
+      `</table>`;
+
+    if (passed < SANITY.length) {
+      html += `<p class="bad">Numerics failed. Do not report this configuration's card lines; ` +
+              `try the other dtype, or device wasm to confirm it is a WebGPU quantisation bug.</p>`;
+    }
+
+    if (!sanityOnly && passed === SANITY.length) {
+      const cases = buildCases();
+      const cap = which === 'A' ? 25 : 20;
+      const rows = [];
+      const ttfts = [], tpss = [];
+      for (let i = 0; i < cases.length; i++) {
+        status(`case ${i + 1}/${cases.length}…`);
+        live.textContent = `case ${i + 1}/${cases.length}`;
+        const k = cases[i];
+        const r = await call(SYS[which], k.user, 48);
+        const f = flags(r.txt, k, cap);
+        if (r.ttft) ttfts.push(r.ttft);
+        tpss.push(r.tps);
+        rows.push({ k, r, f });
+      }
+      const med = a => a.length ? a.slice().sort((x, y) => x - y)[a.length >> 1] : null;
+      const clean = rows.filter(x => !x.f.flags.length).length;
+      /* TTFT here is NOT trustworthy and must not be reported as criterion 4.
+         The streamer's first `put` fires during prompt processing, so this
+         reads single-digit milliseconds even when the first real token is
+         seconds away. Measuring it properly needs a TextStreamer with
+         skip_prompt, which is worth doing before anyone judges a model on
+         latency. Left visible, and labelled, rather than quietly wrong. */
+      html += `<p>first-callback <b>${med(ttfts) ?? 'n/a'} ms</b> <span class="warn">(NOT TTFT — see comment)</span> · median <b>${med(tpss)} tok/s</b> · ` +
+        `mechanically clean <b>${clean}/${rows.length}</b> · avg words ` +
+        `<b>${(rows.reduce((s, x) => s + x.f.words, 0) / rows.length).toFixed(1)}</b></p>` +
+        `<p class="dim">Criterion 1 (never contradicts the meaning) and criterion 5 (voice) are hand-judged. ` +
+        `Read the meaning and the line side by side below.</p>` +
+        `<table><tr><th>card · seat</th><th>meaning → line</th><th>w</th><th>ms</th><th>flags</th></tr>` +
+        rows.map(({ k, r, f }) => `<tr>` +
+          `<td>${esc(k.name)}${k.rev ? ' <i>rev</i>' : ''}<br><span class="dim">${esc(k.seat)}</span><br><span class="dim">“${esc(k.q)}”</span></td>` +
+          `<td><span class="mean">${esc(k.meaning)}</span><br><span class="gold">${esc(r.txt)}</span></td>` +
+          `<td>${f.words}</td><td>${r.totalMs}</td>` +
+          `<td class="${f.flags.length ? 'warn' : 'ok'}">${f.flags.join('<br>') || 'ok'}</td></tr>`).join('') +
+        `</table>`;
+    }
+    live.innerHTML = html;
+    status('done');
+  } catch (e) {
+    live.innerHTML = `<span class="bad">FAILED: ${esc(e.message || e)}</span>`;
+    status('failed');
+  } finally {
+    if (worker) worker.kill();   // a held model is hundreds of MB of RAM
+    running = false; $('go').disabled = $('sanity').disabled = false;
+  }
+}
+
+$('go').addEventListener('click', () => run(false));
+$('sanity').addEventListener('click', () => run(true));
+</script>
