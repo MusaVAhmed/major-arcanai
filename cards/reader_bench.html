@@ -236,7 +236,12 @@ self.onmessage = async (e) => {
          enable_latency_breakdown, its own latency breakdown — measured inside
          the engine rather than inferred from chunk arrival. Field names are
          read defensively and fall back to wall-clock, labelled. */
-      try { await engine.resetChat?.(); } catch (_) {}
+      /* resetChat() is NOT called between cases any more. It was added to fix
+         the mapAsync buffer error and did not, and mlc-ai/web-llm#497 associates
+         that error with reload/reset paths — so it is at least as likely to be
+         a trigger as a cure. The OpenAI-shaped API is stateless when the full
+         messages array is passed each time, which it is, so nothing carries
+         over that needs clearing. */
       const s = performance.now();
       const reply = await engine.chat.completions.create({
         messages: [{ role: 'system', content: m.system },
@@ -263,7 +268,15 @@ self.onmessage = async (e) => {
                                : +((nTok || 1) / Math.max(1, genMs) * 1000).toFixed(1) });
     }
   } catch (err) {
-    self.postMessage({ type: 'error', message: String(err && err.message || err) });
+    /* A generation failure is reported against ITS OWN request, not as a fatal
+       worker error, so one bad case cannot destroy eleven good ones. The
+       mapAsync buffer error (mlc-ai/web-llm#497) shows up partway through a
+       run of fifteen completions and used to take the entire run with it,
+       which turns a partial result into no result. Partial results are still
+       evidence. Load failures stay fatal — there is nothing to salvage. */
+    const msg = String(err && err.message || err);
+    if (m && m.cmd === 'gen') self.postMessage({ type: 'gen', id: m.id, error: msg });
+    else self.postMessage({ type: 'error', message: msg });
   }
 };
 `;
@@ -880,7 +893,7 @@ async function run(sanityOnly) {
       const cap = CAP[which];
       const rows = [];
       const ttfts = [], tpss = [];
-      let estimated = false;
+      let estimated = false, errs = 0, aborted = null;
       for (let i = 0; i < cases.length; i++) {
         status(`case ${i + 1}/${cases.length}…`);
         live.textContent = `case ${i + 1}/${cases.length}`;
@@ -890,6 +903,15 @@ async function run(sanityOnly) {
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
         const r = await call(SYS[which], k.user, 80);
+        if (r.error) {
+          /* Keep going. A run that dies on case 7 still knows something about
+             cases 1-6, and the failures are worth counting in their own right. */
+          rows.push({ k, r: { txt: '', totalMs: 0, err: r.error },
+                      f: { words: 0, flags: ['RUN-ERROR'] } });
+          errs++;
+          if (errs >= 4) { aborted = `aborted after ${errs} generation failures`; break; }
+          continue;
+        }
         const f = flags(r.txt, k, cap);
         if (r.think) f.flags.push('THINK-BLOCK');
         if (r.truncated) f.flags.push('TRUNCATED');
@@ -899,7 +921,7 @@ async function run(sanityOnly) {
         rows.push({ k, r, f });
       }
       if (doScreen) {
-        try { await screenRows(rows, status); }
+        try { await screenRows(rows.filter(x => !x.r.err), status); }
         catch (e) { live.innerHTML += `<br><span class="warn">D1 screen unavailable: ${esc(e.message)}</span>`; }
       }
       const med = a => a.length ? a.slice().sort((x, y) => x - y)[a.length >> 1] : null;
@@ -909,6 +931,12 @@ async function run(sanityOnly) {
          through prompt processing. Tokens are counted, not estimated from
          characters. Both were wrong before and both were the same bug. */
       const susp = rows.filter(x => x.f.flags.includes('ANSWERS-QUESTION?')).length;
+      if (errs) {
+        html += `<p class="bad">${errs}/${rows.length} generations FAILED` +
+          (aborted ? ' — ' + esc(aborted) : '') + `. The surviving rows are still ` +
+          `reported below; a run that dies partway still knows something about the cases ` +
+          `that completed. First error: ${esc((rows.find(x => x.r.err) || {r:{}}).r.err || '')}</p>`;
+      }
       html += `<p>TTFT median <b>${med(ttfts) ?? 'n/a'} ms</b> <span class="dim">(criterion 4: under ~400 ms on a mid-range phone)</span> · ` +
         `median <b>${med(tpss)} tok/s</b>${estimated ? ' <span class="warn">(estimated — token callback unavailable)</span>' : ''} · ` +
         `mechanically clean <b>${clean}/${rows.length}</b> · avg words ` +
@@ -925,7 +953,8 @@ async function run(sanityOnly) {
                           (a.f.flags.includes('ANSWERS-QUESTION?') ? 1 : 0))
           .map(({ k, r, f }) => `<tr>` +
           `<td>${esc(k.name)}${k.rev ? ' <i>rev</i>' : ''}<br><span class="dim">${esc(k.seat)}</span><br><span class="dim">“${esc(k.q)}”</span></td>` +
-          `<td><span class="mean">${esc(k.meaning)}</span><br><span class="gold">${esc(r.txt)}</span></td>` +
+          `<td><span class="mean">${esc(k.meaning)}</span><br>` +
+          (r.err ? `<span class="bad">${esc(r.err)}</span>` : `<span class="gold">${esc(r.txt)}</span>`) + `</td>` +
           `<td>${f.words}</td>` +
           `<td>${r.simM === undefined ? '<span class="dim">—</span>' :
                 `<span class="${r.simQ > r.simM ? 'bad' : 'dim'}">${r.simM.toFixed(2)} / ${r.simQ.toFixed(2)}</span>`}</td>` +
