@@ -502,6 +502,19 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **Download progress is throttled, and must stay throttled.** Measured: a
+    260 MB model fires **6014** `progress_callback` events (~190/s), one per
+    ~43 KB chunk, and a 1.3 GB candidate fires roughly five times that.
+    Forwarding each one from the worker is a `postMessage` plus a main-thread
+    DOM write; once the main thread cannot drain the queue as fast as the
+    worker fills it the backlog compounds, and the download appears to slow and
+    then freeze partway. The worker posts at most one update per 100 ms (status
+    changes always post, so `done`/`ready` are never swallowed) and the page
+    coalesces to one DOM write per frame with `requestAnimationFrame`. A 467 MB
+    uncached load went from thousands of writes to **3**. Byte accounting still
+    sees every event — only the reporting is throttled. The point is that the
+    message rate is now bounded by *time*, not by chunk count, so a fast
+    connection cannot outrun the display.
   - **The bench is pinned to transformers.js 3.7.6, deliberately ahead of
     `attune.js`'s 3.3.3.** 3.3.3 bundles onnxruntime-web 1.20.1; Chrome now
     ships a native `Float16Array`, ORT maps the float16 dtype onto it, and

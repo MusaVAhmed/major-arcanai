@@ -176,12 +176,26 @@ self.onmessage = async (e) => {
       const seen = new Map();
       const total = () => { let s = 0; seen.forEach((v) => { s += v; }); return s; };
       const t0 = performance.now();
+      /* Progress is THROTTLED, and it has to be. Measured on this bench: a
+         260 MB model fires 6014 progress callbacks in 32 s — about 190 a
+         second — and a 1.3 GB candidate fires roughly five times that.
+         Forwarding every one is a postMessage plus a DOM write on the main
+         thread, and the moment the main thread cannot drain the queue as fast
+         as the worker fills it the backlog compounds: the download appears to
+         slow down and then freeze partway, which is precisely the symptom this
+         caused on a phone. The byte accounting still sees EVERY event -- only
+         the reporting is throttled -- and any change of status still posts
+         immediately, so 'done'/'ready' are never swallowed. */
+      let lastPost = 0, lastStatus = null;
       gen = await pipeline('text-generation', m.model, {
         dtype: m.dtype, device: m.device,
         progress_callback: (p) => {
           if (p.file && (p.loaded || p.total)) {
             seen.set(p.file, Math.max(seen.get(p.file) || 0, p.loaded || 0, p.total || 0));
           }
+          const now = performance.now();
+          if (p.status === lastStatus && now - lastPost < 100) return;
+          lastPost = now; lastStatus = p.status ?? null;
           self.postMessage({ type: 'progress', status: p.status, file: p.file,
                              pct: p.progress, bytes: total() });
         },
@@ -535,9 +549,20 @@ async function run(sanityOnly) {
     const cases = sanityOnly ? [] : buildCases(seatField);
 
     status('spawning worker…');
+    /* Second half of the throttle: coalesce to one DOM write per frame. Even
+       throttled, several progress messages can land inside a single frame on a
+       fast connection, and a phone repainting a text node per message is the
+       jank the worker was moved off the main thread to avoid. */
+    let pending = null, praf = 0;
     worker = spawnWorker(p => {
-      live.textContent = `${p.status || ''} ${p.file || ''} ` +
-        `${p.pct ? p.pct.toFixed(0) + '%' : ''} · ${fmtMB(p.bytes || 0)} so far`;
+      pending = p;
+      if (praf) return;
+      praf = requestAnimationFrame(() => {
+        praf = 0;
+        const q = pending;
+        live.textContent = `${q.status || ''} ${q.file || ''} ` +
+          `${q.pct ? q.pct.toFixed(0) + '%' : ''} · ${fmtMB(q.bytes || 0)} so far`;
+      });
     });
 
     status('loading model…');
