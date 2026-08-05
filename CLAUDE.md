@@ -514,6 +514,19 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     sanity 3/3 with byte accounting identical to 3.7.6 on the same model. The
     **D1 screener stays pinned to 3.7.6 regardless** — its cosines are compared
     across runs and must not move under the comparison.
+  - **Corruption has TWO signatures and the gate must catch both.** Repetitive
+    garbage (`!!!!!!!!`) is the easy one. The other is **token salad**: fluent-
+    looking fragments from every script the tokenizer knows, spliced at random.
+    Llama-3.2-3B q4f16 under WebLLM produced twelve rows of it **and the first
+    version of this gate passed it as "numerics sound"**, which is precisely the
+    failure the handoff built the gate to prevent. Never accept "it emitted
+    English-looking characters" as evidence. Two discriminators, both cheap and
+    both verified against 16 real strings from this bake-off with no false
+    positives: English prose is a third to a half **function words** and salad
+    has almost none (<8% disqualifies, only applied at >=8 words so short
+    correct answers are untouched), and real output stays in **one script**
+    while salad mixes Cyrillic, CJK, Thai, Arabic, Devanagari and Hangul in a
+    single line (>=3 distinct non-Latin scripts disqualifies).
   - **The gate distinguishes GARBAGE from WRONG, and the difference decides
     whether a candidate lives.** Corrupted numerics emit one repeated token
     (Qwen2.5-0.5B q4f16/WebGPU answered all three checks `!!!!!!!!`). A model
