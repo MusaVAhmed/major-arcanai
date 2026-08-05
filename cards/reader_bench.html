@@ -71,9 +71,13 @@
 
 <div id="cfg">
   <select id="model"></select>
+  <select id="lib">
+    <option value="3.7.6">lib 3.7.6</option>
+    <option value="4.2.0">lib 4.2.0 (new WebGPU runtime)</option>
+  </select>
   <select id="dtype">
-    <option value="q4">q4</option>
-    <option value="q4f16">q4f16</option>
+    <option value="q4">q4 (fp32 compute — ~2x device memory)</option>
+    <option value="q4f16">q4f16 (fp16 compute — smaller, overflows on some adapters)</option>
   </select>
   <select id="device">
     <option value="webgpu">webgpu</option>
@@ -124,7 +128,25 @@
      on 3.3.3. Bumping the shipped page is a re-measuring job, not an edit.
      speak.js will force that decision if it wants q4f16; it is not this file's
      to make. */
-const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js';
+const LIBS = {
+  '3.7.6': 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js',
+  '4.2.0': 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js',
+};
+/* The library version is an ARM, because on mobile WebGPU it decides whether
+   there is a usable configuration at all. 3.x is squeezed from both sides:
+   q4f16 has the fp16 overflow (sanity 0/3, output all "!") and q4 needs about
+   twice the device memory for the same model, which takes the tab. v4 rewrote
+   the WebGPU runtime in C++ and is the plausible way out — if it fixes q4f16
+   then the fp16 footprint comes back with correct numerics and the squeeze
+   dissolves. Verified API-compatible with everything this bench uses:
+   TextStreamer, token_callback_function, skip_prompt (same put() ordering, so
+   TTFT stays honest), apply_chat_template's kwarg spread (so enable_thinking
+   still reaches Qwen3), progress_callback, return_full_text and dispose.
+
+   The D1 screener stays pinned to 3.7.6 regardless. Its cosines are compared
+   across runs, and a screener that changed version mid-bake-off would move the
+   numbers under the comparison for no benefit. */
+const SCREEN_CDN = LIBS['3.7.6'];
 
 /* ---- inference runs in a Worker ----
    Not a nicety. A 135M model on the wasm backend blocks the main thread hard
@@ -136,7 +158,7 @@ const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/t
 
    Inlined as a Blob so this file stays a single self-contained page with no
    build step, matching the rest of the project. */
-const WORKER_SRC = `
+const WORKER_SRC = (CDN) => `
 import { pipeline, env, TextStreamer } from '${CDN}';
 env.allowLocalModels = false;
 let gen = null;
@@ -279,8 +301,8 @@ self.onmessage = async (e) => {
 };
 `;
 
-function spawnWorker(onProgress) {
-  const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+function spawnWorker(onProgress, cdn) {
+  const url = URL.createObjectURL(new Blob([WORKER_SRC(cdn)], { type: 'text/javascript' }));
   const w = new Worker(url, { type: 'module' });
   URL.revokeObjectURL(url);
   const waiters = new Map();
@@ -446,8 +468,23 @@ MODELS.forEach(m => { const o = document.createElement('option'); o.value = m; o
     try {
       const a = await navigator.gpu.requestAdapter();
       if (!a) bits.push('<span class="bad">navigator.gpu present but requestAdapter() returned NULL — no adapter. Perf numbers from this machine are meaningless.</span>');
-      else bits.push('<span class="ok">adapter: ' + esc([a.info?.vendor, a.info?.architecture, a.info?.description].filter(Boolean).join(' / ') || 'unnamed') +
+      else {
+        bits.push('<span class="ok">adapter: ' + esc([a.info?.vendor, a.info?.architecture, a.info?.description].filter(Boolean).join(' / ') || 'unnamed') +
                      '</span> · shader-f16: ' + (a.features?.has('shader-f16') ? 'yes' : '<span class="warn">NO — q4f16 will be slow or unavailable</span>'));
+        /* The ceiling, reported BEFORE anything is downloaded. ORT dequantizes
+           4-bit weights up to the compute precision on device, so a q4 (fp32
+           compute) run needs roughly twice the device memory of the same model
+           at q4f16 -- on top of a larger download. When a model downloads and
+           then takes the tab with it, this is the number that predicted it, and
+           there is no reason to learn it the expensive way. */
+        const L = a.limits || {};
+        const mb = (v) => v ? (v / 1048576).toFixed(0) + ' MB' : '?';
+        bits.push('limits: maxStorageBufferBindingSize ' + mb(L.maxStorageBufferBindingSize) +
+                  ' · maxBufferSize ' + mb(L.maxBufferSize) +
+                  '<br><span class="dim">A model whose largest weight tensor exceeds the binding size will not run. ' +
+                  'q4 needs ~2x the device memory of q4f16 for the same model: if q4f16 loads and q4 kills the tab, ' +
+                  'it fits at fp16 and does not fit at fp32 — that is a result, not a bug.</span>');
+      }
     } catch (e) { bits.push('<span class="bad">adapter error: ' + esc(e.message) + '</span>'); }
   }
   bits.push('Chrome Prompt API (Tier 1): ' + ('LanguageModel' in self
@@ -539,7 +576,7 @@ let extractor = null;
 async function screenRows(rows, status) {
   if (!extractor) {
     status('loading D1 screener (MiniLM q8, ~23 MB)…');
-    const { pipeline, env } = await import(CDN);
+    const { pipeline, env } = await import(SCREEN_CDN);
     env.allowLocalModels = false;
     extractor = await pipeline('feature-extraction', SCREEN_MODEL, { dtype: 'q8' });
   }
@@ -571,11 +608,12 @@ async function run(sanityOnly) {
   const model = modelSel.value, dtype = $('dtype').value, device = $('device').value;
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
+  const lib = $('lib').value;
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
   head.innerHTML = `<h2>${esc(model)} · ${esc(dtype)} · ${esc(device)} · prompt ${esc(which)}` +
-    ` · seat ${esc(seatField)}` +
+    ` · seat ${esc(seatField)} · lib ${esc(lib)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
   const live = head.querySelector('#live');
@@ -602,7 +640,7 @@ async function run(sanityOnly) {
         live.textContent = `${q.status || ''} ${q.file || ''} ` +
           `${q.pct ? q.pct.toFixed(0) + '%' : ''} · ${fmtMB(q.bytes || 0)} so far`;
       });
-    });
+    }, LIBS[lib]);
 
     status('loading model…');
     const { loadMs, bytes, tmpl } = await worker.load(model, dtype, device);

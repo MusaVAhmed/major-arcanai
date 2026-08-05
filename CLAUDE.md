@@ -502,6 +502,22 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **The library version is an arm too** (`lib` selector: 3.7.6 / 4.2.0),
+    because on mobile WebGPU it decides whether a usable configuration exists
+    at all. 3.x is squeezed from both sides — q4f16 hits the fp16 overflow, and
+    q4 needs ~2x the device memory and takes the tab with it on an 8 GB
+    handset. v4 rewrote the WebGPU runtime in C++ and is the way out if it
+    fixes q4f16, since that restores the fp16 footprint with correct numerics.
+    Verified API-compatible with everything the bench uses, including `put()`'s
+    skip-prompt ordering (TTFT stays honest) and `apply_chat_template`'s kwarg
+    spread (`enable_thinking` still reaches Qwen3), and confirmed working:
+    sanity 3/3 with byte accounting identical to 3.7.6 on the same model. The
+    **D1 screener stays pinned to 3.7.6 regardless** — its cosines are compared
+    across runs and must not move under the comparison.
+  - **Probe configurations with Sanity only.** It answers "does this
+    model/dtype/backend/library combination produce valid numerics at all"
+    without paying for 12 generations, and that is the question a new
+    configuration is actually asking.
   - **Dispose before terminating.** `worker.terminate()` alone does not
     reliably hand back ORT's GPU buffers, and a bench session on a phone is
     many load/kill cycles of several hundred MB each — which is how a page that
