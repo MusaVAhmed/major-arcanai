@@ -91,6 +91,7 @@
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
   <button id="sanity">Sanity only</button>
+  <button id="copy">Copy results</button>
   <span id="status" class="dim">idle</span>
 </div>
 
@@ -660,4 +661,49 @@ async function run(sanityOnly) {
 
 $('go').addEventListener('click', () => run(false));
 $('sanity').addEventListener('click', () => run(true));
+
+/* Results exist only in this tab's DOM. On a phone that makes them nearly
+   impossible to get out by hand -- selecting a 12-row table with a thumb is
+   not a thing anyone should have to do -- and the environment block is half
+   the result, so it goes first. Tables are flattened to pipe-separated rows
+   rather than innerText, which runs the cells together into gibberish. */
+function resultsText() {
+  const out = [];
+  out.push('=== environment ===', $('env').innerText.trim(), '');
+  for (const sec of document.getElementById('out').children) {
+    const h = sec.querySelector('h2');
+    if (h) out.push('=== ' + h.innerText.trim() + ' ===');
+    for (const p of sec.querySelectorAll('p')) {
+      const t = p.innerText.replace(/\s+/g, ' ').trim();
+      if (t) out.push(t);
+    }
+    for (const t of sec.querySelectorAll('table')) {
+      out.push('');
+      for (const r of t.rows) {
+        out.push([...r.cells]
+          .map(c => c.innerText.replace(/\s*\n\s*/g, ' · ').replace(/\s+/g, ' ').trim())
+          .join(' | '));
+      }
+    }
+    out.push('');
+  }
+  return out.join('\n');
+}
+
+$('copy').addEventListener('click', async () => {
+  const t = resultsText();
+  try {
+    await navigator.clipboard.writeText(t);
+    $('status').textContent = 'copied ' + t.length + ' chars';
+  } catch (e) {
+    /* Clipboard can be refused even on HTTPS. Fall back to something a thumb
+       can actually work with rather than failing silently. */
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.cssText = 'position:fixed;inset:0;width:100%;height:70vh;z-index:9999;font:12px monospace';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    $('status').textContent = 'clipboard refused — select all in the box and copy';
+  }
+});
 </script>
