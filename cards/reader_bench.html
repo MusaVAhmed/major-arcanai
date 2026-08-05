@@ -99,9 +99,31 @@
 <iframe id="f" src="../release/major-arcanai/index.html"></iframe>
 
 <script type="module">
-/* Same CDN and version as attune.js, deliberately: the library is then fetched
-   once and shared with the page's MiniLM rather than pulling a second copy. */
-const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/transformers.min.js';
+/* This USED to be pinned to attune.js's 3.3.3 so the library was fetched once
+   and shared with the page's MiniLM. It is deliberately ahead of it now, and
+   the reason is a hard blocker rather than a preference:
+
+   3.3.3 bundles onnxruntime-web 1.20.1. Chrome ships a native Float16Array now,
+   ORT maps the float16 data type onto it, and 1.20.1's tensor check rejects the
+   Uint16Array that transformers.js actually hands it —
+       "a float16 tensor's data must be type of function Float16Array()"
+   — so EVERY q4f16 and fp16 run dies at load. q4 is untouched, which is why
+   this went unnoticed through a full q4 bake-off run. ORT 1.21.0 accepts
+   Uint16Array again (microsoft/onnxruntime#23827); 3.5.0 is the first
+   transformers.js carrying it, and 3.7.6 is the last of the 3.x line. v4 is
+   available but is a major bump and this file is not the place to discover
+   what changed in it.
+
+   Two consequences, both deliberate:
+   - The bench now pays for a second copy of the library. It is a dev tool that
+     is never shipped, so this costs nothing that matters.
+   - attune.js is NOT bumped along with it. It runs MiniLM at q8, which has no
+     float16 tensors and is therefore unaffected — and every measured number in
+     CLAUDE.md (reversal rate, lean stops, the resonance background) was taken
+     on 3.3.3. Bumping the shipped page is a re-measuring job, not an edit.
+     speak.js will force that decision if it wants q4f16; it is not this file's
+     to make. */
+const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js';
 
 /* ---- inference runs in a Worker ----
    Not a nicety. A 135M model on the wasm backend blocks the main thread hard

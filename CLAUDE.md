@@ -502,6 +502,26 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **The bench is pinned to transformers.js 3.7.6, deliberately ahead of
+    `attune.js`'s 3.3.3.** 3.3.3 bundles onnxruntime-web 1.20.1; Chrome now
+    ships a native `Float16Array`, ORT maps the float16 dtype onto it, and
+    1.20.1 rejects the `Uint16Array` transformers.js actually passes —
+    `a float16 tensor's data must be type of function Float16Array()` — killing
+    **every q4f16 and fp16 run at load**. ORT 1.21.0 accepts it again
+    (microsoft/onnxruntime#23827); 3.5.0 is the first release carrying that and
+    3.7.6 is the last of the 3.x line. Three things worth knowing:
+    - **It is WebGPU-only.** q4f16 loads fine on the wasm backend even on
+      3.3.3, so this cannot be reproduced on a machine with no GPU adapter and
+      it did not show up in a full q4 bake-off run. Do not conclude from a
+      clean wasm run that a float16 path works.
+    - **q4 is unaffected** either way — it has no float16 tensors.
+    - **`attune.js` was NOT bumped with it**, and should not be casually.
+      MiniLM at q8 has no float16 tensors, so the shipped page cannot hit this,
+      and every measured number here (reversal rate, lean stops, resonance
+      background, dilution ranks) was taken on 3.3.3. Bumping the page is a
+      re-measuring job, not an edit. `speak.js` forces the decision if it wants
+      q4f16: either the page carries two library versions or the deck gets
+      re-measured on a newer one.
 - **Build hygiene**: after any change, run `build_draw_page.py` twice and
   confirm `git diff` on `release/` shows only what you meant and nothing on the
   second run. Catches the failure mode of having edited the generated
