@@ -560,7 +560,20 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     embedding is huge at a fraction of the parameters. Every untried candidate
     is over: gemma-3-1b 576 MB, Llama-3.2-1B 501 MB, Qwen2.5-1.5B 445 MB,
     Qwen3-1.7B 594 MB, **and SmolLM2-1.7B 192 MB**.
-    Caveats, stated because this rule is load-bearing: four data points, and
+    **CONFIRMED 2026-08-05 with a control.** SmolLM2-1.7B (192 MB, first over
+    the line) loaded fine — 1059 MB, 54 s — and then generated *nothing*: three
+    empty outputs, sanity 0/3, caught as corrupt by the garbage classifier. In
+    the **same session immediately after**, SmolLM2-360M scored 3/3 with sound
+    numerics, so the device was healthy and the failure was the model, not a
+    lost GPU context. Five data points, perfect discrimination, and the cap
+    falls between 90 MB (works) and 192 MB (fails) with family, vocabulary,
+    architecture and library held constant across the boundary.
+    **Consequence for WP4: the largest model that runs under WebGPU on this
+    handset is SmolLM2-360M, and SmolLM2-360M is not good enough** (best arm
+    5/12 mechanically clean, and it produced the grief line). Tier 2 has no
+    viable WebGPU candidate on this device. Stop spending phone bandwidth on
+    larger models; they are all further over the line.
+    Older caveats, kept: the mechanism (ORT materialising that tensor at fp16 in
     the mechanism (ORT materialising that tensor at fp16 in one binding) is
     inferred rather than observed. **SmolLM2-1.7B is the decisive test** — same
     family, same vocab, same architecture, the only variable being 192 MB
