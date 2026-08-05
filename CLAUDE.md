@@ -525,6 +525,18 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     takes a `free` command that awaits `pipeline.dispose()`, and the page races
     it against a 3 s timeout before killing the thread so a wedged worker
     cannot hang teardown.
+  - **Measured ceiling on the test handset (S24 Ultra, adreno-7xx):
+    `maxStorageBufferBindingSize` is 128 MB — the WebGPU spec's required
+    minimum, i.e. no headroom above baseline**, while `maxBufferSize` is
+    2048 MB. So the binding cap, not total RAM, is the constraint that bites,
+    and fp32 compute inflates exactly the tensors that hit it: same weights,
+    twice the unpacked width. This is why q4f16 loads on this device and q4
+    takes the tab. It also prunes the candidate list — the cap scales against
+    model width and refuses rather than slows, so the 1 GB+ candidates
+    (Llama-3.2-1B, SmolLM2-1.7B, Qwen2.5-1.5B, Qwen3-1.7B) should be treated as
+    unlikely on this adapter regardless of phone RAM. Do not spend gigabytes
+    confirming that one at a time. The exact cutoff depends on how ORT splits
+    tensors and has not been measured.
   - **q4 costs more memory than q4f16, not just more bytes.** It is fp32
     compute, so activations are fp32 too. On a phone the fp16-overflow
     workaround therefore buys correctness with headroom, and the two
