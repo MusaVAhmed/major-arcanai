@@ -514,6 +514,24 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     sanity 3/3 with byte accounting identical to 3.7.6 on the same model. The
     **D1 screener stays pinned to 3.7.6 regardless** — its cosines are compared
     across runs and must not move under the comparison.
+  - **The gate distinguishes GARBAGE from WRONG, and the difference decides
+    whether a candidate lives.** Corrupted numerics emit one repeated token
+    (Qwen2.5-0.5B q4f16/WebGPU answered all three checks `!!!!!!!!`). A model
+    that answers "2" to 2+2 in fluent English has sound numerics and weak
+    arithmetic — a different fact, and not disqualifying. Qwen3-0.6B does
+    exactly that, **because this bench disables thinking** to keep `<think>`
+    out of the word cap, and Qwen3's non-thinking mode is markedly weaker at
+    reasoning. Failing it there would reject a candidate for a limitation the
+    harness itself imposed. Only `numerics CORRUPT` blocks the card lines now;
+    coherent-but-wrong warns and proceeds.
+  - **Measured 2026-08-05, model/runtime compatibility is not uniform:**
+    `onnx-community/Qwen2.5-0.5B-Instruct` **cannot be loaded by lib 4.2.0 at
+    all** — ORT 1.24.3 fails at session creation in `graph_utils`
+    `GetIndexFromName`, on *wasm* as well as WebGPU, while 3.7.6 loads it fine.
+    `Qwen3-0.6B-ONNX` (a newer export) loads on 4.2.0 and passes with sound
+    numerics. So lib version and model export are coupled, and the arm matrix
+    is not free: check a new model loads before drawing conclusions about its
+    voice.
   - **Probe configurations with Sanity only.** It answers "does this
     model/dtype/backend/library combination produce valid numerics at all"
     without paying for 12 generations, and that is the question a new

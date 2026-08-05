@@ -450,6 +450,26 @@ const SANITY = [
                /one[\s\S]*two[\s\S]*three/i.test(t), why: 'sequence broken' },
 ];
 
+/* GARBAGE IS NOT THE SAME AS WRONG, and the gate must not conflate them.
+   Corrupted numerics produce a stream of one repeated token — Qwen2.5-0.5B at
+   q4f16 on WebGPU answered all three checks with "!!!!!!!!" — and that is the
+   thing the gate exists to catch. A model that answers "2" to 2 + 2 in fluent
+   English has intact numerics and weak arithmetic, which is a different fact
+   and must not disqualify it: Qwen3-0.6B does exactly this with thinking
+   disabled, and disabling thinking is OUR doing (it is how the <think> blocks
+   are kept out of the word cap). Failing it on that would reject a candidate
+   for a limitation the bench itself imposed. */
+const isGarbage = (t) => {
+  const s = (t || '').trim();
+  if (!s) return true;
+  const compact = s.replace(/\s+/g, '');
+  if (/^(.)\1{5,}$/.test(compact)) return true;              // "!!!!!!!!"
+  const toks = s.split(/\s+/);
+  if (toks.length >= 6 && new Set(toks).size <= 2) return true;   // one token looped
+  const nonLatin = (s.match(/[^\x00-\x7F]/g) || []).length;
+  return s.length > 8 && nonLatin / s.length > 0.3;
+};
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
 const fmtMB = b => (b / 1048576).toFixed(1) + ' MB';
@@ -653,21 +673,32 @@ async function run(sanityOnly) {
     const sane = [];
     for (const s of SANITY) {
       const r = await call('You answer in as few words as possible.', s.prompt, 24);
-      sane.push({ id: s.id, pass: s.test(r.txt), why: s.why, got: r.txt });
+      sane.push({ id: s.id, pass: s.test(r.txt), garbage: isGarbage(r.txt), why: s.why, got: r.txt });
     }
     const passed = sane.filter(s => s.pass).length;
+    const garbled = sane.filter(s => s.garbage).length;
+    const numericsOk = garbled === 0;
     let html = `<p>load <b>${loadMs} ms</b> · download <b>${fmtMB(bytes)}</b> · ` +
-      `sanity <b class="${passed === SANITY.length ? 'ok' : 'bad'}">${passed}/${SANITY.length}</b></p>` +
-      `<table><tr><th>check</th><th>pass</th><th>got</th></tr>` +
-      sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : 'bad'}">${s.pass ? 'pass' : 'FAIL — ' + esc(s.why)}</td><td>${esc(s.got)}</td></tr>`).join('') +
+      `sanity <b class="${passed === SANITY.length ? 'ok' : 'warn'}">${passed}/${SANITY.length}</b> · ` +
+      `numerics <b class="${numericsOk ? 'ok' : 'bad'}">${numericsOk ? 'sound' : 'CORRUPT'}</b></p>` +
+      `<table><tr><th>check</th><th>verdict</th><th>got</th></tr>` +
+      sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : s.garbage ? 'bad' : 'warn'}">` +
+        `${s.pass ? 'pass' : s.garbage ? 'GARBAGE — ' + esc(s.why) : 'wrong (coherent)'}</td>` +
+        `<td>${esc(s.got)}</td></tr>`).join('') +
       `</table>`;
 
-    if (passed < SANITY.length) {
-      html += `<p class="bad">Numerics failed. Do not report this configuration's card lines; ` +
-              `try the other dtype, or device wasm to confirm it is a WebGPU quantisation bug.</p>`;
+    if (!numericsOk) {
+      html += `<p class="bad">Numerics corrupt — output is a repeated token, not an answer. ` +
+              `Do not report this configuration's card lines; try the other dtype, another lib ` +
+              `version, or device wasm to confirm it is a WebGPU quantisation bug.</p>`;
+    } else if (passed < SANITY.length) {
+      html += `<p class="warn">Numerics look sound: the output is coherent English, it is just ` +
+              `wrong. That is a capability limit, not corruption, and the card lines below are ` +
+              `worth reading. Note Qwen3 with thinking disabled — which this bench does, to keep ` +
+              `&lt;think&gt; blocks out of the word cap — is markedly weaker at arithmetic.</p>`;
     }
 
-    if (!sanityOnly && passed === SANITY.length) {
+    if (!sanityOnly && numericsOk) {
       const cap = CAP[which];
       const rows = [];
       const ttfts = [], tpss = [];
