@@ -222,26 +222,45 @@ self.onmessage = async (e) => {
       self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0),
                          bytes, vram, tmpl: 'webllm' });
     } else if (m.cmd === 'gen') {
-      let first = null, nTok = 0, txt = '';
+      /* NOT streamed, and each call resets the chat first. Streaming 15
+         unrelated prompts in a row died with "Failed to execute 'mapAsync' on
+         'GPUBuffer': Buffer was unmapped before mapping was resolved"
+         (mlc-ai/web-llm#497) — a buffer still referenced by pending GPU work.
+         Three sanity calls survived and the full run did not, which points at
+         accumulation rather than any one prompt, so: resetChat() between calls
+         because these cases are unrelated conversations and nothing should
+         carry over, and no streaming because the async generator is the
+         fragile part.
+
+         The metrics get BETTER for it. WebLLM reports its own usage and, with
+         enable_latency_breakdown, its own latency breakdown — measured inside
+         the engine rather than inferred from chunk arrival. Field names are
+         read defensively and fall back to wall-clock, labelled. */
+      try { await engine.resetChat?.(); } catch (_) {}
       const s = performance.now();
-      const stream = await engine.chat.completions.create({
+      const reply = await engine.chat.completions.create({
         messages: [{ role: 'system', content: m.system },
                    { role: 'user', content: m.user }],
-        max_tokens: m.maxTok, temperature: 0, stream: true,
+        max_tokens: m.maxTok, temperature: 0,
+        enable_latency_breakdown: true,
       });
-      for await (const chunk of stream) {
-        const d = chunk.choices?.[0]?.delta?.content;
-        if (d) { if (first === null) first = performance.now(); nTok++; txt += d; }
-      }
       const done = performance.now();
-      const genMs = first ? done - first : done - s;
+      let txt = reply?.choices?.[0]?.message?.content || '';
+      const u = reply?.usage || {};
+      const x = u.extra || {};
+      const nTok = u.completion_tokens || 0;
+      const ttftS = x.time_to_first_token_s ?? x.timeToFirstToken ?? null;
+      const decodeTps = x.decode_tokens_per_s ?? x.decodeTokensPerSecond ?? null;
       const think = /<think>/i.test(txt);
       if (think) { const i = txt.search(/<\\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
+      const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
+      const genMs = ttft != null ? Math.max(1, (done - s) - ttft) : (done - s);
       self.postMessage({ type: 'gen', id: m.id, txt: txt.trim(),
-        think, truncated: nTok >= m.maxTok, counted: true, tokens: nTok,
-        ttft: first ? Math.round(first - s) : null,
+        think, truncated: nTok > 0 && nTok >= m.maxTok, counted: nTok > 0, tokens: nTok || 1,
+        ttft,
         totalMs: Math.round(done - s), genMs: Math.round(genMs),
-        tps: +(nTok / Math.max(1, genMs) * 1000).toFixed(1) });
+        tps: decodeTps != null ? +decodeTps.toFixed(1)
+                               : +((nTok || 1) / Math.max(1, genMs) * 1000).toFixed(1) });
     }
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
