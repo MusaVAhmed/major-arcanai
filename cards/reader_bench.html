@@ -184,7 +184,7 @@ const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
    mean in the other engine. */
 const WEBLLM_SRC = (CDN) => `
 import * as webllm from '${CDN}';
-let engine = null;
+let engine = null, lastModel = null;
 self.onmessage = async (e) => {
   const m = e.data;
   try {
@@ -196,6 +196,7 @@ self.onmessage = async (e) => {
     }
     if (m.cmd === 'load') {
       try { await engine?.unload?.(); } catch (_) {}
+      lastModel = m.model;
       const t0 = performance.now();
       /* WebLLM reports a text line, not per-file bytes, so criterion 3 has to
          come from somewhere else or it reads 0.0 MB and looks free. Two
@@ -247,7 +248,15 @@ self.onmessage = async (e) => {
         messages: [{ role: 'system', content: m.system },
                    { role: 'user', content: m.user }],
         max_tokens: m.maxTok, temperature: 0,
-        enable_latency_breakdown: true,
+        /* enable_latency_breakdown is GONE, and it is the prime suspect. The
+           evidence moved: three sanity calls at 24 tokens all succeed and the
+           FIRST card case at 80 tokens fails, so this is not accumulation over
+           fifteen calls, it is the first long generation. The latency
+           breakdown is extra per-token bookkeeping I added speculatively for
+           metrics that WebLLM already reports well enough without it, and more
+           tokens means more of it. Removing a non-essential option is the
+           cheapest way to test that, and costs only the in-engine TTFT figure
+           — which falls back to wall-clock below. */
       });
       const done = performance.now();
       let txt = reply?.choices?.[0]?.message?.content || '';
@@ -275,8 +284,20 @@ self.onmessage = async (e) => {
        which turns a partial result into no result. Partial results are still
        evidence. Load failures stay fatal — there is nothing to salvage. */
     const msg = String(err && err.message || err);
-    if (m && m.cmd === 'gen') self.postMessage({ type: 'gen', id: m.id, error: msg });
-    else self.postMessage({ type: 'error', message: msg });
+    if (m && m.cmd === 'gen') {
+      /* The first mapAsync failure DISPOSES the engine, so every later case
+         came back "The current Object has already been disposed" -- eleven
+         rows of collateral damage from one real error. Rebuild it before
+         answering, so the next case is a fresh test rather than an echo of
+         this one. The model is cached, so this costs seconds. */
+      let revived = false;
+      try {
+        try { await engine?.unload?.(); } catch (_) {}
+        engine = null;
+        if (lastModel) { engine = await webllm.CreateMLCEngine(lastModel); revived = true; }
+      } catch (_) {}
+      self.postMessage({ type: 'gen', id: m.id, error: msg + (revived ? ' [engine rebuilt]' : ' [engine dead]') });
+    } else self.postMessage({ type: 'error', message: msg });
   }
 };
 `;
