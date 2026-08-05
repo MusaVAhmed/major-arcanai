@@ -502,6 +502,40 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **tok/s is generation throughput, measured first-token-to-last.** It used
+    to divide by the whole call, folding prompt processing into the rate, which
+    penalises short outputs hardest — the fixed prompt cost amortised over
+    fewer tokens. On the SmolLM2-360M run prompt B read 11.1 tok/s against
+    prompt A's 20.7 purely because B's lines are shorter; corrected, the arms
+    are close. It would have been read as a speed difference when comparing
+    models. `genMs` is reported alongside `totalMs` now.
+  - **First real phone run, 2026-08-05: SmolLM2-360M-Instruct q4f16 / WebGPU /
+    seat prose, on an S24 Ultra (adreno-7xx, shader-f16 yes).** Rejected, and
+    the arms decided something:
+    - A (cap 25) 43.3 avg words, 1/12 clean · A20 (cap 20) 35.1, 2/12 ·
+      B (cap 20) 28.6, 5/12. So of the 14.7-word fall from A to B, **~56% is
+      the word cap and ~44% is the leash — but the leash does nearly all of
+      the *cleaning*** (clean 1→2 on the cap, 2→5 on the leash). They are not
+      the same knob, and the A-vs-B tradeoff is milder than it looked.
+    - The model completes the prompt instead of answering it under A/A20
+      (`Card:`, `Position:`, `They asked:` echoed verbatim) and degenerates
+      into repetition under B. A capability failure, not a prompt failure.
+    - **It echoes `seats.js` prose verbatim** — "The obstacle, the thing that
+      stands in the way" is the matching text, sitting in the prompt inviting
+      exactly this. Strong argument for the `lens` arm.
+    - **Under prompt B it answered "will the grief ever ease off" with "The
+      grief will never ease off."** (meaning: "You could have left the queue an
+      hour ago. Stalling isn't waiting."; sim **0.06/0.73**, the widest q>m gap
+      in the run, correctly sorted to the top by the D1 screen). The
+      anti-invention prompt did not prevent it. Treat this as a gate: no model
+      ships that produces this line. It also bears on F5 — "no crisis
+      interception" was decided when every word was authored at build time.
+    - **Every arm fails criterion 4** (TTFT 905 / 965 / 1420 ms against ~400).
+      The best of them came from the model that cannot do the task, and larger
+      candidates will be slower. Criterion 4 may need amending rather than
+      meeting; that is a Commander call.
+    - Chrome Prompt API is **absent on Android**, confirming Tier 1 is desktop
+      only and Tier 2 is the tier that reaches phones.
   - **Download progress is throttled, and must stay throttled.** Measured: a
     260 MB model fires **6014** `progress_callback` events (~190/s), one per
     ~43 KB chunk, and a 1.3 GB candidate fires roughly five times that.

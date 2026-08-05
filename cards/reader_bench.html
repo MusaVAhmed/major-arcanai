@@ -241,6 +241,15 @@ self.onmessage = async (e) => {
          say so rather than quietly reporting an estimate as a measurement. */
       const counted = nTok > 0;
       const toks = counted ? nTok : Math.max(1, Math.round(txt.length / 4));
+      /* tok/s is generation throughput, so it is measured from the FIRST token
+         to the last -- not from the call. Dividing by (done - s) folds prompt
+         processing into the rate, which penalises short outputs hardest
+         because the fixed prompt cost is amortised over fewer tokens. Measured
+         on SmolLM2-360M: prompt B looked like 11.1 tok/s against prompt A's
+         20.7 purely because B's lines are shorter. That is not a speed
+         difference, and it would have been read as one when comparing models.
+         Falls back to the old denominator if the streamer never fired. */
+      const genMs = first ? done - first : done - s;
       self.postMessage({ type: 'gen', id: m.id, txt,
         think,
         truncated: counted && nTok >= m.maxTok,
@@ -248,7 +257,8 @@ self.onmessage = async (e) => {
         tokens: toks,
         ttft: first ? Math.round(first - s) : null,
         totalMs: Math.round(done - s),
-        tps: +(toks / ((done - s) / 1000)).toFixed(1) });
+        genMs: Math.round(genMs),
+        tps: +(toks / Math.max(1, genMs) * 1000).toFixed(1) });
     }
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
