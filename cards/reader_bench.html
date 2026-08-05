@@ -237,12 +237,15 @@ self.onmessage = async (e) => {
          enable_latency_breakdown, its own latency breakdown — measured inside
          the engine rather than inferred from chunk arrival. Field names are
          read defensively and fall back to wall-clock, labelled. */
-      /* resetChat() is NOT called between cases any more. It was added to fix
-         the mapAsync buffer error and did not, and mlc-ai/web-llm#497 associates
-         that error with reload/reset paths — so it is at least as likely to be
-         a trigger as a cure. The OpenAI-shaped API is stateless when the full
-         messages array is passed each time, which it is, so nothing carries
-         over that needs clearing. */
+      /* resetChat() is BACK, and not because of the buffer error — because the
+         cases were contaminating each other. Measured on Llama-3.2-1B: "stuck"
+         appeared in six of twelve lines, and "dead-end road" turned up in The
+         Moon seven cases after The Dead End Job. So state does carry between
+         completions even though the full messages array is passed every time,
+         and without this every case after the first is judged on a prompt it
+         was not given. That invalidates the comparison the bench exists to
+         make, which is worse than an occasional crash. */
+      try { await engine.resetChat?.(); } catch (_) {}
       const s = performance.now();
       const reply = await engine.chat.completions.create({
         messages: [{ role: 'system', content: m.system },
