@@ -70,6 +70,10 @@
 <h1>Reader bench &middot; WP4 bake-off</h1>
 
 <div id="cfg">
+  <select id="engine">
+    <option value="tjs">engine: transformers.js</option>
+    <option value="webllm">engine: WebLLM (MLC)</option>
+  </select>
   <select id="model"></select>
   <select id="lib">
     <option value="3.7.6">lib 3.7.6</option>
@@ -147,6 +151,10 @@ const LIBS = {
    across runs, and a screener that changed version mid-bake-off would move the
    numbers under the comparison for no benefit. */
 const SCREEN_CDN = LIBS['3.7.6'];
+/* WebLLM carries its own model format and its own model zoo, so the lib and
+   dtype selectors do not apply to it — quantisation is baked into the model id
+   (…-q4f16_1-MLC). */
+const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
 
 /* ---- inference runs in a Worker ----
    Not a nicety. A 135M model on the wasm backend blocks the main thread hard
@@ -158,6 +166,80 @@ const SCREEN_CDN = LIBS['3.7.6'];
 
    Inlined as a Blob so this file stays a single self-contained page with no
    build step, matching the rest of the project. */
+/* ---- WebLLM (MLC) worker -------------------------------------------------
+   A second engine, and the reason is measured rather than fashionable. ORT's
+   WebGPU backend cannot run anything past SmolLM2-360M on the test handset,
+   because it materialises the embedding/lm_head tensor as a single binding and
+   the adreno-7xx caps a binding at 128 MB — the WebGPU spec floor. MLC/TVM
+   shards weights across many smaller buffers instead, and WebLLM demonstrably
+   runs Llama-3.2 1B/3B in Chrome for Android 121+ under that same cap
+   (mlc-ai/web-llm#209 is the same 128 MB wall, since fixed on their side).
+
+   So the ceiling measured here is a fact about ONNX Runtime Web, not about the
+   phone. This arm is what tells the two apart.
+
+   Deliberately kept identical where it matters: same cases, same prompts, same
+   flags, same D1 screen, same sanity gate, greedy decoding (temperature 0), and
+   TTFT/tok-s measured over the streamed chunks so the numbers mean what they
+   mean in the other engine. */
+const WEBLLM_SRC = (CDN) => `
+import * as webllm from '${CDN}';
+let engine = null;
+self.onmessage = async (e) => {
+  const m = e.data;
+  try {
+    if (m.cmd === 'free') {
+      try { await engine?.unload?.(); } catch (_) {}
+      engine = null;
+      self.postMessage({ type: 'freed' });
+      return;
+    }
+    if (m.cmd === 'load') {
+      try { await engine?.unload?.(); } catch (_) {}
+      const t0 = performance.now();
+      let bytes = 0, lastPost = 0;
+      engine = await webllm.CreateMLCEngine(m.model, {
+        initProgressCallback: (r) => {
+          /* WebLLM reports a text line and a 0..1 progress, not per-file bytes.
+             Throttled for the same reason the other engine is: a phone cannot
+             repaint per callback without the queue outrunning it. */
+          const now = performance.now();
+          if (now - lastPost < 100) return;
+          lastPost = now;
+          self.postMessage({ type: 'progress', status: r.text || '',
+                             pct: (r.progress || 0) * 100, bytes });
+        },
+      });
+      self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0),
+                         bytes: 0, tmpl: 'webllm' });
+    } else if (m.cmd === 'gen') {
+      let first = null, nTok = 0, txt = '';
+      const s = performance.now();
+      const stream = await engine.chat.completions.create({
+        messages: [{ role: 'system', content: m.system },
+                   { role: 'user', content: m.user }],
+        max_tokens: m.maxTok, temperature: 0, stream: true,
+      });
+      for await (const chunk of stream) {
+        const d = chunk.choices?.[0]?.delta?.content;
+        if (d) { if (first === null) first = performance.now(); nTok++; txt += d; }
+      }
+      const done = performance.now();
+      const genMs = first ? done - first : done - s;
+      const think = /<think>/i.test(txt);
+      if (think) { const i = txt.search(/<\\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
+      self.postMessage({ type: 'gen', id: m.id, txt: txt.trim(),
+        think, truncated: nTok >= m.maxTok, counted: true, tokens: nTok,
+        ttft: first ? Math.round(first - s) : null,
+        totalMs: Math.round(done - s), genMs: Math.round(genMs),
+        tps: +(nTok / Math.max(1, genMs) * 1000).toFixed(1) });
+    }
+  } catch (err) {
+    self.postMessage({ type: 'error', message: String(err && err.message || err) });
+  }
+};
+`;
+
 const WORKER_SRC = (CDN) => `
 import { pipeline, env, TextStreamer } from '${CDN}';
 env.allowLocalModels = false;
@@ -301,8 +383,9 @@ self.onmessage = async (e) => {
 };
 `;
 
-function spawnWorker(onProgress, cdn) {
-  const url = URL.createObjectURL(new Blob([WORKER_SRC(cdn)], { type: 'text/javascript' }));
+function spawnWorker(onProgress, cdn, engine) {
+  const src = engine === 'webllm' ? WEBLLM_SRC(cdn) : WORKER_SRC(cdn);
+  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
   const w = new Worker(url, { type: 'module' });
   URL.revokeObjectURL(url);
   const waiters = new Map();
@@ -475,7 +558,38 @@ const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':
 const fmtMB = b => (b / 1048576).toFixed(1) + ' MB';
 
 const modelSel = $('model');
-MODELS.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; modelSel.appendChild(o); });
+function fillModels(pairs) {
+  modelSel.innerHTML = '';
+  for (const [value, label] of pairs) {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label;
+    modelSel.appendChild(o);
+  }
+}
+fillModels(MODELS.map(m => [m, m]));
+
+/* Switching engine reloads the model list, because the two engines do not share
+   a model zoo. WebLLM's prebuilt list is read from the library itself rather
+   than hardcoded, so the ids cannot go stale — and it carries vram_required_MB,
+   which is the number that actually decides whether a handset will take it. */
+$('engine').addEventListener('change', async () => {
+  const eng = $('engine').value;
+  const na = eng === 'webllm';
+  $('dtype').disabled = na; $('lib').disabled = na; $('device').disabled = na;
+  if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
+  fillModels([['', 'loading WebLLM model list…']]);
+  try {
+    const webllm = await import(WEBLLM_CDN);
+    const list = (webllm.prebuiltAppConfig?.model_list || [])
+      .filter(x => /q4f16/i.test(x.model_id))
+      .sort((a, b) => (a.vram_required_MB || 0) - (b.vram_required_MB || 0))
+      .map(x => [x.model_id, `${x.model_id} · ${x.vram_required_MB ? Math.round(x.vram_required_MB) + ' MB VRAM' : 'size ?'}` +
+                             `${x.low_resource_required ? ' · low-resource' : ''}`]);
+    fillModels(list.length ? list : [['', 'no q4f16 models in prebuilt list']]);
+  } catch (e) {
+    fillModels([['', 'model list failed: ' + (e.message || e)]]);
+  }
+});
 
 /* ---- environment, reported up front because it is half the result ---- */
 (async () => {
@@ -628,12 +742,13 @@ async function run(sanityOnly) {
   const model = modelSel.value, dtype = $('dtype').value, device = $('device').value;
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
-  const lib = $('lib').value;
+  const lib = $('lib').value, engine = $('engine').value;
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
-  head.innerHTML = `<h2>${esc(model)} · ${esc(dtype)} · ${esc(device)} · prompt ${esc(which)}` +
-    ` · seat ${esc(seatField)} · lib ${esc(lib)}` +
+  head.innerHTML = `<h2>${esc(model)} · ` +
+    (engine === 'webllm' ? 'WebLLM/MLC · webgpu' : `${esc(dtype)} · ${esc(device)} · lib ${esc(lib)}`) +
+    ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
   const live = head.querySelector('#live');
@@ -660,7 +775,7 @@ async function run(sanityOnly) {
         live.textContent = `${q.status || ''} ${q.file || ''} ` +
           `${q.pct ? q.pct.toFixed(0) + '%' : ''} · ${fmtMB(q.bytes || 0)} so far`;
       });
-    }, LIBS[lib]);
+    }, engine === 'webllm' ? WEBLLM_CDN : LIBS[lib], engine);
 
     status('loading model…');
     const { loadMs, bytes, tmpl } = await worker.load(model, dtype, device);

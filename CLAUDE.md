@@ -543,6 +543,18 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     takes a `free` command that awaits `pipeline.dispose()`, and the page races
     it against a 3 s timeout before killing the thread so a wedged worker
     cannot hang teardown.
+  - **SCOPE CORRECTION (2026-08-05, same day): the binding-cap rule below is a
+    fact about ONNX Runtime Web, NOT about the handset.** It was recorded as
+    though the phone could not run these models. The phone can. WebLLM/MLC runs
+    Llama-3.2 1B/3B in Chrome for Android 121+ under the *same* 128 MB cap,
+    because MLC/TVM shards weights across many smaller buffers where ORT
+    materialises the embedding/lm_head as a single binding (mlc-ai/web-llm#209
+    is the identical 128 MB wall on a Pixel 7, since solved on their side; TVM
+    carries explicit mobile fallbacks). See also gpuweb#4533 on `adapter.limits`
+    under-reporting true GPU capability. So the rule predicts ORT's behaviour
+    exactly and says nothing about what is possible — **the bench now has a
+    WebLLM engine arm to tell the two apart**, and WP4 Tier 2 is not dead, it
+    may simply have the wrong runtime.
   - **THE BINDING-CAP RULE, and it decides the bake-off.** On the S24 Ultra
     (adreno-7xx, `maxStorageBufferBindingSize` = 128 MB, the WebGPU spec floor)
     a model runs under WebGPU at q4f16 only if its embedding/lm_head tensor
