@@ -457,9 +457,51 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     the bench; the question is which model needs the least leash.
   - The `count` check is deliberately tolerant of list formatting; an
     intolerant regex disqualified a model whose arithmetic was fine.
-  - **`first-callback` is not TTFT.** The streamer's first `put` fires during
-    prompt processing. Fix with a `TextStreamer` and `skip_prompt` before
-    judging any model on criterion 4.
+  - **TTFT is real now.** It was not: the hand-rolled streamer's first `put`
+    fired during prompt processing. It is a `TextStreamer` with `skip_prompt`,
+    verified against the 3.3.3 bundle — `put()` returns early on the prompt
+    batch *before* calling `token_callback_function`, so the first callback is
+    the first generated token. The same callback counts tokens exactly, which
+    also retired the old `chars/4` estimate: that silently compared one
+    tokenizer's characters-per-token against another's and called the ratio
+    throughput. If a future build drops `token_callback_function` the bench
+    falls back to the estimate and *says so* rather than reporting it as
+    measured.
+  - **The A/B result was confounded and there is now an A20 arm.** A and B
+    differed in two things, not one: B forbids answering the question *and*
+    caps at 20 words where A caps at 25. "Honesty costs voice" was therefore
+    entangled with losing a fifth of the line. A20 is A verbatim at B's cap:
+    A vs A20 isolates the cap, A20 vs B isolates the leash. Do not draw a
+    criterion-5 conclusion from A vs B alone.
+  - **Qwen3 candidates think unless told not to.** Qwen3-0.6B/1.7B are hybrid
+    reasoning models that emit `<think>` blocks by default; the switch is
+    `enable_thinking`, which lives in the *chat template*, not in the
+    generation options, so there is nowhere to pass it when messages go
+    straight into the pipeline. The bench templates by hand and passes it
+    there — verified safe because 3.3.3's `apply_chat_template` collects
+    unknown kwargs into a rest object and spreads them into the render context,
+    so a template that ignores the variable is unaffected. Output is also
+    stripped of `<think>` blocks and flagged `THINK-BLOCK` as belt and braces.
+  - **`max_new_tokens` is 80, not 48.** A 25-word line is ~35-40 tokens, so 48
+    truncated long lines mid-sentence and they read as terse — with no flag
+    distinguishing a cut-off model from a clean one. Hitting the ceiling now
+    flags `TRUNCATED`.
+  - **The D1 pre-screen is a sort order, not a verdict.** MiniLM q8 (the page's
+    own model) embeds each produced line and cosines it against the card meaning
+    and against the question; `sim q > sim m` flags `ANSWERS-QUESTION?` and
+    sorts that row to the top. It exists because hand-judging 12 cases × 9
+    models × 3 prompts × 2 dtypes is how careful reading becomes skimming.
+    Embeds **one text per forward pass** — the EMB1 rule applies here more than
+    anywhere, since the whole comparison is between two cosines a few
+    hundredths apart and batching would manufacture the signal.
+  - **Seat text is an arm.** The handoff specifies `prose`, but per the seats
+    rule above `prose` is matching text — written flat for a cosine, never
+    displayed — while `lens` carries the register. Feeding a model text
+    optimised to embed is a candidate cause of output that reads flat, so the
+    bench can send either. Every seat used in `CASES` has both, checked.
+  - Cases are built **before** the model loads, so a missing or unbuilt
+    `release/major-arcanai/index.html` fails immediately instead of after
+    downloading up to 1.3 GB onto a phone.
 - **Build hygiene**: after any change, run `build_draw_page.py` twice and
   confirm `git diff` on `release/` shows only what you meant and nothing on the
   second run. Catches the failure mode of having edited the generated

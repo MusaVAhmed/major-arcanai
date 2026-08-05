@@ -26,6 +26,18 @@
   seats.js, so they cannot drift from what ships. Generation is greedy
   (do_sample false) so two runs of the same build and model are comparable.
 
+  THE ARMS. Four things vary, and only one of them at a time should:
+    - model / dtype / device — the bake-off proper.
+    - prompt A / A20 / B. A and B differed in TWO ways (leash AND word cap), so
+      the finding that honesty costs voice was confounded. A20 is A at B's cap.
+      A vs A20 isolates the cap; A20 vs B isolates the leash.
+    - seat prose vs lens. The handoff specifies prose, but prose is matching
+      text written flat for a cosine and never shown to anyone; lens is the
+      display text and carries the register. Prose may be flattening the output.
+  D1 PRE-SCREEN embeds each produced line and cosines it against the meaning and
+  against the question. It sorts suspicion to the top of the table; it does not
+  judge. Criterion 1 and criterion 5 remain hand-judged, by design.
+
   RUNNING IT ON A PHONE, which is the point — Tier 2 is the tier that reaches
   phones, and desktop numbers do not transfer. Per CLAUDE.md:
       cloudflared tunnel --url http://localhost:8642 --protocol http2
@@ -68,9 +80,15 @@
     <option value="wasm">wasm (correctness only — NOT a perf number)</option>
   </select>
   <select id="prompt">
-    <option value="A">prompt A — handoff verbatim</option>
-    <option value="B">prompt B — anti-invention</option>
+    <option value="A">prompt A — handoff verbatim (25w)</option>
+    <option value="A20">prompt A20 — A at B's word cap (20w)</option>
+    <option value="B">prompt B — anti-invention (20w)</option>
   </select>
+  <select id="seattext">
+    <option value="prose">seat: prose (embedding text)</option>
+    <option value="lens">seat: lens (display text)</option>
+  </select>
+  <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
   <button id="sanity">Sanity only</button>
   <span id="status" class="dim">idle</span>
@@ -96,9 +114,35 @@ const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/t
    Inlined as a Blob so this file stays a single self-contained page with no
    build step, matching the rest of the project. */
 const WORKER_SRC = `
-import { pipeline, env } from '${CDN}';
+import { pipeline, env, TextStreamer } from '${CDN}';
 env.allowLocalModels = false;
 let gen = null;
+let tmpl = 'messages';   // 'string' once the tokenizer proves it can template
+
+/* Qwen3 is a hybrid reasoning model: left alone it emits a <think> block before
+   the answer, which blows the word cap and reads as garbage in the table. The
+   switch is 'enable_thinking', and it lives in the CHAT TEMPLATE, not in the
+   generation options — so there is nowhere to pass it when messages go straight
+   into the pipeline. We template by hand instead, and pass the flag there.
+   Harmless for every other candidate: a template that does not use the variable
+   ignores it. Falls back to raw messages if the tokenizer has no template. */
+function toPrompt(system, user) {
+  if (tmpl !== 'string') return [{ role: 'system', content: system },
+                                 { role: 'user', content: user }];
+  return gen.tokenizer.apply_chat_template(
+    [{ role: 'system', content: system }, { role: 'user', content: user }],
+    { tokenize: false, add_generation_prompt: true, enable_thinking: false });
+}
+
+/* Belt and braces: a model can still think even with the flag set, and a
+   truncated think block never closes. Report it rather than silently scoring
+   the reasoning as the line. */
+function stripThink(s) {
+  if (!/<think>/i.test(s)) return { txt: s.trim(), think: false };
+  const i = s.search(/<\\/think>/i);
+  return { txt: (i === -1 ? s : s.slice(i + 8)).trim(), think: true };
+}
+
 self.onmessage = async (e) => {
   const m = e.data;
   try {
@@ -120,19 +164,51 @@ self.onmessage = async (e) => {
                              pct: p.progress, bytes: total() });
         },
       });
-      self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0), bytes: total() });
+      const loadMs = Math.round(performance.now() - t0);
+      try {
+        const probe = gen.tokenizer.apply_chat_template(
+          [{ role: 'user', content: 'x' }],
+          { tokenize: false, add_generation_prompt: true, enable_thinking: false });
+        if (typeof probe === 'string' && probe.length) tmpl = 'string';
+      } catch (_) {}
+      self.postMessage({ type: 'loaded', loadMs, bytes: total(), tmpl });
     } else if (m.cmd === 'gen') {
-      let first = null;
-      const streamer = { put: () => { if (first === null) first = performance.now(); }, end: () => {} };
+      /* A real TextStreamer with skip_prompt, not a hand-rolled put(). Two
+         things depend on it and both were wrong before: the first callback now
+         fires on the first GENERATED token rather than during prompt
+         processing, so ttft is criterion 4 for real; and the token callback
+         counts tokens exactly, so tok/s is no longer characters/4 — an estimate
+         that silently compared one tokenizer's characters-per-token against
+         another's and called the ratio throughput. */
+      let first = null, nTok = 0;
+      const streamer = new TextStreamer(gen.tokenizer, {
+        skip_prompt: true,
+        skip_special_tokens: true,
+        callback_function: () => {},
+        token_callback_function: (t) => {
+          if (first === null) first = performance.now();
+          nTok += (t && t.length) || 1;
+        },
+      });
+      const input = toPrompt(m.system, m.user);
+      const opts = { max_new_tokens: m.maxTok, do_sample: false, streamer };
+      if (typeof input === 'string') opts.return_full_text = false;
       const s = performance.now();
-      const r = await gen([{ role: 'system', content: m.system },
-                           { role: 'user', content: m.user }],
-                          { max_new_tokens: m.maxTok, do_sample: false, streamer });
+      const r = await gen(input, opts);
       const done = performance.now();
-      const txt = (r[0] && r[0].generated_text && r[0].generated_text.at(-1)
-                   ? r[0].generated_text.at(-1).content : '') || '';
-      const toks = Math.max(1, Math.round(txt.length / 4));
-      self.postMessage({ type: 'gen', id: m.id, txt: txt.trim(),
+      const g = r && r[0] && r[0].generated_text;
+      let raw = typeof g === 'string' ? g
+              : (Array.isArray(g) && g.at(-1) ? g.at(-1).content : '') || '';
+      const { txt, think } = stripThink(raw);
+      /* If token_callback_function is absent in this build, nTok stays 0 and we
+         say so rather than quietly reporting an estimate as a measurement. */
+      const counted = nTok > 0;
+      const toks = counted ? nTok : Math.max(1, Math.round(txt.length / 4));
+      self.postMessage({ type: 'gen', id: m.id, txt,
+        think,
+        truncated: counted && nTok >= m.maxTok,
+        counted,
+        tokens: toks,
         ttft: first ? Math.round(first - s) : null,
         totalMs: Math.round(done - s),
         tps: +(toks / ((done - s) / 1000)).toFixed(1) });
@@ -214,11 +290,22 @@ const MODELS = [
    B fixed every D1 failure and cost most of the voice, which is the tradeoff
    the bake-off now has to weigh per model. Keep both; the interesting result is
    which model needs the least of B's leash to stay honest. */
+/* A20 exists because A and B differed in TWO things, not one: B forbids
+   answering the question AND caps at 20 words where A caps at 25. The
+   conclusion drawn from that comparison — that honesty costs voice — was
+   therefore confounded with losing a fifth of the line. A20 is A verbatim
+   except for the number, so:
+       A vs A20   isolates the cap
+       A20 vs B   isolates the leash, at equal length
+   Criterion 5 now turns on which of those did the flattening. */
+const aText = (n) =>
+  "You rewrite a single line of a sarcastic oracle deck. You never invent " +
+  "meanings. You are given the card's meaning and you rewrite it to speak to " +
+  "one specific position in the spread and one specific question. Under " + n + " " +
+  "words. No preamble. No quotes. Dry, blunt, funny. Second person.";
 const SYS = {
-  A: "You rewrite a single line of a sarcastic oracle deck. You never invent " +
-     "meanings. You are given the card's meaning and you rewrite it to speak to " +
-     "one specific position in the spread and one specific question. Under 25 " +
-     "words. No preamble. No quotes. Dry, blunt, funny. Second person.",
+  A: aText(25),
+  A20: aText(20),
   B: "You rewrite one line of a sarcastic oracle deck.\n" +
      "You are given a card's MEANING. You rewrite that meaning so it speaks to one position in a spread.\n" +
      "The question is context for tone only. NEVER answer it. Never predict what will happen. " +
@@ -227,6 +314,7 @@ const SYS = {
      "meaning says something is good, it stays good; if it turns from bad to good, keep the turn.\n" +
      "Under 20 words. No preamble. No quotation marks. No markdown. No ellipses. Dry, blunt, funny. Second person.",
 };
+const CAP = { A: 25, A20: 20, B: 20 };
 
 /* [card name, reversed, spread mode, seat index, question] — see the header
    comment for why each one is here. */
@@ -294,7 +382,13 @@ MODELS.forEach(m => { const o = document.createElement('option'); o.value = m; o
 })();
 
 /* ---- cases are read from the built page so they cannot drift ---- */
-function buildCases() {
+/* seatField picks which of the seat's two texts the model is shown. `prose` is
+   what the handoff specified, but per CLAUDE.md prose is MATCHING text: written
+   long and plain so a cosine can find it, and never displayed to anyone. `lens`
+   is the display text and carries the deck's register. Feeding a model prose
+   optimised to embed is a plausible contributor to output that reads flat, so
+   it is an arm here rather than an assumption. */
+function buildCases(seatField) {
   const w = $('f').contentWindow;
   let DECK, SEATS;
   try { DECK = w.eval('DECK'); SEATS = w.ARCANAI_SEATS; }
@@ -305,13 +399,16 @@ function buildCases() {
     const c = byName[name];
     if (!c) throw new Error('unknown card in CASES: ' + name);
     const seat = SEATS.seats[mode][si];
+    // lens ends in a colon by design (it prefixes the meaning on the page);
+    // that punctuation is meaningless mid-prompt, so drop it.
+    const seatTxt = String(seat[seatField] || seat.prose || '').replace(/:\s*$/, '');
     return {
       name, rev: !!rev, seat: seat.label || seat.name, q,
       meaning: rev ? c.r : c.meaning,
       user: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
             `Its meaning: ${rev ? c.r : c.meaning}\n` +
             `In practice: ${rev ? c.sitr : c.sit}\n` +
-            `Position: ${seat.label || seat.name}, ${seat.prose}\n` +
+            `Position: ${seat.label || seat.name}, ${seatTxt}\n` +
             `They asked: ${q}\n` +
             `Rewrite the meaning for this position.`,
     };
@@ -349,22 +446,72 @@ function flags(text, kase, cap) {
   return { words, flags: f };
 }
 
+/* ---- D1 pre-screen ---------------------------------------------------------
+   The flags above catch mechanical junk. They cannot catch the failure that
+   actually matters — the model answering the QUESTION instead of re-voicing the
+   CARD, which is what "you're drifting, not cheating" was. That is hand-judged,
+   and hand-judging 12 cases x 9 models x 3 prompts x 2 dtypes is how careful
+   reading turns into skimming.
+
+   So: embed the produced line and cosine it against the card's meaning and
+   against the question. A line that sits closer to the question than to the
+   meaning has drifted toward answering it. This is NOT a verdict — it is a
+   sort order, so the suspicious lines get read first and the obvious passes
+   last. Same model and dtype the page itself uses, so the screener is a tool
+   this repo already trusts rather than a new dependency. */
+const SCREEN_MODEL = 'Xenova/all-MiniLM-L6-v2';
+let extractor = null;
+async function screenRows(rows, status) {
+  if (!extractor) {
+    status('loading D1 screener (MiniLM q8, ~23 MB)…');
+    const { pipeline, env } = await import(CDN);
+    env.allowLocalModels = false;
+    extractor = await pipeline('feature-extraction', SCREEN_MODEL, { dtype: 'q8' });
+  }
+  /* ONE TEXT PER FORWARD PASS, per CLAUDE.md's EMB1 rule: q8 pads every
+     sequence in a batch out to the longest one in it, which shifts unrelated
+     vectors by 0.003-0.008. The whole comparison here is between two cosines
+     that can sit a few hundredths apart, so batching would manufacture exactly
+     the signal being measured. */
+  const vec = async (t) => {
+    const o = await extractor([t], { pooling: 'mean', normalize: true });
+    return o.data.slice(0, o.dims[1]);
+  };
+  const cos = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+  for (let i = 0; i < rows.length; i++) {
+    const { k, r, f } = rows[i];
+    if (!r.txt) continue;
+    status(`D1 screen ${i + 1}/${rows.length}…`);
+    const vl = await vec(r.txt), vm = await vec(k.meaning), vq = await vec(k.q);
+    r.simM = +cos(vl, vm).toFixed(3);
+    r.simQ = +cos(vl, vq).toFixed(3);
+    if (r.simQ > r.simM) f.flags.push('ANSWERS-QUESTION?');
+  }
+}
+
 let running = false;
 async function run(sanityOnly) {
   if (running) return;
   running = true; $('go').disabled = $('sanity').disabled = true;
   const model = modelSel.value, dtype = $('dtype').value, device = $('device').value;
   const which = $('prompt').value;
+  const seatField = $('seattext').value, doScreen = $('screen').checked;
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
   head.innerHTML = `<h2>${esc(model)} · ${esc(dtype)} · ${esc(device)} · prompt ${esc(which)}` +
+    ` · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
   const live = head.querySelector('#live');
 
   let worker = null;
   try {
+    /* Cases are built BEFORE the model loads. They are read out of the iframe,
+       and if the draw page has not been built this throws — discovering that
+       after downloading up to 1.3 GB, on a phone, is not a thing to do twice. */
+    const cases = sanityOnly ? [] : buildCases(seatField);
+
     status('spawning worker…');
     worker = spawnWorker(p => {
       live.textContent = `${p.status || ''} ${p.file || ''} ` +
@@ -372,7 +519,7 @@ async function run(sanityOnly) {
     });
 
     status('loading model…');
-    const { loadMs, bytes } = await worker.load(model, dtype, device);
+    const { loadMs, bytes, tmpl } = await worker.load(model, dtype, device);
     live.innerHTML = `<span class="ok">loaded</span> in ${loadMs} ms · download ${fmtMB(bytes)}`;
 
     const call = (system, user, maxTok) => worker.gen(system, user, maxTok);
@@ -397,38 +544,59 @@ async function run(sanityOnly) {
     }
 
     if (!sanityOnly && passed === SANITY.length) {
-      const cases = buildCases();
-      const cap = which === 'A' ? 25 : 20;
+      const cap = CAP[which];
       const rows = [];
       const ttfts = [], tpss = [];
+      let estimated = false;
       for (let i = 0; i < cases.length; i++) {
         status(`case ${i + 1}/${cases.length}…`);
         live.textContent = `case ${i + 1}/${cases.length}`;
         const k = cases[i];
-        const r = await call(SYS[which], k.user, 48);
+        /* 80, not 48. A 25-word line is ~35-40 tokens and 48 left almost no
+           headroom, so a model that ran long was cut mid-sentence and read as
+           terse — indistinguishable, with no flag, from a model that ended
+           cleanly. Now it has room, and hitting the ceiling is reported. */
+        const r = await call(SYS[which], k.user, 80);
         const f = flags(r.txt, k, cap);
+        if (r.think) f.flags.push('THINK-BLOCK');
+        if (r.truncated) f.flags.push('TRUNCATED');
+        if (!r.counted) estimated = true;
         if (r.ttft) ttfts.push(r.ttft);
         tpss.push(r.tps);
         rows.push({ k, r, f });
       }
+      if (doScreen) {
+        try { await screenRows(rows, status); }
+        catch (e) { live.innerHTML += `<br><span class="warn">D1 screen unavailable: ${esc(e.message)}</span>`; }
+      }
       const med = a => a.length ? a.slice().sort((x, y) => x - y)[a.length >> 1] : null;
       const clean = rows.filter(x => !x.f.flags.length).length;
-      /* TTFT here is NOT trustworthy and must not be reported as criterion 4.
-         The streamer's first `put` fires during prompt processing, so this
-         reads single-digit milliseconds even when the first real token is
-         seconds away. Measuring it properly needs a TextStreamer with
-         skip_prompt, which is worth doing before anyone judges a model on
-         latency. Left visible, and labelled, rather than quietly wrong. */
-      html += `<p>first-callback <b>${med(ttfts) ?? 'n/a'} ms</b> <span class="warn">(NOT TTFT — see comment)</span> · median <b>${med(tpss)} tok/s</b> · ` +
+      /* TTFT is now criterion 4 for real: a TextStreamer with skip_prompt, so
+         the clock stops on the first GENERATED token rather than partway
+         through prompt processing. Tokens are counted, not estimated from
+         characters. Both were wrong before and both were the same bug. */
+      const susp = rows.filter(x => x.f.flags.includes('ANSWERS-QUESTION?')).length;
+      html += `<p>TTFT median <b>${med(ttfts) ?? 'n/a'} ms</b> <span class="dim">(criterion 4: under ~400 ms on a mid-range phone)</span> · ` +
+        `median <b>${med(tpss)} tok/s</b>${estimated ? ' <span class="warn">(estimated — token callback unavailable)</span>' : ''} · ` +
         `mechanically clean <b>${clean}/${rows.length}</b> · avg words ` +
-        `<b>${(rows.reduce((s, x) => s + x.f.words, 0) / rows.length).toFixed(1)}</b></p>` +
+        `<b>${(rows.reduce((s, x) => s + x.f.words, 0) / rows.length).toFixed(1)}</b>` +
+        (doScreen ? ` · <span class="${susp ? 'warn' : 'ok'}">D1 suspicions <b>${susp}/${rows.length}</b></span>` : '') +
+        ` · chat template: ${esc(tmpl)}</p>` +
         `<p class="dim">Criterion 1 (never contradicts the meaning) and criterion 5 (voice) are hand-judged. ` +
-        `Read the meaning and the line side by side below.</p>` +
-        `<table><tr><th>card · seat</th><th>meaning → line</th><th>w</th><th>ms</th><th>flags</th></tr>` +
-        rows.map(({ k, r, f }) => `<tr>` +
+        `Read the meaning and the line side by side below. <b>sim</b> is cosine of the produced line ` +
+        `against the meaning (m) and against the question (q) — q &gt; m is a hint that the model ` +
+        `answered the question, not a verdict. Suspicious rows are listed first.</p>` +
+        `<table><tr><th>card · seat</th><th>meaning → line</th><th>w</th><th>sim m/q</th><th>ms</th><th>flags</th></tr>` +
+        rows.slice()
+          .sort((a, b) => (b.f.flags.includes('ANSWERS-QUESTION?') ? 1 : 0) -
+                          (a.f.flags.includes('ANSWERS-QUESTION?') ? 1 : 0))
+          .map(({ k, r, f }) => `<tr>` +
           `<td>${esc(k.name)}${k.rev ? ' <i>rev</i>' : ''}<br><span class="dim">${esc(k.seat)}</span><br><span class="dim">“${esc(k.q)}”</span></td>` +
           `<td><span class="mean">${esc(k.meaning)}</span><br><span class="gold">${esc(r.txt)}</span></td>` +
-          `<td>${f.words}</td><td>${r.totalMs}</td>` +
+          `<td>${f.words}</td>` +
+          `<td>${r.simM === undefined ? '<span class="dim">—</span>' :
+                `<span class="${r.simQ > r.simM ? 'bad' : 'dim'}">${r.simM.toFixed(2)} / ${r.simQ.toFixed(2)}</span>`}</td>` +
+          `<td>${r.totalMs}</td>` +
           `<td class="${f.flags.length ? 'warn' : 'ok'}">${f.flags.join('<br>') || 'ok'}</td></tr>`).join('') +
         `</table>`;
     }
