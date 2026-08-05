@@ -759,9 +759,10 @@ function resultsText() {
   for (const sec of document.getElementById('out').children) {
     const h = sec.querySelector('h2');
     if (h) out.push('=== ' + h.innerText.trim() + ' ===');
+    let emitted = 0;
     for (const p of sec.querySelectorAll('p')) {
       const t = p.innerText.replace(/\s+/g, ' ').trim();
-      if (t) out.push(t);
+      if (t) { out.push(t); emitted++; }
     }
     for (const t of sec.querySelectorAll('table')) {
       out.push('');
@@ -770,6 +771,19 @@ function resultsText() {
           .map(c => c.innerText.replace(/\s*\n\s*/g, ' · ').replace(/\s+/g, ' ').trim())
           .join(' | '));
       }
+      emitted++;
+    }
+    /* A run that is still loading, or one that threw, has neither a <p> nor a
+       <table> -- just text or a <span class="bad">FAILED: ...</span> in the
+       live div. Emitting only p's and tables made both copy out as a bare
+       header, which is worse than useless: it looks like a run that produced
+       nothing rather than one that is mid-download or one that reported
+       exactly why it died. The error IS the result in that case. */
+    if (!emitted) {
+      const live = sec.querySelector('div');
+      const t = ((live || sec).innerText || '').replace(/\s+/g, ' ').trim();
+      out.push(t ? '[no table — status: ' + t + ']'
+                 : '[no output at all — run never reported]');
     }
     out.push('');
   }
