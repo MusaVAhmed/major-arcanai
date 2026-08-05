@@ -758,7 +758,25 @@ async function run(sanityOnly) {
     live.innerHTML = html;
     status('done');
   } catch (e) {
-    live.innerHTML = `<span class="bad">FAILED: ${esc(e.message || e)}</span>`;
+    const msg = String(e.message || e);
+    /* Dawn's device-loss message is unactionable as written, and it is the one
+       most likely to be hit here: a tab that has already been killed by an OOM
+       leaves the GPU process degraded, and a device lost that way does NOT come
+       back on a tab reload. Say so, because the obvious response (reload and
+       try again) is the one that cannot work. */
+    let hint = '';
+    if (/external Instance reference|device is lost|Device is lost|device was lost/i.test(msg)) {
+      hint = `<p class="warn">That is a lost WebGPU device, not a bad model. It usually follows an ` +
+             `earlier OOM in the same browser session, and <b>a tab reload will not fix it</b> — ` +
+             `fully quit the browser (clear it from recents) and make this run the first one on a ` +
+             `fresh page. If it fails identically on a clean start, the fault is the kernel or the ` +
+             `adapter rather than the session, and that is a real result.</p>`;
+    } else if (/create session|GetIndexFromName|graph/i.test(msg)) {
+      hint = `<p class="warn">That is a session-creation failure: this model's ONNX export and this ` +
+             `library version disagree about the graph. Try the other lib version — it is a ` +
+             `model/runtime pairing problem, not a device or dtype problem.</p>`;
+    }
+    live.innerHTML = `<span class="bad">FAILED: ${esc(msg)}</span>` + hint;
     status('failed');
   } finally {
     /* Dispose BEFORE terminating, and do not let a wedged worker hang teardown:
