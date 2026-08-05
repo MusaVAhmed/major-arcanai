@@ -808,6 +808,17 @@ function resultsText() {
   for (const sec of document.getElementById('out').children) {
     const h = sec.querySelector('h2');
     if (h) out.push('=== ' + h.innerText.trim() + ' ===');
+    /* The error line is a <span class="bad">, and it is emitted FIRST and
+       unconditionally. Twice now the copy has swallowed it: once because only
+       p's and tables were extracted, and again because the remediation hint
+       added beside it is a <p>, which made the section look like it had
+       reported properly. The message is the whole result of a failed run --
+       "it failed" without the reason costs a round trip every time. */
+    const err = sec.querySelector('span.bad');
+    if (err) {
+      const t = err.innerText.replace(/\s+/g, ' ').trim();
+      if (t) out.push(t);
+    }
     let emitted = 0;
     for (const p of sec.querySelectorAll('p')) {
       const t = p.innerText.replace(/\s+/g, ' ').trim();

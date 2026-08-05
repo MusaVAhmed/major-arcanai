@@ -543,6 +543,30 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     takes a `free` command that awaits `pipeline.dispose()`, and the page races
     it against a 3 s timeout before killing the thread so a wedged worker
     cannot hang teardown.
+  - **THE BINDING-CAP RULE, and it decides the bake-off.** On the S24 Ultra
+    (adreno-7xx, `maxStorageBufferBindingSize` = 128 MB, the WebGPU spec floor)
+    a model runs under WebGPU at q4f16 only if its embedding/lm_head tensor
+    fits one binding at fp16 — i.e. **vocab x hidden < 67.1M elements**.
+    Perfect discrimination on every model actually tried:
+    | model | emb @ fp16 | observed |
+    |---|---|---|
+    | SmolLM2-135M (49152 x 576) | 54 MB | ran |
+    | SmolLM2-360M (49152 x 960) | 90 MB | ran, full 3-arm bake-off |
+    | Qwen2.5-0.5B (151936 x 896) | 260 MB | failed |
+    | Qwen3-0.6B (151936 x 1024) | 297 MB | failed |
+    It is **not** architecture (SmolLM2-360M uses GQA too and runs), not lib
+    version (Qwen2.5 fails on both), not dtype (q4 fails on memory instead).
+    It is **vocabulary**: Qwen's 151936 tokens is 3x SmolLM2's, so its
+    embedding is huge at a fraction of the parameters. Every untried candidate
+    is over: gemma-3-1b 576 MB, Llama-3.2-1B 501 MB, Qwen2.5-1.5B 445 MB,
+    Qwen3-1.7B 594 MB, **and SmolLM2-1.7B 192 MB**.
+    Caveats, stated because this rule is load-bearing: four data points, and
+    the mechanism (ORT materialising that tensor at fp16 in one binding) is
+    inferred rather than observed. **SmolLM2-1.7B is the decisive test** — same
+    family, same vocab, same architecture, the only variable being 192 MB
+    against the cap. If it fails, the ceiling is characterised and Tier 2 has
+    no candidate on this handset that is also good enough. If it runs, the rule
+    is wrong and there is a capable model that works.
   - **Measured ceiling on the test handset (S24 Ultra, adreno-7xx):
     `maxStorageBufferBindingSize` is 128 MB — the WebGPU spec's required
     minimum, i.e. no headroom above baseline**, while `maxBufferSize` is
