@@ -643,6 +643,38 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt A's 20.7 purely because B's lines are shorter; corrected, the arms
     are close. It would have been read as a speed difference when comparing
     models. `genMs` is reported alongside `totalMs` now.
+  - **The decisive run, 2026-08-05: Llama-3.2-1B q4f16 under WebLLM/MLC on an
+    RTX 500 Ada, four arms, `resetChat` on, D1 screen on.**
+    | arm | clean | avg words | D1 susp | TTFT | tok/s |
+    |---|---|---|---|---|---|
+    | B-prose | 5/12 | 11.4 | 5/12 | 279 ms | 78 |
+    | **B-lens** | **6/12** | **9.3** | 5/12 | 285 ms | 88.6 |
+    | A20-prose | 4/12 | 10.7 | 7/12 | 184 ms | 89.6 |
+    | A-prose | 4/12 | 14.1 | 6/12 | 188 ms | 89.2 |
+    - **`lens` beats `prose`** — more clean, two words shorter, and it killed
+      the worst invention of the whole bake-off: on "how do I say no to my
+      sister without a row" the prose arm produced *"You're stuck in a
+      relationship that's toxic to you"*, and the lens arm produced bland
+      filler instead. The long descriptive seat text was feeding elaboration.
+      It bought blandness, not fidelity.
+    - **The leash cuts D1 suspicion** (A20 7/12 → B 5/12); **the cap only
+      shortens** (A 14.1 → A20 10.7 words, clean unchanged at 4/12). Same
+      decomposition the SmolLM2 arms showed, now on a model that can do the task.
+    - **Criterion 4 is met on desktop-class hardware and missed on the phone**:
+      184-285 ms TTFT on the RTX against 1107 ms for the same model on the
+      adreno. Whether that counts depends on which device the criterion is about.
+    - **Criterion 1 still fails in roughly half the cases, and fluently.** Under
+      the *best* arm it answers "am I the problem" with "I'm not the problem"
+      (sim 0.21/0.55), tells a seeker moving city that "you'll find your new
+      home, but it's a disaster waiting to happen" (0.13/0.46), and twice
+      asserts what "he" is feeling. All under the prompt that forbids answering
+      the question and forbids predicting.
+    - **A contaminated run scored 9/12 clean and the honest number is 5/12.**
+      Without `resetChat` the cases riff on each other's phrasing and come out
+      mechanically tidier. Never quote a clean rate from a run without it.
+    - The D1 screen caught the two worst by wide margins and **missed The Lovers
+      reversed at 0.36/0.33** — a real failure inside the noise. It is a sort
+      order, not a gate, and this is what that means in practice.
   - **First real phone run, 2026-08-05: SmolLM2-360M-Instruct q4f16 / WebGPU /
     seat prose, on an S24 Ultra (adreno-7xx, shader-f16 yes).** Rejected, and
     the arms decided something:
