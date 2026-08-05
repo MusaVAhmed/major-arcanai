@@ -316,8 +316,20 @@ function spawnWorker(onProgress) {
    What actually bounds this now is the handset, not policy. A 1GB+ model has
    to fit in the phone's RAM and inside WebGPU's maxStorageBufferBindingSize;
    past roughly a gigabyte, expect OOM or an adapter refusal on mobile rather
-   than a slow-but-working run. Numbers below are the q4f16 export, which is
-   the one worth trying first in every case. */
+   than a slow-but-working run.
+
+   Sizes below are the q4f16 export. q4f16 is NO LONGER the one to try first in
+   every case: it is 4-bit weights with fp16 COMPUTE, and ONNX Runtime Web
+   overflows fp16 on the WebGPU backend for some architectures, emitting a
+   stream of one repeated token — token id 0, which prints as "!" in Qwen's
+   tokenizer (microsoft/onnxruntime#26732). Measured here on 2026-08-05:
+   Qwen2.5-0.5B q4f16 scored sanity 0/3 with nothing but "!" on an adreno-7xx,
+   and the SAME model, dtype and export scored 3/3 on the wasm backend — so it
+   is the backend's numerics, not the model or the conversion. gemma-3 is named
+   in that issue too, so expect the same. Use q4 (4-bit weights, fp32 compute)
+   on WebGPU for anything that fails the gate, and take the larger download.
+   This is exactly what the sanity gate exists to catch: the output was fluent
+   nonsense of a kind no card-line reading would have flagged. */
 const MODELS = [
   'HuggingFaceTB/SmolLM2-360M-Instruct',        // q4f16 260 MB
   'HuggingFaceTB/SmolLM2-135M-Instruct',        // q4f16 112 MB — measured unusable, kept as the floor

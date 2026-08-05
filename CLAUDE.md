@@ -502,6 +502,20 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **q4f16 is not the default dtype to reach for on WebGPU.** It is 4-bit
+    weights with fp16 *compute*, and ONNX Runtime Web overflows fp16 on the
+    WebGPU backend for some architectures, emitting one repeated token —
+    id 0, which prints as `!` in Qwen's tokenizer
+    (microsoft/onnxruntime#26732, which also names gemma-3). Measured
+    2026-08-05 on an adreno-7xx: `Qwen2.5-0.5B-Instruct` q4f16 scored
+    **sanity 0/3, output nothing but `!`**, while the *same model, dtype and
+    export* scored **3/3 on the wasm backend**. So it is the backend's
+    numerics, not the model, not the conversion, and not the size. Use **q4**
+    (4-bit weights, fp32 compute) on WebGPU for anything that fails the gate
+    and accept the larger download — q4 ran ~1.5× the q4f16 bytes on
+    SmolLM2-135M (176 MB vs 114 MB). This is the single best argument for the
+    sanity gate existing: the failure is fluent-looking garbage that no amount
+    of reading card lines would have diagnosed.
   - **tok/s is generation throughput, measured first-token-to-last.** It used
     to divide by the whole call, folding prompt processing into the rate, which
     penalises short outputs hardest — the fixed prompt cost amortised over
