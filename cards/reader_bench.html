@@ -169,7 +169,20 @@ function stripThink(s) {
 self.onmessage = async (e) => {
   const m = e.data;
   try {
+    if (m.cmd === 'free') {
+      /* terminate() alone is not enough. ORT holds GPU buffers for the session,
+         and killing the thread does not reliably hand them back promptly --
+         across a session of load/kill cycles on a phone that accumulates until
+         the tab dies. dispose() is the documented teardown; call it and wait
+         for it before the worker goes away. */
+      try { await gen?.dispose?.(); } catch (_) {}
+      gen = null;
+      self.postMessage({ type: 'freed' });
+      return;
+    }
     if (m.cmd === 'load') {
+      try { await gen?.dispose?.(); } catch (_) {}   // never hold two sessions
+      gen = null;
       /* Byte accounting: sum the HIGH-WATER 'loaded' per file. The 'done'
          events do not reliably carry a total, and summing raw progress events
          double-counts, which is how this first read 0.0 MB. Download size is
@@ -281,7 +294,9 @@ function spawnWorker(onProgress) {
       waiters.clear();
       return;
     }
-    const key = m.type === 'loaded' ? 'load' : 'gen:' + m.id;
+    const key = m.type === 'loaded' ? 'load'
+              : m.type === 'freed' ? 'freed'
+              : 'gen:' + m.id;
     const p = waiters.get(key);
     if (p) { waiters.delete(key); p.resolve(m); }
   };
@@ -299,6 +314,7 @@ function spawnWorker(onProgress) {
     load: (model, dtype, device) => send('load', { cmd: 'load', model, dtype, device }),
     gen: (() => { let n = 0; return (system, user, maxTok) => {
       const id = ++n; return send('gen:' + id, { cmd: 'gen', id, system, user, maxTok }); }; })(),
+    free: () => send('freed', { cmd: 'free' }),
     kill: () => w.terminate(),
   };
 }
@@ -676,7 +692,17 @@ async function run(sanityOnly) {
     live.innerHTML = `<span class="bad">FAILED: ${esc(e.message || e)}</span>`;
     status('failed');
   } finally {
-    if (worker) worker.kill();   // a held model is hundreds of MB of RAM
+    /* Dispose BEFORE terminating, and do not let a wedged worker hang teardown:
+       whichever comes first, the thread still dies. A session on a phone is
+       many load/kill cycles of several hundred MB each, and terminate() on its
+       own leaves ORT's GPU buffers to be collected whenever -- which is how a
+       bench that ran fine for two models starts crashing the tab on the
+       fourth. */
+    if (worker) {
+      try { await Promise.race([worker.free(), new Promise(r => setTimeout(r, 3000))]); }
+      catch (_) {}
+      worker.kill();
+    }
     running = false; $('go').disabled = $('sanity').disabled = false;
   }
 }

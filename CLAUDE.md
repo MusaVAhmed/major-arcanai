@@ -502,6 +502,18 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
   - Cases are built **before** the model loads, so a missing or unbuilt
     `release/major-arcanai/index.html` fails immediately instead of after
     downloading up to 1.3 GB onto a phone.
+  - **Dispose before terminating.** `worker.terminate()` alone does not
+    reliably hand back ORT's GPU buffers, and a bench session on a phone is
+    many load/kill cycles of several hundred MB each — which is how a page that
+    ran fine for two models starts crashing the tab on the fourth. The worker
+    takes a `free` command that awaits `pipeline.dispose()`, and the page races
+    it against a 3 s timeout before killing the thread so a wedged worker
+    cannot hang teardown.
+  - **q4 costs more memory than q4f16, not just more bytes.** It is fp32
+    compute, so activations are fp32 too. On a phone the fp16-overflow
+    workaround therefore buys correctness with headroom, and the two
+    constraints pull against each other: the dtype that works is the dtype that
+    fits least.
   - **q4f16 is not the default dtype to reach for on WebGPU.** It is 4-bit
     weights with fp16 *compute*, and ONNX Runtime Web overflows fp16 on the
     WebGPU backend for some architectures, emitting one repeated token —
