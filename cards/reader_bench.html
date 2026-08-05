@@ -197,9 +197,18 @@ self.onmessage = async (e) => {
     if (m.cmd === 'load') {
       try { await engine?.unload?.(); } catch (_) {}
       const t0 = performance.now();
+      /* WebLLM reports a text line, not per-file bytes, so criterion 3 has to
+         come from somewhere else or it reads 0.0 MB and looks free. Two
+         sources, both honest: the cache size the progress text quotes while
+         fetching, and vram_required_MB from the prebuilt record, which is the
+         number that actually decides whether a handset takes the model. */
       let bytes = 0, lastPost = 0;
+      const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === m.model);
+      const vram = rec && rec.vram_required_MB ? Math.round(rec.vram_required_MB) : null;
       engine = await webllm.CreateMLCEngine(m.model, {
         initProgressCallback: (r) => {
+          const mb = /([\\d.]+)\\s*MB/i.exec(r.text || '');
+          if (mb) bytes = Math.max(bytes, parseFloat(mb[1]) * 1048576);
           /* WebLLM reports a text line and a 0..1 progress, not per-file bytes.
              Throttled for the same reason the other engine is: a phone cannot
              repaint per callback without the queue outrunning it. */
@@ -211,7 +220,7 @@ self.onmessage = async (e) => {
         },
       });
       self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0),
-                         bytes: 0, tmpl: 'webllm' });
+                         bytes, vram, tmpl: 'webllm' });
     } else if (m.cmd === 'gen') {
       let first = null, nTok = 0, txt = '';
       const s = performance.now();
@@ -778,8 +787,11 @@ async function run(sanityOnly) {
     }, engine === 'webllm' ? WEBLLM_CDN : LIBS[lib], engine);
 
     status('loading model…');
-    const { loadMs, bytes, tmpl } = await worker.load(model, dtype, device);
-    live.innerHTML = `<span class="ok">loaded</span> in ${loadMs} ms · download ${fmtMB(bytes)}`;
+    const { loadMs, bytes, vram, tmpl } = await worker.load(model, dtype, device);
+    const sizeTxt = bytes ? `download ${fmtMB(bytes)}`
+                  : vram ? `${vram} MB VRAM (declared; WebLLM reports no byte count)`
+                  : 'size unknown';
+    live.innerHTML = `<span class="ok">loaded</span> in ${loadMs} ms · ${sizeTxt}`;
 
     const call = (system, user, maxTok) => worker.gen(system, user, maxTok);
 
@@ -793,7 +805,7 @@ async function run(sanityOnly) {
     const passed = sane.filter(s => s.pass).length;
     const garbled = sane.filter(s => s.garbage).length;
     const numericsOk = garbled === 0;
-    let html = `<p>load <b>${loadMs} ms</b> · download <b>${fmtMB(bytes)}</b> · ` +
+    let html = `<p>load <b>${loadMs} ms</b> · <b>${esc(sizeTxt)}</b> · ` +
       `sanity <b class="${passed === SANITY.length ? 'ok' : 'warn'}">${passed}/${SANITY.length}</b> · ` +
       `numerics <b class="${numericsOk ? 'ok' : 'bad'}">${numericsOk ? 'sound' : 'CORRUPT'}</b></p>` +
       `<table><tr><th>check</th><th>verdict</th><th>got</th></tr>` +
@@ -809,8 +821,9 @@ async function run(sanityOnly) {
     } else if (passed < SANITY.length) {
       html += `<p class="warn">Numerics look sound: the output is coherent English, it is just ` +
               `wrong. That is a capability limit, not corruption, and the card lines below are ` +
-              `worth reading. Note Qwen3 with thinking disabled — which this bench does, to keep ` +
-              `&lt;think&gt; blocks out of the word cap — is markedly weaker at arithmetic.</p>`;
+              `worth reading. Chat-tuned models often decline the echo check outright, and Qwen3 ` +
+              `with thinking disabled — which this bench does, to keep &lt;think&gt; blocks out of ` +
+              `the word cap — is markedly weaker at arithmetic. Neither is disqualifying.</p>`;
     }
 
     if (!sanityOnly && numericsOk) {
