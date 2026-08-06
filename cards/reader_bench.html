@@ -98,7 +98,12 @@
   </select>
   <select id="outfmt">
     <option value="free">output: free text</option>
-    <option value="json">output: schema-constrained (WebLLM only)</option>
+    <option value="json">output: schema, field "line"</option>
+    <option value="json-named">output: schema, field "oracle_line" + description</option>
+  </select>
+  <select id="bias">
+    <option value="off">logit_bias: off</option>
+    <option value="nofirst">logit_bias: ban first person</option>
   </select>
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
@@ -228,12 +233,24 @@ self.onmessage = (msg) => { handler.onmessage(msg); };
    It cannot help faithfulness. "You'll find your new home" is perfectly well
    formed. That is the point of doing it — it clears the shape noise so the
    remaining failures are all the interesting kind. */
-const lineSchema = (maxChars) => JSON.stringify({
-  type: 'object',
-  properties: { line: { type: 'string', maxLength: maxChars } },
-  required: ['line'],
-  additionalProperties: false,
-});
+/* The FIELD NAME is an arm. Measured: with the field called `line`, the model
+   stopped writing oracle lines and started writing titles ("The Shadow"),
+   first-person dialogue, and duplicate text across seats. The hypothesis is
+   that the field name and its description prime what the model thinks belongs
+   in the slot, so `oracle_line` plus a description that carries the register
+   should pull it back. One word of change; if it works, the mechanism is
+   confirmed rather than assumed. */
+const SCHEMAS = {
+  json: (maxChars) => ({ key: 'line', schema: {
+    type: 'object',
+    properties: { line: { type: 'string', maxLength: maxChars } },
+    required: ['line'], additionalProperties: false } }),
+  'json-named': (maxChars) => ({ key: 'oracle_line', schema: {
+    type: 'object',
+    properties: { oracle_line: { type: 'string', maxLength: maxChars,
+      description: 'One dry, blunt line of a sarcastic oracle deck, addressed to the seeker as "you". Never first person. Not a title.' } },
+    required: ['oracle_line'], additionalProperties: false } }),
+};
 
 function makeWebLLMEngine(onProgress, cdn) {
   let worker = null, engine = null, webllm = null;
@@ -269,7 +286,13 @@ function makeWebLLMEngine(onProgress, cdn) {
         const req = { messages: [{ role: 'system', content: system },
                                  { role: 'user', content: user }],
                       max_tokens: maxTok, temperature: 0 };
-        if (opts.json) req.response_format = { type: 'json_object', schema: lineSchema(opts.maxChars || 160) };
+        let jsonKey = null;
+        if (opts.json) {
+          const spec = (SCHEMAS[opts.json] || SCHEMAS.json)(opts.maxChars || 120);
+          jsonKey = spec.key;
+          req.response_format = { type: 'json_object', schema: JSON.stringify(spec.schema) };
+        }
+        if (opts.logitBias) req.logit_bias = opts.logitBias;
         const s = performance.now();
         const reply = await engine.chat.completions.create(req);
         const done = performance.now();
@@ -278,7 +301,7 @@ function makeWebLLMEngine(onProgress, cdn) {
         if (opts.json) {
           try {
             const o = JSON.parse(txt);
-            if (typeof o.line === 'string') txt = o.line; else jsonFail = true;
+            if (typeof o[jsonKey] === 'string') txt = o[jsonKey]; else jsonFail = true;
           } catch (_) { jsonFail = true; }
         }
         /* WebLLM reports its own usage and timings; prefer them over wall clock. */
@@ -673,6 +696,7 @@ $('engine').addEventListener('change', async () => {
   const na = eng === 'webllm';
   $('dtype').disabled = na; $('lib').disabled = na; $('device').disabled = na;
   $('outfmt').disabled = !na;   // response_format is a WebLLM feature
+  $('bias').disabled = !na;     // so is logit_bias
   if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
   fillModels([['', 'loading WebLLM model list…']]);
   try {
@@ -832,6 +856,48 @@ async function screenRows(rows, status) {
   }
 }
 
+/* ---- logit_bias: ban first person at the token level -----------------------
+   The 1B keeps writing "I'm not the problem" and "I'm not sure I'm ready to
+   forgive you yet" — the deck speaking as the seeker instead of to them. That
+   is not a shape a schema can forbid and not something prompt B's wording has
+   managed to stop, but it IS a small set of tokens, and WebLLM exposes
+   logit_bias.
+
+   The token ids have to come from the model's own tokenizer, so this is
+   coupled to the model family — transformers.js loads the tokenizer only (no
+   weights), which is a few MB. An unknown family disables the arm rather than
+   guessing ids, because biasing the wrong ids would silently ban arbitrary
+   words and look like the model getting worse. */
+const TOKENIZER_FOR = {
+  'Llama-3.2-1B': 'onnx-community/Llama-3.2-1B-Instruct',
+  'Llama-3.2-3B': 'onnx-community/Llama-3.2-3B-Instruct',
+  'gemma3-1b': 'onnx-community/gemma-3-1b-it-ONNX',
+  'Qwen3-0.6B': 'onnx-community/Qwen3-0.6B-ONNX',
+};
+const FIRST_PERSON = ["I", " I", "I'm", " I'm", " I've", " I'll", " my", " My", " me", " mine"];
+
+async function firstPersonBias(modelId, note) {
+  const famKey = Object.keys(TOKENIZER_FOR).find(k => modelId.includes(k));
+  if (!famKey) { note('logit_bias: no tokenizer mapped for ' + modelId + ' — arm disabled'); return null; }
+  const { AutoTokenizer } = await import(SCREEN_CDN);
+  const tok = await AutoTokenizer.from_pretrained(TOKENIZER_FOR[famKey]);
+  const ids = new Set();
+  for (const s of FIRST_PERSON) {
+    try {
+      const enc = tok.encode(s, { add_special_tokens: false });
+      /* Only single-token strings are banned. A multi-token encoding means the
+         pieces are shared with other words, and banning those would take
+         innocent vocabulary down with them. */
+      if (enc.length === 1) ids.add(enc[0]);
+    } catch (_) {}
+  }
+  if (!ids.size) { note('logit_bias: no single-token first-person forms found — arm disabled'); return null; }
+  const bias = {};
+  ids.forEach(id => { bias[String(id)] = -100; });
+  note('logit_bias: banning ' + ids.size + ' first-person token(s) from ' + TOKENIZER_FOR[famKey]);
+  return bias;
+}
+
 let running = false;
 async function run(sanityOnly) {
   if (running) return;
@@ -840,12 +906,14 @@ async function run(sanityOnly) {
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
   const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
+  const biasArm = $('bias').value;
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
   head.innerHTML = `<h2>${esc(model)} · ` +
     (engine === 'webllm' ? 'WebLLM/MLC · webgpu' : `${esc(dtype)} · ${esc(device)} · lib ${esc(lib)}`) +
-    (engine === 'webllm' && outfmt === 'json' ? ' · schema' : '') +
+    (engine === 'webllm' && outfmt !== 'free' ? ' · ' + esc(outfmt) : '') +
+    (engine === 'webllm' && biasArm !== 'off' ? ' · bias:' + esc(biasArm) : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
@@ -919,6 +987,12 @@ async function run(sanityOnly) {
 
     if (!sanityOnly && numericsOk) {
       const cap = CAP[which];
+      let logitBias = null;
+      if (engine === 'webllm' && biasArm === 'nofirst') {
+        status('building logit_bias…');
+        try { logitBias = await firstPersonBias(model, (m) => { html += `<p class="dim">${esc(m)}</p>`; }); }
+        catch (e) { html += `<p class="warn">logit_bias unavailable: ${esc(e.message || e)}</p>`; }
+      }
       const rows = [];
       const ttfts = [], tpss = [];
       let estimated = false, errs = 0, aborted = null;
@@ -931,7 +1005,7 @@ async function run(sanityOnly) {
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
         const r = await call(SYS[which], k.user, 80,
-          { json: outfmt === 'json', maxChars: cap * 6 });   // ~6 chars/word, incl. the space
+          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
