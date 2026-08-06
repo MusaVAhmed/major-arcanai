@@ -651,6 +651,31 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     enjoyment*; "The outcome is quiet, the roommates are back to being
     roommates." for The Lovers reversed on *is he cheating on me* — the case
     every other model answered by adjudicating him.
+  - **THE CRASH IS FIXED, confirmed on the device that had it.**
+    `CreateWebWorkerMLCEngine` completed all 12 cases on the S24 Ultra. Every
+    previous WebLLM run there died on the first long generation with
+    "Failed to execute 'mapAsync' on 'GPUBuffer'". The hand-rolled worker
+    boundary WAS the bug — importing web-llm into your own worker and carrying
+    your own postMessage protocol means owning the GPU buffer lifecycle across
+    that boundary, and MLC's own worker path owns it correctly. **Do not
+    hand-roll what the library already provides.**
+  - **Greedy is deterministic on a device, NOT across devices — desktop numbers
+    do not transfer.** Same code, same model (Qwen3-0.6B), same prompt B/lens,
+    `temperature: 0`: on the RTX 500 Ada `/no_think` suppressed thinking
+    completely (0 think blocks, 13.6 avg words, sanity 3/3); on the adreno-7xx
+    it half-applied (6/12 rows with full reasoning, 33.3 avg words, sanity 1/3).
+    `temperature: 0` takes the argmax, the two chips' floating point differs
+    slightly, and where the model sits on a knife-edge between emitting
+    `<think>` and not, they land on opposite sides — after which the whole
+    generation diverges. **Every pneumatic number in this file is indicative,
+    not predictive, of the handset.** The bench's own header always said desktop
+    numbers do not transfer; this is what that means in practice.
+  - **Measured on the phone (the numbers that actually count for WP4):**
+    Qwen3-0.6B q4f16, WebLLM worker engine, prompt B, seat lens — loads (320 MB
+    download), runs all 12, **TTFT 1208 ms** (criterion 4 missed by 3x, against
+    141 ms on the RTX), **22.7 tok/s** (vs 78.9), 3/12 clean, 33.3 avg words,
+    **0/12 D1 suspicions**. The faithfulness holds up on-device; the speed and
+    the thinking suppression do not.
   - **Few-shot does not help, and the way it fails twice is the lesson.**
     - **Attempt 1, examples in the system prompt as prose with a `-> ` marker:
       Qwen3-0.6B scored 10/12 clean — the highest of the bake-off — by copying
