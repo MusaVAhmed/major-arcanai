@@ -831,9 +831,17 @@ const COMMON = new Set(('the a an and or but if to of in on at for with is are w
   'down over under again once still keep like get got go going make made take taken say said').split(' '));
 const SCRIPTS = [/[Ѐ-ӿ]/, /[一-鿿]/, /[぀-ヿ]/, /[가-힯]/,
                  /[؀-ۿ]/, /[฀-๿]/, /[֐-׿]/, /[ऀ-ॿ]/];
+/* ABSENCE OF OUTPUT IS NOT EVIDENCE OF CORRUPTED NUMERICS. Phi-3-mini opens
+   with its own <thought> preamble, spends the 24-token sanity budget on it, and
+   returns empty for one check while answering the others in fluent English —
+   and an empty-means-garbage rule turned that into "numerics CORRUPT" and
+   blocked twelve card lines from a model that was working. Empty is now its own
+   signal: it fails the check, but it is not corruption. Corruption has to be
+   positively demonstrated — a repeated token, one token looped, a script flood,
+   or prose with no function words in it. */
 const isGarbage = (t) => {
   const s = (t || '').trim();
-  if (!s) return true;
+  if (!s) return false;
   const compact = s.replace(/\s+/g, '');
   if (/^(.)\1{5,}$/.test(compact)) return true;              // "!!!!!!!!"
   const toks = s.split(/\s+/);
@@ -1172,9 +1180,14 @@ async function run(sanityOnly) {
          while all twelve card rows were clean — the checks were measuring a
          configuration the run was not using, and made the model look worse than
          it is. A gate that does not match the run is not a gate. */
-      const r = await call('You answer in as few words as possible.', s.prompt, 24,
+      /* 64, not 24. Phi-3-mini spends its budget on a <thought> preamble and
+         never reaches the answer, which reads as failure when it is truncation.
+         A sanity check that a verbose model cannot physically pass is measuring
+         the budget. */
+      const r = await call('You answer in as few words as possible.', s.prompt, 64,
         { think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
-      sane.push({ id: s.id, pass: s.test(r.txt), garbage: isGarbage(r.txt), why: s.why, got: r.txt });
+      sane.push({ id: s.id, pass: s.test(r.txt), garbage: isGarbage(r.txt),
+                  empty: !(r.txt || '').trim(), why: s.why, got: r.txt });
     }
     const passed = sane.filter(s => s.pass).length;
     const garbled = sane.filter(s => s.garbage).length;
@@ -1184,7 +1197,8 @@ async function run(sanityOnly) {
       `numerics <b class="${numericsOk ? 'ok' : 'bad'}">${numericsOk ? 'sound' : 'CORRUPT'}</b></p>` +
       `<table><tr><th>check</th><th>verdict</th><th>got</th></tr>` +
       sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : s.garbage ? 'bad' : 'warn'}">` +
-        `${s.pass ? 'pass' : s.garbage ? 'GARBAGE — ' + esc(s.why) : 'wrong (coherent)'}</td>` +
+        `${s.pass ? 'pass' : s.garbage ? 'GARBAGE — ' + esc(s.why)
+            : s.empty ? 'empty (budget spent on preamble?)' : 'wrong (coherent)'}</td>` +
         `<td>${esc(s.got)}</td></tr>`).join('') +
       `</table>`;
 
