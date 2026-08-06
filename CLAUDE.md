@@ -687,6 +687,54 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt complexity (web-llm#485) — the ~10-token sanity prompts corrupt too;
     prefill/context (ctx 2048 + prefill_chunk 256 changed nothing); and VRAM,
     which only correlated by accident.
+  - **OUR MOBILE RESULTS MATCH PUBLISHED REPORTS — this is a known browser
+    limitation, not something peculiar to this project.**
+    - `maxStorageBufferBindingSize` is documented as *"128 MB on mobile to 4 GB
+      on desktop"*; mlc-ai/web-llm#209 hits the same 128 MB wall on a Pixel 7.
+    - Published guidance is that **1B-3B models are stable on almost all
+      supported devices**. Our working set (0.6B-1B) sits at the low end of that
+      band, which is consistent — our prompt is long, and prompt size demonstrably
+      moves the failure point.
+    - Stated outright in the literature: *"a native app uses the hardware better
+      and manages memory more predictably… **this is why the MLC Android app can
+      run models that WebLLM in Chrome cannot on the same device**"*, and native
+      MLC runs Llama-3.2-3B at 18-25 tok/s on this same Snapdragon.
+    - So it is **the WebGPU sandbox**, not the Adreno and not TVM's compilation.
+      Splitting the two constraints by who owns them: the **binding cap** is a
+      WebGPU spec/driver limit that a runtime *could* shard around (MLC has done
+      so before, per #209) but currently does not for these tensors; the
+      **working set / `mapAsync`** failure is Chrome's GPU process memory
+      management on Android, which is nobody's to fix from JS.
+  - **Other browser runtimes exist, with real trade-offs — none of them WebLLM.**
+    - **MediaPipe / LiteRT-LM** (Google AI Edge) publishes *"unlocking 7B+
+      language models in your browser"*, implying materially different memory
+      handling. The obvious thing to try if the ~1B ceiling ever becomes the
+      blocker. Different API, different model format, no MLC model zoo.
+    - **wllama** is llama.cpp in WASM: CPU only, so **no binding cap at all** and
+      no WebGPU corruption modes — at a large speed cost. The honest fallback if
+      correctness matters more than latency.
+    - **transformers.js** is *worse* on mobile than WebLLM, measured here: it
+      cannot load Qwen3-0.6B at all on this handset (ORT materialises the
+      embedding as one binding) while WebLLM runs it fine. Same phone, same
+      model, opposite outcome — the clearest argument for WebLLM on mobile in
+      this whole exercise.
+  - **MOBILE VS DESKTOP: what transfers and what does not.** pneumatic (RTX 500
+    Ada) is a good iteration loop and a bad oracle.
+    | | desktop (RTX) | phone (adreno) |
+    |---|---|---|
+    | binding cap | 2048 MB | **128 MB** |
+    | Qwen3-0.6B TTFT | 141 ms | **1208 ms** |
+    | Qwen3-0.6B tok/s | 78.9 | 22.7 |
+    | Qwen3-0.6B clean | 7/12 | 6/12 |
+    | `/no_think` | fully honoured | **half honoured** |
+    | Qwen3-1.7B | runs, 7/12 clean | **token salad** |
+    - **Rankings transfer; absolute numbers do not.** Every intervention that
+      helped on desktop also helped on the phone (prefill, `lens`, prompt B) —
+      but no latency, throughput or ceiling figure survived the move.
+    - **`temperature: 0` is deterministic per device, not across devices.** The
+      two chips' floating point differs, and where the model sits on a knife
+      edge the argmax lands differently, after which generation diverges.
+    - Practical rule: **iterate on desktop, decide on the phone.**
   - **FINAL mobile matrix (S24 Ultra, adreno-7xx, WebLLM/MLC).** Constraint 1 is
     the packed-embedding binding cap; constraint 2 is working set during
     prefill. A model must clear both.
