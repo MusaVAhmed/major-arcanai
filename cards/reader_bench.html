@@ -253,16 +253,24 @@ const SCHEMAS = {
 };
 
 function makeWebLLMEngine(onProgress, cdn) {
-  let worker = null, engine = null, webllm = null;
+  let worker = null, engine = null, webllm = null, loadedModel = null;
   return {
     load: async (model) => {
       webllm = await import(cdn);
+      loadedModel = model;
       const url = URL.createObjectURL(new Blob([WEBLLM_WORKER_SRC(cdn)], { type: 'text/javascript' }));
       worker = new Worker(url, { type: 'module' });
       URL.revokeObjectURL(url);
       let bytes = 0, lastPost = 0;
       const t0 = performance.now();
-      engine = await webllm.CreateWebWorkerMLCEngine(worker, model, {
+      /* gemma3-1b dies with "WindowSizeConfigurationError: Only one of
+         context_window_size and sliding_window_size can be set" — WebLLM's
+         default chat config disagreeing with that model's own record. It is a
+         configuration collision, not a model or a device failure, and it would
+         otherwise read as "the newer model doesn't work". Retry once with
+         context_window_size disabled so the model's sliding window stands
+         alone. */
+      const mkEngine = (chatOpts) => webllm.CreateWebWorkerMLCEngine(worker, model, {
         initProgressCallback: (r) => {
           const mb = /([\d.]+)\s*MB/i.exec(r.text || '');
           if (mb) bytes = Math.max(bytes, parseFloat(mb[1]) * 1048576);
@@ -271,14 +279,21 @@ function makeWebLLMEngine(onProgress, cdn) {
           lastPost = now;
           onProgress({ status: r.text || '', pct: (r.progress || 0) * 100, bytes });
         },
-      });
+      }, chatOpts);
+      try {
+        engine = await mkEngine(undefined);
+      } catch (e) {
+        if (!/WindowSizeConfiguration/i.test(String(e && e.message || e))) throw e;
+        onProgress({ status: 'window-size collision — retrying with context_window_size:-1', pct: 0, bytes });
+        engine = await mkEngine({ context_window_size: -1 });
+      }
       const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === model);
       return { loadMs: Math.round(performance.now() - t0), bytes,
                vram: rec && rec.vram_required_MB ? Math.round(rec.vram_required_MB) : null,
                tmpl: 'webllm-worker' };
     },
     gen: async (system, user, maxTok, opts) => {
-      opts = opts || {};
+      opts = Object.assign({ model: loadedModel }, opts || {});
       try {
         /* Cases are unrelated conversations; without this they demonstrably
            riff on each other (six of twelve lines contained "stuck"). */
@@ -293,6 +308,14 @@ function makeWebLLMEngine(onProgress, cdn) {
           req.response_format = { type: 'json_object', schema: JSON.stringify(spec.schema) };
         }
         if (opts.logitBias) req.logit_bias = opts.logitBias;
+        /* Qwen3 is a hybrid reasoning model and thinks by default, which would
+           blow the word cap with a <think> block before the line ever starts.
+           WebLLM exposes enable_thinking as a request field, so unlike the
+           transformers.js arm — where the switch lives in the chat template and
+           has to be applied by hand — it can simply be passed. Sent only to
+           Qwen3, because an unknown field is a validation risk on engines that
+           check. The <think> stripper stays as a backstop either way. */
+        if (/Qwen3/i.test(opts.model || '')) req.enable_thinking = false;
         const s = performance.now();
         const reply = await engine.chat.completions.create(req);
         const done = performance.now();
