@@ -919,8 +919,22 @@ $('engine').addEventListener('change', async () => {
 });
 
 /* ---- environment, reported up front because it is half the result ---- */
+let BENCH_BUILD = 'unknown';
 (async () => {
   const bits = [];
+  /* WHICH CODE IS ACTUALLY RUNNING. Three times this session a phone ran fresh
+     model weights against stale JavaScript — twice from HTTP caching, once from
+     pressing Run in a tab that was never reloaded — and each time the result was
+     attributed to the code we believed was live. The page asks the server for
+     its own Last-Modified and prints it in the env block AND in every run
+     header, so a stale page is visible in the output rather than inferred three
+     runs later. */
+  try {
+    const r = await fetch(location.href, { method: 'HEAD', cache: 'no-store' });
+    const lm = r.headers.get('Last-Modified');
+    if (lm) BENCH_BUILD = new Date(lm).toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+  } catch (_) {}
+  bits.push('bench build: <b>' + esc(BENCH_BUILD) + '</b> — if this predates your last edit, RELOAD the page');
   bits.push('UA: ' + navigator.userAgent);
   bits.push('cores: ' + (navigator.hardwareConcurrency ?? '?') +
             ' · deviceMemory: ' + (navigator.deviceMemory ?? '?'));
@@ -1131,6 +1145,7 @@ async function run(sanityOnly) {
     (engine === 'webllm' && thinkVal !== 'off' ? ' · think:' + esc(thinkVal) : '') +
     (engine === 'webllm' && safeArm !== 'off' ? ' · mobile-safe' : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
+    ` <span class="dim">· build ${esc(BENCH_BUILD)}</span>` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
   const live = head.querySelector('#live');
@@ -1229,11 +1244,9 @@ async function run(sanityOnly) {
     } else if (passed < SANITY.length) {
       html += `<p class="warn">Numerics sound — at least one check produced coherent output, `
             + `which broken weights cannot do. The failures below are capability or verbosity, `
-            + `not corruption. ` +
-              `wrong. That is a capability limit, not corruption, and the card lines below are ` +
-              `worth reading. Chat-tuned models often decline the echo check outright, and Qwen3 ` +
-              `with thinking disabled — which this bench does, to keep &lt;think&gt; blocks out of ` +
-              `the word cap — is markedly weaker at arithmetic. Neither is disqualifying.</p>`;
+            + `not corruption. Chat-tuned models decline the echo check, Phi-3 spends its `
+            + `budget on a &lt;thought&gt; preamble, and Qwen3 with thinking suppressed is weak `
+            + `at arithmetic. None of that is disqualifying — read the card lines.</p>`;
     }
 
     if (!sanityOnly && numericsOk) {
