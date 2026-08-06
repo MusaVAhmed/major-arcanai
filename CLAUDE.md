@@ -651,6 +651,20 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     enjoyment*; "The outcome is quiet, the roommates are back to being
     roommates." for The Lovers reversed on *is he cheating on me* — the case
     every other model answered by adjudicating him.
+  - **Prefilling an empty `<think></think>` is the reliable way to stop Qwen3
+    thinking — the soft switches are instructions and a 0.6B cannot follow them
+    dependably.** `enable_thinking: false` is accepted by WebLLM and ignored by
+    the model; `/no_think` is honoured on the RTX and only half-honoured on the
+    adreno; QwenLM/Qwen3#1329 is exactly "can't disable thinking when using
+    qwen3-0.6b with /nothink". Prefilling removes the instruction: put a closed,
+    empty think block in the assistant turn before generation and the model
+    continues after it. Needs the raw prompt, so it goes through **WebLLM's
+    non-chat completions API** with Qwen3 ChatML written by hand — `resetChat()`
+    first, since text completion requires an empty KV cache. Measured on the
+    RTX: **0 think blocks on both 0.6B and 1.7B**, 0.6B 6/12 → 7/12 clean, at no
+    speed cost (138 ms TTFT, 78.5 tok/s). The desktop gain is small because
+    `/no_think` already worked there; **the phone is where 5 of 9 failures were
+    thinking leakage**, so that is where this is worth measuring.
   - **THE CRASH IS FIXED, confirmed on the device that had it.**
     `CreateWebWorkerMLCEngine` completed all 12 cases on the S24 Ultra. Every
     previous WebLLM run there died on the first long generation with
