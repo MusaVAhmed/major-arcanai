@@ -665,6 +665,20 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     speed cost (138 ms TTFT, 78.5 tok/s). The desktop gain is small because
     `/no_think` already worked there; **the phone is where 5 of 9 failures were
     thinking leakage**, so that is where this is worth measuring.
+  - **ON THE PHONE, PREFILL DOUBLED THE CLEAN SCORE: 3/12 → 6/12**, avg words
+    33.3 → 17.3, D1 1/12, and **zero thinking leakage across all twelve rows**
+    (it had been 5). The low score was never a writing ceiling — it was
+    `/no_think` failing on that adapter. Best on-device configuration is now
+    **Qwen3-0.6B q4f16 · WebLLM worker engine · prompt B · seat lens · thinking
+    PREFILLED**.
+  - **What remains at 0.6B is a size ceiling, and it has one shape: copying.**
+    All six residual failures are `NEAR-COPY`, prompt echo, or seat leak —
+    "You're in the Obstacle. Don't stay stuck in something meaningless.", and a
+    row that reproduced the prompt's own scaffolding ("In practice: … Position:
+    The Advice, what to do?"). Faithful (D1 1/12) because it is paraphrasing
+    rather than writing. Qwen3-1.7B is the obvious next lever and **has never
+    been run on the handset** (2037 MB, between the 0.6B that works and the 3B
+    that produced salad).
   - **THE CRASH IS FIXED, confirmed on the device that had it.**
     `CreateWebWorkerMLCEngine` completed all 12 cases on the S24 Ultra. Every
     previous WebLLM run there died on the first long generation with

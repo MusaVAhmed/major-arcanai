@@ -1145,7 +1145,13 @@ async function run(sanityOnly) {
     status('sanity…');
     const sane = [];
     for (const s of SANITY) {
-      const r = await call('You answer in as few words as possible.', s.prompt, 24);
+      /* Sanity goes through the SAME thinking arm as the cases. It did not, and
+         the phone's prefill run reported sanity 1/3 with <think> in the output
+         while all twelve card rows were clean — the checks were measuring a
+         configuration the run was not using, and made the model look worse than
+         it is. A gate that does not match the run is not a gate. */
+      const r = await call('You answer in as few words as possible.', s.prompt, 24,
+        { think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
       sane.push({ id: s.id, pass: s.test(r.txt), garbage: isGarbage(r.txt), why: s.why, got: r.txt });
     }
     const passed = sane.filter(s => s.pass).length;
