@@ -680,6 +680,17 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt complexity (web-llm#485) — the ~10-token sanity prompts corrupt too;
     prefill/context (ctx 2048 + prefill_chunk 256 changed nothing); and VRAM,
     which only correlated by accident.
+  - **There are TWO independent mobile limits, and they select different
+    models.** (1) the binding cap on the packed embedding, `vocab x hidden x
+    0.5 < 128 MB` — failing it gives **token salad from the first token**, on
+    prompts of any length; (2) total GPU memory for model + KV during prefill —
+    failing it gives **`mapAsync` on the first long generation**, after short
+    prompts have already worked. Phi-3-mini-4k passes (1) at 49 MB and fails
+    (2) at 2051 MB download / 2520 MB declared VRAM: sanity answered in fluent
+    English, then the first card prompt aborted and the engine disposed. Qwen3-
+    1.7B fails (1); Qwen3-0.6B passes both. Diagnose by **which failure it is**
+    — salad means the embedding is too wide, mapAsync-after-sanity means the
+    model is too big.
   - **THIS SELECTS BY VOCABULARY, NOT PARAMETER COUNT, and that inverts the
     candidate list.** `vocab x hidden < 268M` is the test. **Phi-3.5-mini is
     3.8B parameters with a 32064 vocab — a 47 MB embedding, smaller than
