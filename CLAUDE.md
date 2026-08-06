@@ -950,6 +950,14 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
       re-measuring job, not an edit. `speak.js` forces the decision if it wants
       q4f16: either the page carries two library versions or the deck gets
       re-measured on a newer one.
+- **Serve the bench with `cards/serve_nocache.py`, never `python3 -m
+  http.server`.** The stdlib server sends only `Last-Modified` and no
+  `Cache-Control`, and Chrome on Android will reuse a cached page without
+  revalidating. This cost a full phone run: the handset re-ran a stale
+  `reader_bench.html` and produced byte-identical output to the previous run —
+  same truncation point, same flags — which read as "the fix didn't work"
+  rather than "the fix never arrived". Two runs and a wrong conclusion. The
+  replacement sends `no-store` and is otherwise identical.
 - **Build hygiene**: after any change, run `build_draw_page.py` twice and
   confirm `git diff` on `release/` shows only what you meant and nothing on the
   second run. Catches the failure mode of having edited the generated
