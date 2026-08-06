@@ -687,6 +687,25 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt complexity (web-llm#485) — the ~10-token sanity prompts corrupt too;
     prefill/context (ctx 2048 + prefill_chunk 256 changed nothing); and VRAM,
     which only correlated by accident.
+  - **FINAL mobile matrix (S24 Ultra, adreno-7xx, WebLLM/MLC).** Constraint 1 is
+    the packed-embedding binding cap; constraint 2 is working set during
+    prefill. A model must clear both.
+    | model | emb@4bit | download | result |
+    |---|---|---|---|
+    | **Qwen3-0.6B** | 74 MB | 320 MB | **✅ completes 12/12** |
+    | Llama-3.2-1B | 125 MB | ~650 MB | ✅ completes |
+    | Qwen2.5-1.5B | 111 MB | 829 MB | ❌ 2 gens then `mapAsync` |
+    | Qwen3-1.7B | 148 MB | 924 MB | ❌ token salad (cap) |
+    | Phi-3-mini (3.8B) | 47 MB | 2051 MB | ❌ `mapAsync` on case 1 |
+    | Llama-3.2-3B | 188 MB | 2264 MB | ❌ token salad (cap) |
+  - **Qwen2.5-1.5B is marginal, not viable, and that distinction matters.** It
+    clears the binding cap and its numerics are sound (answers `4`, answers
+    `1, 2, 3`), but it manages 2 generations before `mapAsync` and runs at
+    10-13 tok/s with ~4 s TTFT. Shrinking the prompt (prompt D, expansion
+    dropped) moved the failure from case 1 to case 3 — **direct evidence that
+    peak allocation tracks prompt size** — and `prefill_chunk_size` 256 changed
+    nothing. A reader that dies partway through a spread is worse than a static
+    one, so marginal is a rejection.
   - **There are TWO independent mobile limits, and they select different
     models.** (1) the binding cap on the packed embedding, `vocab x hidden x
     0.5 < 128 MB` — failing it gives **token salad from the first token**, on
