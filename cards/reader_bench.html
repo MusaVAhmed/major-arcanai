@@ -364,8 +364,21 @@ function makeWebLLMEngine(onProgress, cdn) {
         const nTok = u.completion_tokens || 0;
         const ttftS = x.time_to_first_token_s;
         const decodeTps = x.decode_tokens_per_s;
-        let think = reasonedSeparately || /<think>/i.test(txt);
-        if (/<think>/i.test(txt)) { const i = txt.search(/<\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
+        /* THINK-BLOCK must mean "it actually reasoned", not "a tag appeared".
+           Qwen3 honouring /no_think emits an EMPTY <think></think> and then
+           answers — documented behaviour — and flagging that marked all twelve
+           rows and zeroed the clean count on the best-writing model in the
+           bake-off. The evidence /no_think was working was right there in the
+           numbers: average words fell from 63 to 12.2 because the block became
+           empty. Flag only a block with content in it. */
+        let think = reasonedSeparately;
+        const om = /<think>/i.exec(txt);
+        if (om) {
+          const ci = txt.search(/<\/think>/i);
+          const inner = ci !== -1 ? txt.slice(om.index + om[0].length, ci) : txt.slice(om.index + om[0].length);
+          if (inner.trim().length) think = true;
+          if (ci !== -1) txt = txt.slice(ci + 8);
+        }
         const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
         const total = done - s;
         const genMs = ttft != null ? Math.max(1, total - ttft) : total;
