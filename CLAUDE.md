@@ -651,6 +651,24 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     enjoyment*; "The outcome is quiet, the roommates are back to being
     roommates." for The Lovers reversed on *is he cheating on me* — the case
     every other model answered by adjudicating him.
+  - **Qwen3-0.6B is the phone-shaped candidate, and it trades voice for
+    fidelity.** 1403 MB, **141 ms TTFT** (criterion 4 met outright), 78.9 tok/s,
+    **1/12 D1 suspicions** — the most faithful arm measured — 6/12 clean, sanity
+    3/3, no preamble. It is also the only model to handle the grief case
+    correctly: "You could have left the queue an hour ago. Procrastinating and
+    calling it waiting." But its sim-to-meaning runs 0.73-0.81 because it
+    **copies rather than rewrites**, and it leaks the seat name into the line
+    ("You're in the Obstacle.", "You're in the Vibe."), plus occasional
+    grammatical failure ("stuck in something meaningful"). So the choice is
+    real: **0.6B is faithful and voiceless at 1403 MB and 141 ms; 1.7B has the
+    voice and invents, at 2037 MB and 406 ms.**
+  - **gemma3-1b: the system-role hypothesis was WRONG.** Gemma has no system
+    turn, so the harness merges system into the user message for that family —
+    a correct fix on its own terms — and it changed nothing: 11/12 lines still
+    open "Okay, here's a rewrite of that line in the context of…", 49 avg
+    words, 9/12 suspicions. The model genuinely narrates the task rather than
+    performing it. The merge is kept because it is right regardless; the verdict
+    on gemma3-1b for THIS task stands on its own.
   - **Newer is not the axis; size and instruction-tuning style are.**
     `gemma3-1b-it` is newer than Llama-3.2-1B and far worse: ten of twelve lines
     open "Okay, here's a rewrite of the meaning for…", explaining the task
