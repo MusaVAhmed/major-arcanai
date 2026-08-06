@@ -811,62 +811,70 @@ const SANITY = [
    disabled, and disabling thinking is OUR doing (it is how the <think> blocks
    are kept out of the word cap). Failing it on that would reject a candidate
    for a limitation the bench itself imposed. */
-/* Corruption has TWO signatures and the first version of this only caught one.
-   Repetitive garbage ("!!!!!!!!") is easy. The other is TOKEN SALAD: fluent-
-   looking fragments from every script and vocabulary the tokenizer knows,
-   spliced at random — "violated analyticsVALID Debate ccolicychshivfox Хар
-   gdzie 圳 Rated". Llama-3.2-3B q4f16 produced twelve rows of it and this gate
-   passed it as "numerics sound", which is the exact failure the handoff wrote
-   the gate to prevent. Never trust "it emitted English-looking characters".
+/* ---- THE NUMERICS GATE, rewritten ----------------------------------------
+   Its only job: decide whether a model's weights are producing valid tokens at
+   all, so a human knows whether the card lines are worth reading. It is NOT a
+   quality judgement. It got that wrong three times and each time the cost was
+   the same — a working model rejected without its lines being generated:
+     1. it only knew repetitive garbage, and passed twelve rows of multilingual
+        token salad as "numerics sound";
+     2. it counted an EMPTY answer as corruption, and rejected Phi-3-mini, which
+        had spent its 24-token budget on a <thought> preamble;
+     3. it counted a fenced SHELL BLOCK as corruption, and rejected
+        Qwen2.5-1.5B, which had just answered 2+2 correctly.
 
-   Two discriminators, both cheap. English prose is mostly FUNCTION WORDS — a
-   third to a half of tokens — and salad has almost none. And real output stays
-   in one script, while salad mixes Cyrillic, CJK, Thai, Arabic, Devanagari and
-   Hangul in a single line. Both only apply to text long enough to measure, so
-   "4" and "1, 2, 3" are never touched. */
-const COMMON = new Set(('the a an and or but if to of in on at for with is are was were be been being it its ' +
+   The design error was constant: asking "does this look wrong?" per output and
+   treating anything unexpected as proof of corruption. But corruption is a
+   property of the WEIGHTS, not of a prompt — numerics that emit salad cannot
+   also do arithmetic. So:
+
+     - classify each output as coherent / corrupt / empty, requiring POSITIVE
+       evidence for each verdict rather than inferring from absence;
+     - decide at the RUN level: one coherent output anywhere means the numerics
+       work, whatever the other checks did.
+
+   That inversion is what makes per-output strictness safe. A model may loop or
+   refuse or preamble on one check; it cannot produce coherent English on any
+   check if its numerics are broken. */
+const COMMON = new Set(('the a an an and or but if to of in on at for with is are was were be been being it its ' +
   'this that these those you your yours i me my we our us they them their he she his her not no nor do does ' +
   'did done can could should would will shall have has had from as so what why how when where who whom which ' +
   'all any more most other some such only own same than too very just now then there here about into out up ' +
   'down over under again once still keep like get got go going make made take taken say said').split(' '));
-const SCRIPTS = [/[Ѐ-ӿ]/, /[一-鿿]/, /[぀-ヿ]/, /[가-힯]/,
-                 /[؀-ۿ]/, /[฀-๿]/, /[֐-׿]/, /[ऀ-ॿ]/];
-/* ABSENCE OF OUTPUT IS NOT EVIDENCE OF CORRUPTED NUMERICS. Phi-3-mini opens
-   with its own <thought> preamble, spends the 24-token sanity budget on it, and
-   returns empty for one check while answering the others in fluent English —
-   and an empty-means-garbage rule turned that into "numerics CORRUPT" and
-   blocked twelve card lines from a model that was working. Empty is now its own
-   signal: it fails the check, but it is not corruption. Corruption has to be
-   positively demonstrated — a repeated token, one token looped, a script flood,
-   or prose with no function words in it. */
-const isGarbage = (t) => {
+const SCRIPTS = [/[Ѐ-ӿ]/, /[一-鿿]/, /[぀-ヿ]/, /[가-힯]/, /[؀-ۿ]/, /[฀-๿]/, /[֐-׿]/, /[ऀ-ॿ]/];
+
+/* 'empty' | 'corrupt' | 'coherent' */
+function classifyOutput(t) {
   const s = (t || '').trim();
-  if (!s) return false;
+  if (!s) return 'empty';
+
+  // --- positive corruption signatures, in order of confidence ---
   const compact = s.replace(/\s+/g, '');
-  if (/^(.)\1{5,}$/.test(compact)) return true;              // "!!!!!!!!"
+  if (/^(.)\1{5,}$/.test(compact)) return 'corrupt';            // "!!!!!!!!" — argmax stuck
   const toks = s.split(/\s+/);
-  if (toks.length >= 6 && new Set(toks).size <= 2) return true;   // one token looped
-  const nonLatin = (s.match(/[^\x00-\x7F]/g) || []).length;
-  if (s.length > 8 && nonLatin / s.length > 0.3) return true;
-  // three or more distinct non-Latin scripts in one short answer is not writing
-  if (SCRIPTS.filter(re => re.test(s)).length >= 3) return true;
-  /* CODE IS NOT GARBAGE. Qwen2.5-1.5B answered the echo check with a shell
-     block — ```bash echo "..."``` — which is a wrong answer and perfectly valid
-     output, and the function-word test flagged it as salad because shell has no
-     function words. That tipped a model with correct arithmetic to CORRUPT and
-     blocked its card lines. A fenced code block is the specific, narrow
-     exemption; token salad does not come fenced. */
-  if (/```/.test(s)) return false;
-  // English without function words is not English
-  if (toks.length >= 8) {
-    const words = s.toLowerCase().match(/[a-z']+/g) || [];
-    if (words.length >= 8) {
-      const common = words.filter(w => COMMON.has(w)).length / words.length;
-      if (common < 0.08) return true;
-    }
-  }
-  return false;
-};
+  if (toks.length >= 6 && new Set(toks).size <= 2) return 'corrupt';   // one token looped
+  const nonAscii = (s.match(/[^\x00-\x7F]/g) || []).length;
+  if (s.length > 8 && nonAscii / s.length > 0.3) return 'corrupt';
+  if (SCRIPTS.filter(re => re.test(s)).length >= 3) return 'corrupt';  // salad mixes scripts
+
+  // --- positive coherence signals, before the last-resort statistic ---
+  if (/```|^\s*[$#>]\s|\w+\(\)/.test(s)) return 'coherent';         // code is not garbage
+  const words = s.toLowerCase().match(/[a-z']+/g) || [];
+  if (words.length < 8) return 'coherent';   // too short to measure; "4", "1, 2, 3", "<thought>"
+
+  /* Function-word ratio is the ONLY statistical test, applied last and only to
+     text long enough to mean something. English prose runs a third to a half
+     function words; salad runs near zero. */
+  const ratio = words.filter(w => COMMON.has(w)).length / words.length;
+  return ratio < 0.08 ? 'corrupt' : 'coherent';
+}
+
+/* Run-level verdict: 'sound' | 'CORRUPT' | 'NO OUTPUT'. */
+function numericsVerdict(classes) {
+  if (classes.includes('coherent')) return 'sound';
+  if (classes.includes('corrupt')) return 'CORRUPT';
+  return 'NO OUTPUT';           // everything empty — nothing generated at all
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
@@ -1193,28 +1201,35 @@ async function run(sanityOnly) {
          the budget. */
       const r = await call('You answer in as few words as possible.', s.prompt, 64,
         { think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
-      sane.push({ id: s.id, pass: s.test(r.txt), garbage: isGarbage(r.txt),
-                  empty: !(r.txt || '').trim(), why: s.why, got: r.txt });
+      sane.push({ id: s.id, pass: s.test(r.txt), cls: classifyOutput(r.txt),
+                  why: s.why, got: r.txt });
     }
     const passed = sane.filter(s => s.pass).length;
-    const garbled = sane.filter(s => s.garbage).length;
-    const numericsOk = garbled === 0;
+    const verdict = numericsVerdict(sane.map(s => s.cls));
+    const numericsOk = verdict === 'sound';
     let html = `<p>load <b>${loadMs} ms</b> · <b>${esc(sizeTxt)}</b> · ` +
       `sanity <b class="${passed === SANITY.length ? 'ok' : 'warn'}">${passed}/${SANITY.length}</b> · ` +
-      `numerics <b class="${numericsOk ? 'ok' : 'bad'}">${numericsOk ? 'sound' : 'CORRUPT'}</b></p>` +
+      `numerics <b class="${numericsOk ? 'ok' : 'bad'}">${esc(verdict)}</b></p>` +
       `<table><tr><th>check</th><th>verdict</th><th>got</th></tr>` +
-      sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : s.garbage ? 'bad' : 'warn'}">` +
-        `${s.pass ? 'pass' : s.garbage ? 'GARBAGE — ' + esc(s.why)
-            : s.empty ? 'empty (budget spent on preamble?)' : 'wrong (coherent)'}</td>` +
+      sane.map(s => `<tr><td>${s.id}</td><td class="${s.pass ? 'ok' : s.cls === 'corrupt' ? 'bad' : 'warn'}">` +
+        `${s.pass ? 'pass'
+            : s.cls === 'corrupt' ? 'CORRUPT — ' + esc(s.why)
+            : s.cls === 'empty' ? 'empty (no tokens produced)'
+            : 'wrong (coherent)'}</td>` +
         `<td>${esc(s.got)}</td></tr>`).join('') +
       `</table>`;
 
-    if (!numericsOk) {
-      html += `<p class="bad">Numerics corrupt — output is a repeated token, not an answer. ` +
+    if (verdict === 'NO OUTPUT') {
+      html += `<p class="bad">The model produced no tokens on any check. Not a corruption ` +
+              `signature — it generated nothing at all. Card lines are not reported.</p>`;
+    } else if (!numericsOk) {
+      html += `<p class="bad">Numerics corrupt — no check produced coherent output. ` +
               `Do not report this configuration's card lines; try the other dtype, another lib ` +
               `version, or device wasm to confirm it is a WebGPU quantisation bug.</p>`;
     } else if (passed < SANITY.length) {
-      html += `<p class="warn">Numerics look sound: the output is coherent English, it is just ` +
+      html += `<p class="warn">Numerics sound — at least one check produced coherent output, `
+            + `which broken weights cannot do. The failures below are capability or verbosity, `
+            + `not corruption. ` +
               `wrong. That is a capability limit, not corruption, and the card lines below are ` +
               `worth reading. Chat-tuned models often decline the echo check outright, and Qwen3 ` +
               `with thinking disabled — which this bench does, to keep &lt;think&gt; blocks out of ` +

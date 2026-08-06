@@ -514,29 +514,36 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     sanity 3/3 with byte accounting identical to 3.7.6 on the same model. The
     **D1 screener stays pinned to 3.7.6 regardless** — its cosines are compared
     across runs and must not move under the comparison.
-  - **Corruption has TWO signatures and the gate must catch both.** Repetitive
-    garbage (`!!!!!!!!`) is the easy one. The other is **token salad**: fluent-
-    looking fragments from every script the tokenizer knows, spliced at random.
-    Llama-3.2-3B q4f16 under WebLLM produced twelve rows of it **and the first
-    version of this gate passed it as "numerics sound"**, which is precisely the
-    failure the handoff built the gate to prevent. Never accept "it emitted
-    English-looking characters" as evidence. Two discriminators, both cheap and
-    both verified against 16 real strings from this bake-off with no false
-    positives: English prose is a third to a half **function words** and salad
-    has almost none (<8% disqualifies, only applied at >=8 words so short
-    correct answers are untouched), and real output stays in **one script**
-    while salad mixes Cyrillic, CJK, Thai, Arabic, Devanagari and Hangul in a
-    single line (>=3 distinct non-Latin scripts disqualifies).
-  - **The gate distinguishes GARBAGE from WRONG, and the difference decides
-    whether a candidate lives.** Corrupted numerics emit one repeated token
-    (Qwen2.5-0.5B q4f16/WebGPU answered all three checks `!!!!!!!!`). A model
-    that answers "2" to 2+2 in fluent English has sound numerics and weak
-    arithmetic — a different fact, and not disqualifying. Qwen3-0.6B does
-    exactly that, **because this bench disables thinking** to keep `<think>`
-    out of the word cap, and Qwen3's non-thinking mode is markedly weaker at
-    reasoning. Failing it there would reject a candidate for a limitation the
-    harness itself imposed. Only `numerics CORRUPT` blocks the card lines now;
-    coherent-but-wrong warns and proceeds.
+  - **THE NUMERICS GATE — rewritten after three false CORRUPT verdicts.** Its
+    only job is deciding whether the weights produce valid tokens, so a human
+    knows whether the card lines are worth reading. It is not a quality
+    judgement, and it wrongly rejected three working models before it worked:
+    it knew only repetitive garbage and passed twelve rows of multilingual
+    salad; then it counted an EMPTY answer as corruption and rejected
+    Phi-3-mini, which had spent its budget on a `<thought>` preamble; then it
+    counted a fenced SHELL BLOCK as corruption and rejected Qwen2.5-1.5B, which
+    had just answered 2+2 correctly.
+    - **The design error was constant**: asking "does this look wrong?" per
+      output, and treating anything unexpected as proof of corruption.
+    - **The fix is the inversion.** Corruption is a property of the WEIGHTS, not
+      of a prompt — numerics that emit salad cannot also do arithmetic. So each
+      output is classified `coherent` / `corrupt` / `empty` on **positive
+      evidence**, and the verdict is taken at the **run** level: **one coherent
+      output anywhere means the numerics work**, whatever the other checks did.
+      `CORRUPT` needs a corrupt output and no coherent one; all-empty is its own
+      verdict, `NO OUTPUT`.
+    - That inversion is what makes per-output strictness safe: a model may loop,
+      refuse or preamble on one check, but it cannot produce coherent English on
+      any check if its numerics are broken.
+    - Corruption signatures, all positive: one char repeated; ≤2 distinct tokens
+      over ≥6; >30% non-ASCII; ≥3 distinct non-Latin scripts; or <8% function
+      words across ≥8 words. Coherence short-circuits first for code (fences,
+      shell prompts, `call()`) and for anything under 8 words, which is too
+      short to measure.
+    - **Regression-tested against 23 real outputs from this bake-off** — every
+      corruption signature and every false positive that fooled an earlier
+      version — plus 5 run-level verdicts. Add any new case to that corpus
+      before touching it again.
   - **Measured 2026-08-05, model/runtime compatibility is not uniform:**
     `onnx-community/Qwen2.5-0.5B-Instruct` **cannot be loaded by lib 4.2.0 at
     all** — ORT 1.24.3 fails at session creation in `graph_utils`
