@@ -108,7 +108,7 @@
   </select>
   <select id="think">
     <option value="off">thinking: suppressed (80 tok)</option>
-    <option value="on">thinking: ON (512 tok, block stripped)</option>
+    <option value="on">thinking: ON (1024 tok, block stripped)</option>
   </select>
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
@@ -351,7 +351,15 @@ function makeWebLLMEngine(onProgress, cdn) {
            to fit a 20-word cap may be throwing away the reason to use it. With
            the arm on, thinking is left alone and the token budget is raised to
            fit a block plus a line; the block is then stripped and only the
-           conclusion is judged, against the same word cap as every other arm. */
+           conclusion is judged, against the same word cap as every other arm.
+
+           1024, not 512. At 512 the blocks did not close — Qwen3-1.7B came back
+           at 269.8 average words on the desktop because most rows never emitted
+           </think> and the whole block survived as output. An unclosed block is
+           not a thinking model failing, it is the budget being too small to see
+           whether it succeeded. On the handset at ~23 tok/s this costs roughly
+           45 s a case, so a full run is ten minutes; that is the price of
+           finding out. */
         if (opts.think) { /* leave Qwen3 to think */ }
         else if (/Qwen3/i.test(opts.model || '')) {
           req.enable_thinking = false;
@@ -1146,7 +1154,7 @@ async function run(sanityOnly) {
            headroom, so a model that ran long was cut mid-sentence and read as
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
-        const r = await call(SYS[which], k.user, thinkArm ? 512 : 80,
+        const r = await call(SYS[which], k.user, thinkArm ? 1024 : 80,
           { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias, think: thinkArm,
             fewshot: which === 'C' ? FEWSHOT_TURNS : null });
         if (r.error) {
