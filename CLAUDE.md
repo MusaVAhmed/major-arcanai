@@ -665,6 +665,23 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     speed cost (138 ms TTFT, 78.5 tok/s). The desktop gain is small because
     `/no_think` already worked there; **the phone is where 5 of 9 failures were
     thinking leakage**, so that is where this is worth measuring.
+  - **THE HANDSET'S CEILING UNDER WEBLLM sits between 1403 MB and 2037 MB
+    declared VRAM.** Four data points, two families, one failure mode:
+    | model | VRAM | adreno-7xx |
+    |---|---|---|
+    | Llama-3.2-1B | 879 MB | runs |
+    | Qwen3-0.6B | 1403 MB | runs |
+    | Qwen3-1.7B | 2037 MB | **numerics CORRUPT** |
+    | Llama-3.2-3B | 2264 MB | **numerics CORRUPT** |
+    Both failures are multilingual **token salad**, not OOM and not a refusal —
+    the fp16 path degrading at size. Note this is a DIFFERENT ceiling from the
+    ORT binding-cap rule below: MLC shards weights, so that rule does not apply
+    here, and 0.6B runs under WebLLM despite an embedding far over 128 MB. Do
+    not spend downloads above ~1.5 GB on this device.
+  - **The garbage classifier earned its place a second time.** Qwen3-1.7B's
+    corruption was caught on all three sanity checks and the card lines were
+    blocked. Without it the run would have produced twelve rows of Cyrillic /
+    CJK / Hebrew fragments and been recorded as "1.7B has no voice".
   - **ON THE PHONE, PREFILL DOUBLED THE CLEAN SCORE: 3/12 → 6/12**, avg words
     33.3 → 17.3, D1 1/12, and **zero thinking leakage across all twelve rows**
     (it had been 5). The low score was never a writing ceiling — it was
