@@ -96,6 +96,10 @@
     <option value="prose">seat: prose (embedding text)</option>
     <option value="lens">seat: lens (display text)</option>
   </select>
+  <select id="outfmt">
+    <option value="free">output: free text</option>
+    <option value="json">output: schema-constrained (WebLLM only)</option>
+  </select>
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
   <button id="sanity">Sanity only</button>
@@ -182,128 +186,112 @@ const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
    flags, same D1 screen, same sanity gate, greedy decoding (temperature 0), and
    TTFT/tok-s measured over the streamed chunks so the numbers mean what they
    mean in the other engine. */
-const WEBLLM_SRC = (CDN) => `
-import * as webllm from '${CDN}';
-let engine = null, lastModel = null;
-self.onmessage = async (e) => {
-  const m = e.data;
-  try {
-    if (m.cmd === 'free') {
-      try { await engine?.unload?.(); } catch (_) {}
-      engine = null;
-      self.postMessage({ type: 'freed' });
-      return;
-    }
-    if (m.cmd === 'load') {
-      try { await engine?.unload?.(); } catch (_) {}
-      lastModel = m.model;
-      const t0 = performance.now();
-      /* WebLLM reports a text line, not per-file bytes, so criterion 3 has to
-         come from somewhere else or it reads 0.0 MB and looks free. Two
-         sources, both honest: the cache size the progress text quotes while
-         fetching, and vram_required_MB from the prebuilt record, which is the
-         number that actually decides whether a handset takes the model. */
+/* ---- WebLLM (MLC), on MLC's OWN worker engine -----------------------------
+   This used to be a worker I wrote, importing web-llm and running
+   CreateMLCEngine inside it, with my own postMessage protocol across the
+   boundary. That is the arrangement that kept dying with "Failed to execute
+   'mapAsync' on 'GPUBuffer'" (mlc-ai/web-llm#497) on the first long generation.
+
+   CreateWebWorkerMLCEngine is the supported shape: MLC's handler runs in the
+   worker, the engine object lives on the main thread, and MLC owns the
+   protocol AND the GPU buffer lifecycle across the boundary — which is exactly
+   the part a hand-rolled version has to get right and mine did not. The worker
+   script is now three lines, none of them mine. It also opens
+   CreateServiceWorkerMLCEngine, where the model survives page loads. */
+const WEBLLM_WORKER_SRC = (CDN) => `
+import { WebWorkerMLCEngineHandler } from '${CDN}';
+const handler = new WebWorkerMLCEngineHandler();
+self.onmessage = (msg) => { handler.onmessage(msg); };
+`;
+
+/* Structured output. WebLLM supports response_format with json_object +
+   schema, which constrains the DECODER rather than asking the model nicely.
+   Every mechanical flag this bench counts — OVER20, WRAPPED-QUOTES, MULTILINE,
+   MARKDOWN, PREAMBLE — is a shape failure, and shape is what a schema can make
+   impossible rather than merely discouraged. maxLength bounds characters, not
+   words, so it is set from the arm's word cap at ~8 chars a word: a soft
+   ceiling in the right place, with the word flag still counting properly.
+
+   It cannot help faithfulness. "You'll find your new home" is perfectly well
+   formed. That is the point of doing it — it clears the shape noise so the
+   remaining failures are all the interesting kind. */
+const lineSchema = (maxChars) => JSON.stringify({
+  type: 'object',
+  properties: { line: { type: 'string', maxLength: maxChars } },
+  required: ['line'],
+  additionalProperties: false,
+});
+
+function makeWebLLMEngine(onProgress, cdn) {
+  let worker = null, engine = null, webllm = null;
+  return {
+    load: async (model) => {
+      webllm = await import(cdn);
+      const url = URL.createObjectURL(new Blob([WEBLLM_WORKER_SRC(cdn)], { type: 'text/javascript' }));
+      worker = new Worker(url, { type: 'module' });
+      URL.revokeObjectURL(url);
       let bytes = 0, lastPost = 0;
-      const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === m.model);
-      const vram = rec && rec.vram_required_MB ? Math.round(rec.vram_required_MB) : null;
-      engine = await webllm.CreateMLCEngine(m.model, {
+      const t0 = performance.now();
+      engine = await webllm.CreateWebWorkerMLCEngine(worker, model, {
         initProgressCallback: (r) => {
-          const mb = /([\\d.]+)\\s*MB/i.exec(r.text || '');
+          const mb = /([\d.]+)\s*MB/i.exec(r.text || '');
           if (mb) bytes = Math.max(bytes, parseFloat(mb[1]) * 1048576);
-          /* WebLLM reports a text line and a 0..1 progress, not per-file bytes.
-             Throttled for the same reason the other engine is: a phone cannot
-             repaint per callback without the queue outrunning it. */
           const now = performance.now();
-          if (now - lastPost < 100) return;
+          if (now - lastPost < 100) return;      // throttled, same reason as the other engine
           lastPost = now;
-          self.postMessage({ type: 'progress', status: r.text || '',
-                             pct: (r.progress || 0) * 100, bytes });
+          onProgress({ status: r.text || '', pct: (r.progress || 0) * 100, bytes });
         },
       });
-      self.postMessage({ type: 'loaded', loadMs: Math.round(performance.now() - t0),
-                         bytes, vram, tmpl: 'webllm' });
-    } else if (m.cmd === 'gen') {
-      /* NOT streamed, and each call resets the chat first. Streaming 15
-         unrelated prompts in a row died with "Failed to execute 'mapAsync' on
-         'GPUBuffer': Buffer was unmapped before mapping was resolved"
-         (mlc-ai/web-llm#497) — a buffer still referenced by pending GPU work.
-         Three sanity calls survived and the full run did not, which points at
-         accumulation rather than any one prompt, so: resetChat() between calls
-         because these cases are unrelated conversations and nothing should
-         carry over, and no streaming because the async generator is the
-         fragile part.
-
-         The metrics get BETTER for it. WebLLM reports its own usage and, with
-         enable_latency_breakdown, its own latency breakdown — measured inside
-         the engine rather than inferred from chunk arrival. Field names are
-         read defensively and fall back to wall-clock, labelled. */
-      /* resetChat() is BACK, and not because of the buffer error — because the
-         cases were contaminating each other. Measured on Llama-3.2-1B: "stuck"
-         appeared in six of twelve lines, and "dead-end road" turned up in The
-         Moon seven cases after The Dead End Job. So state does carry between
-         completions even though the full messages array is passed every time,
-         and without this every case after the first is judged on a prompt it
-         was not given. That invalidates the comparison the bench exists to
-         make, which is worse than an occasional crash. */
-      try { await engine.resetChat?.(); } catch (_) {}
-      const s = performance.now();
-      const reply = await engine.chat.completions.create({
-        messages: [{ role: 'system', content: m.system },
-                   { role: 'user', content: m.user }],
-        max_tokens: m.maxTok, temperature: 0,
-        /* enable_latency_breakdown is GONE, and it is the prime suspect. The
-           evidence moved: three sanity calls at 24 tokens all succeed and the
-           FIRST card case at 80 tokens fails, so this is not accumulation over
-           fifteen calls, it is the first long generation. The latency
-           breakdown is extra per-token bookkeeping I added speculatively for
-           metrics that WebLLM already reports well enough without it, and more
-           tokens means more of it. Removing a non-essential option is the
-           cheapest way to test that, and costs only the in-engine TTFT figure
-           — which falls back to wall-clock below. */
-      });
-      const done = performance.now();
-      let txt = reply?.choices?.[0]?.message?.content || '';
-      const u = reply?.usage || {};
-      const x = u.extra || {};
-      const nTok = u.completion_tokens || 0;
-      const ttftS = x.time_to_first_token_s ?? x.timeToFirstToken ?? null;
-      const decodeTps = x.decode_tokens_per_s ?? x.decodeTokensPerSecond ?? null;
-      const think = /<think>/i.test(txt);
-      if (think) { const i = txt.search(/<\\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
-      const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
-      const genMs = ttft != null ? Math.max(1, (done - s) - ttft) : (done - s);
-      self.postMessage({ type: 'gen', id: m.id, txt: txt.trim(),
-        think, truncated: nTok > 0 && nTok >= m.maxTok, counted: nTok > 0, tokens: nTok || 1,
-        ttft,
-        totalMs: Math.round(done - s), genMs: Math.round(genMs),
-        tps: decodeTps != null ? +decodeTps.toFixed(1)
-                               : +((nTok || 1) / Math.max(1, genMs) * 1000).toFixed(1) });
-    }
-  } catch (err) {
-    /* A generation failure is reported against ITS OWN request, not as a fatal
-       worker error, so one bad case cannot destroy eleven good ones. The
-       mapAsync buffer error (mlc-ai/web-llm#497) shows up partway through a
-       run of fifteen completions and used to take the entire run with it,
-       which turns a partial result into no result. Partial results are still
-       evidence. Load failures stay fatal — there is nothing to salvage. */
-    const msg = String(err && err.message || err);
-    if (m && m.cmd === 'gen') {
-      /* The first mapAsync failure DISPOSES the engine, so every later case
-         came back "The current Object has already been disposed" -- eleven
-         rows of collateral damage from one real error. Rebuild it before
-         answering, so the next case is a fresh test rather than an echo of
-         this one. The model is cached, so this costs seconds. */
-      let revived = false;
+      const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === model);
+      return { loadMs: Math.round(performance.now() - t0), bytes,
+               vram: rec && rec.vram_required_MB ? Math.round(rec.vram_required_MB) : null,
+               tmpl: 'webllm-worker' };
+    },
+    gen: async (system, user, maxTok, opts) => {
+      opts = opts || {};
       try {
-        try { await engine?.unload?.(); } catch (_) {}
-        engine = null;
-        if (lastModel) { engine = await webllm.CreateMLCEngine(lastModel); revived = true; }
-      } catch (_) {}
-      self.postMessage({ type: 'gen', id: m.id, error: msg + (revived ? ' [engine rebuilt]' : ' [engine dead]') });
-    } else self.postMessage({ type: 'error', message: msg });
-  }
-};
-`;
+        /* Cases are unrelated conversations; without this they demonstrably
+           riff on each other (six of twelve lines contained "stuck"). */
+        try { await engine.resetChat(); } catch (_) {}
+        const req = { messages: [{ role: 'system', content: system },
+                                 { role: 'user', content: user }],
+                      max_tokens: maxTok, temperature: 0 };
+        if (opts.json) req.response_format = { type: 'json_object', schema: lineSchema(opts.maxChars || 160) };
+        const s = performance.now();
+        const reply = await engine.chat.completions.create(req);
+        const done = performance.now();
+        let txt = (reply && reply.choices && reply.choices[0] && reply.choices[0].message.content) || '';
+        let jsonFail = false;
+        if (opts.json) {
+          try {
+            const o = JSON.parse(txt);
+            if (typeof o.line === 'string') txt = o.line; else jsonFail = true;
+          } catch (_) { jsonFail = true; }
+        }
+        /* WebLLM reports its own usage and timings; prefer them over wall clock. */
+        const u = (reply && reply.usage) || {}, x = u.extra || {};
+        const nTok = u.completion_tokens || 0;
+        const ttftS = x.time_to_first_token_s;
+        const decodeTps = x.decode_tokens_per_s;
+        const think = /<think>/i.test(txt);
+        if (think) { const i = txt.search(/<\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
+        const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
+        const total = done - s;
+        const genMs = ttft != null ? Math.max(1, total - ttft) : total;
+        return { txt: txt.trim(), think, jsonFail,
+                 truncated: nTok > 0 && nTok >= maxTok, counted: nTok > 0, tokens: nTok || 1,
+                 ttft, totalMs: Math.round(total), genMs: Math.round(genMs),
+                 tps: decodeTps != null ? +decodeTps.toFixed(1)
+                                        : +((nTok || 1) / Math.max(1, genMs) * 1000).toFixed(1) };
+      } catch (e) {
+        // per-request, never fatal: one bad case must not take the run with it
+        return { error: String(e && e.message || e) };
+      }
+    },
+    free: async () => { try { await engine?.unload?.(); } catch (_) {} },
+    kill: () => { try { worker?.terminate(); } catch (_) {} },
+  };
+}
 
 const WORKER_SRC = (CDN) => `
 import { pipeline, env, TextStreamer } from '${CDN}';
@@ -448,9 +436,8 @@ self.onmessage = async (e) => {
 };
 `;
 
-function spawnWorker(onProgress, cdn, engine) {
-  const src = engine === 'webllm' ? WEBLLM_SRC(cdn) : WORKER_SRC(cdn);
-  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+function spawnWorker(onProgress, cdn) {
+  const url = URL.createObjectURL(new Blob([WORKER_SRC(cdn)], { type: 'text/javascript' }));
   const w = new Worker(url, { type: 'module' });
   URL.revokeObjectURL(url);
   const waiters = new Map();
@@ -672,6 +659,7 @@ $('engine').addEventListener('change', async () => {
   const eng = $('engine').value;
   const na = eng === 'webllm';
   $('dtype').disabled = na; $('lib').disabled = na; $('device').disabled = na;
+  $('outfmt').disabled = !na;   // response_format is a WebLLM feature
   if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
   fillModels([['', 'loading WebLLM model list…']]);
   try {
@@ -838,12 +826,13 @@ async function run(sanityOnly) {
   const model = modelSel.value, dtype = $('dtype').value, device = $('device').value;
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
-  const lib = $('lib').value, engine = $('engine').value;
+  const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
   head.innerHTML = `<h2>${esc(model)} · ` +
     (engine === 'webllm' ? 'WebLLM/MLC · webgpu' : `${esc(dtype)} · ${esc(device)} · lib ${esc(lib)}`) +
+    (engine === 'webllm' && outfmt === 'json' ? ' · schema' : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
@@ -862,7 +851,7 @@ async function run(sanityOnly) {
        fast connection, and a phone repainting a text node per message is the
        jank the worker was moved off the main thread to avoid. */
     let pending = null, praf = 0;
-    worker = spawnWorker(p => {
+    const onProg = (p) => {
       pending = p;
       if (praf) return;
       praf = requestAnimationFrame(() => {
@@ -871,7 +860,9 @@ async function run(sanityOnly) {
         live.textContent = `${q.status || ''} ${q.file || ''} ` +
           `${q.pct ? q.pct.toFixed(0) + '%' : ''} · ${fmtMB(q.bytes || 0)} so far`;
       });
-    }, engine === 'webllm' ? WEBLLM_CDN : LIBS[lib], engine);
+    };
+    worker = engine === 'webllm' ? makeWebLLMEngine(onProg, WEBLLM_CDN)
+                                 : spawnWorker(onProg, LIBS[lib]);
 
     status('loading model…');
     const { loadMs, bytes, vram, tmpl } = await worker.load(model, dtype, device);
@@ -880,7 +871,7 @@ async function run(sanityOnly) {
                   : 'size unknown';
     live.innerHTML = `<span class="ok">loaded</span> in ${loadMs} ms · ${sizeTxt}`;
 
-    const call = (system, user, maxTok) => worker.gen(system, user, maxTok);
+    const call = (system, user, maxTok, opts) => worker.gen(system, user, maxTok, opts);
 
     /* sanity FIRST: a model that fails here must not be judged on its lines */
     status('sanity…');
@@ -926,7 +917,8 @@ async function run(sanityOnly) {
            headroom, so a model that ran long was cut mid-sentence and read as
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
-        const r = await call(SYS[which], k.user, 80);
+        const r = await call(SYS[which], k.user, 80,
+          { json: outfmt === 'json', maxChars: cap * 8 });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
@@ -939,6 +931,7 @@ async function run(sanityOnly) {
         const f = flags(r.txt, k, cap);
         if (r.think) f.flags.push('THINK-BLOCK');
         if (r.truncated) f.flags.push('TRUNCATED');
+        if (r.jsonFail) f.flags.push('JSON-FAIL');
         if (!r.counted) estimated = true;
         if (r.ttft) ttfts.push(r.ttft);
         tpss.push(r.tps);
