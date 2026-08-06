@@ -306,9 +306,19 @@ function makeWebLLMEngine(onProgress, cdn) {
         /* Cases are unrelated conversations; without this they demonstrably
            riff on each other (six of twelve lines contained "stuck"). */
         try { await engine.resetChat(); } catch (_) {}
-        const req = { messages: [{ role: 'system', content: system },
-                                 { role: 'user', content: user }],
-                      max_tokens: maxTok, temperature: 0 };
+        /* SOME FAMILIES HAVE NO SYSTEM ROLE. Gemma's chat template has no system
+           turn at all, so a system message is concatenated or dropped and the
+           model ends up reading the instructions as something to describe
+           rather than obey — which is exactly what gemma3-1b did, opening ten
+           of twelve lines with "Okay, here's a rewrite of the meaning for".
+           That is a harness fault, not the model being bad at the task, and
+           judging it before fixing this would have been unfair. Merge into a
+           single user turn for those families. */
+        const noSystemRole = /gemma/i.test(opts.model || '');
+        const messages = noSystemRole
+          ? [{ role: 'user', content: system + '\n\n' + user }]
+          : [{ role: 'system', content: system }, { role: 'user', content: user }];
+        const req = { messages, max_tokens: maxTok, temperature: 0 };
         let jsonKey = null;
         if (opts.json) {
           const spec = (SCHEMAS[opts.json] || SCHEMAS.json)(opts.maxChars || 120);
