@@ -109,6 +109,7 @@
   <select id="think">
     <option value="off">thinking: suppressed (80 tok)</option>
     <option value="on">thinking: ON (1024 tok, block stripped)</option>
+    <option value="prefill">thinking: PREFILLED-EMPTY (raw completions)</option>
   </select>
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
@@ -360,6 +361,41 @@ function makeWebLLMEngine(onProgress, cdn) {
            whether it succeeded. On the handset at ~23 tok/s this costs roughly
            45 s a case, so a full run is ten minutes; that is the price of
            finding out. */
+        /* PREFILL: the documented-robust way to stop Qwen3 thinking, and the
+           one that does not depend on the model choosing to obey. Both soft
+           switches are instructions — enable_thinking is a request field the
+           model ignores, /no_think is text it may or may not honour, and
+           QwenLM/Qwen3#1329 is exactly "can't disable thinking when using
+           qwen3-0.6b with /nothink": the 0.6B lacks the capacity to follow it
+           reliably. Prefilling puts an EMPTY think block in the assistant turn
+           before generation starts, so there is nothing to obey — the block is
+           already closed and the model continues after it.
+
+           That needs the raw prompt, so this uses WebLLM's non-chat completions
+           API and builds Qwen3's ChatML by hand. resetChat() above matters more
+           than usual here: text completion requires an empty KV cache. */
+        if (opts.think === 'prefill') {
+          const prompt = `<|im_start|>system\n${system}<|im_end|>\n` +
+                         `<|im_start|>user\n${user}<|im_end|>\n` +
+                         `<|im_start|>assistant\n<think>\n\n</think>\n\n`;
+          const t0p = performance.now();
+          const cr = await engine.completions.create({
+            prompt, max_tokens: maxTok, temperature: 0, stop: ['<|im_end|>'],
+          });
+          const t1p = performance.now();
+          const ct = (cr && cr.choices && cr.choices[0] && (cr.choices[0].text ?? cr.choices[0].message?.content)) || '';
+          const cu = (cr && cr.usage) || {}, cx = cu.extra || {};
+          const cn = cu.completion_tokens || 0;
+          const cttft = cx.time_to_first_token_s != null ? Math.round(cx.time_to_first_token_s * 1000) : null;
+          const ctotal = t1p - t0p;
+          return { txt: String(ct).replace(/<\|im_end\|>/g, '').trim(),
+                   think: false, jsonFail: false,
+                   truncated: cn > 0 && cn >= maxTok, counted: cn > 0, tokens: cn || 1,
+                   ttft: cttft, totalMs: Math.round(ctotal),
+                   genMs: Math.round(cttft != null ? Math.max(1, ctotal - cttft) : ctotal),
+                   tps: cx.decode_tokens_per_s != null ? +cx.decode_tokens_per_s.toFixed(1)
+                        : +((cn || 1) / Math.max(1, ctotal) * 1000).toFixed(1) };
+        }
         if (opts.think) { /* leave Qwen3 to think */ }
         else if (/Qwen3/i.test(opts.model || '')) {
           req.enable_thinking = false;
@@ -1055,7 +1091,8 @@ async function run(sanityOnly) {
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
   const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
-  const biasArm = $('bias').value, thinkArm = $('think').value === 'on';
+  const biasArm = $('bias').value, thinkVal = $('think').value;
+  const thinkArm = thinkVal === 'on';
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
@@ -1063,7 +1100,7 @@ async function run(sanityOnly) {
     (engine === 'webllm' ? 'WebLLM/MLC · webgpu' : `${esc(dtype)} · ${esc(device)} · lib ${esc(lib)}`) +
     (engine === 'webllm' && outfmt !== 'free' ? ' · ' + esc(outfmt) : '') +
     (engine === 'webllm' && biasArm !== 'off' ? ' · bias:' + esc(biasArm) : '') +
-    (engine === 'webllm' && thinkArm ? ' · thinking' : '') +
+    (engine === 'webllm' && thinkVal !== 'off' ? ' · think:' + esc(thinkVal) : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
@@ -1155,8 +1192,9 @@ async function run(sanityOnly) {
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
         const r = await call(SYS[which], k.user, thinkArm ? 1024 : 80,
-          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias, think: thinkArm,
-            fewshot: which === 'C' ? FEWSHOT_TURNS : null });
+          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias,
+            fewshot: which === 'C' ? FEWSHOT_TURNS : null,
+            think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
