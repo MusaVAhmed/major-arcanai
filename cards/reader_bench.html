@@ -92,6 +92,7 @@
     <option value="A20">prompt A20 — A at B's word cap (20w)</option>
     <option value="B">prompt B — anti-invention (20w)</option>
     <option value="C">prompt C — B + 3 worked examples (20w)</option>
+    <option value="D">prompt D — compact, no expansion (memory test)</option>
   </select>
   <select id="seattext">
     <option value="prose">seat: prose (embedding text)</option>
@@ -763,7 +764,27 @@ const FEWSHOT_TURNS = FEWSHOT_CASES.flatMap(([card, mean, sit, pos, q, line]) =>
 ]));
 SYS.C = SYS.B;
 
-const CAP = { A: 25, A20: 20, B: 20, C: 20 };
+/* PROMPT D: the same job, in as few prompt tokens as possible.
+
+   Qwen2.5-1.5B and Phi-3-mini both answer the ~15-token sanity prompts and both
+   die with mapAsync on the first ~280-token card prompt, and shrinking
+   prefill_chunk_size changed nothing. So the peak allocation tracks the prompt,
+   and the only lever left is to send less of it.
+
+   What goes: the situational expansion ("In practice: …"), which is the longest
+   single line and is matching text for the embedder rather than something the
+   reader needs; and most of B's rule list, compressed to the two rules that
+   actually did work — do not answer the question, do not add facts.
+
+   This is a memory experiment first and a prompt arm second. If a 1.5B model
+   completes twelve cases on D and dies on B, the mobile ceiling is a PROMPT
+   BUDGET rather than a model size, which is a very different constraint to
+   design around. */
+SYS.D = 'Rewrite one line of a sarcastic oracle deck so it speaks to one position in a spread. ' +
+        'Never answer the question. Add no fact the meaning does not contain. ' +
+        'Under 20 words. Second person. Dry and blunt. No preamble, no quotes.';
+
+const CAP = { A: 25, A20: 20, B: 20, C: 20, D: 20 };
 
 /* [card name, reversed, spread mode, seat index, question] — see the header
    comment for why each one is here. */
@@ -998,6 +1019,11 @@ function buildCases(seatField) {
             `Position: ${seat.label || seat.name}, ${seatTxt}\n` +
             `They asked: ${q}\n` +
             `Rewrite the meaning for this position.`,
+      /* the same case with the expansion dropped — prompt D's memory test */
+      userCompact: `${rev ? c.r : c.meaning}\n` +
+            `Position: ${seatTxt}\n` +
+            `They asked: ${q}\n` +
+            `Rewrite it for this position.`,
     };
   });
 }
@@ -1268,7 +1294,7 @@ async function run(sanityOnly) {
            headroom, so a model that ran long was cut mid-sentence and read as
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
-        const r = await call(SYS[which], k.user, thinkArm ? 1024 : 80,
+        const r = await call(SYS[which], which === 'D' ? k.userCompact : k.user, thinkArm ? 1024 : 80,
           { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias,
             fewshot: which === 'C' ? FEWSHOT_TURNS : null,
             think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
