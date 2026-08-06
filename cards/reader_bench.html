@@ -91,6 +91,7 @@
     <option value="A">prompt A — handoff verbatim (25w)</option>
     <option value="A20">prompt A20 — A at B's word cap (20w)</option>
     <option value="B">prompt B — anti-invention (20w)</option>
+    <option value="C">prompt C — B + 3 worked examples (20w)</option>
   </select>
   <select id="seattext">
     <option value="prose">seat: prose (embedding text)</option>
@@ -319,6 +320,16 @@ function makeWebLLMEngine(onProgress, cdn) {
           ? [{ role: 'user', content: system + '\n\n' + user }]
           : [{ role: 'system', content: system }, { role: 'user', content: user }];
         const req = { messages, max_tokens: maxTok, temperature: 0 };
+        /* Gemma 3's documented inference config is temperature 1.0 / top_p 0.95
+           / top_k 64, and this bench runs everything greedy at temperature 0 for
+           determinism. Greedy is a known way to push instruction-tuned models
+           into verbose repetitive modes, so gemma3 has been judged off-spec —
+           which may be the whole "Okay, here's a rewrite of that line" story.
+           It gets its own numbers. The cost is that this family is no longer
+           deterministic run to run, which is a fair trade for measuring it as
+           its authors intended; top_k has no place in the OpenAI-shaped request
+           so only temperature and top_p are sent. */
+        if (noSystemRole) { req.temperature = 1.0; req.top_p = 0.95; }
         let jsonKey = null;
         if (opts.json) {
           const spec = (SCHEMAS[opts.json] || SCHEMAS.json)(opts.maxChars || 120);
@@ -660,7 +671,42 @@ const SYS = {
      "meaning says something is good, it stays good; if it turns from bad to good, keep the turn.\n" +
      "Under 20 words. No preamble. No quotation marks. No markdown. No ellipses. Dry, blunt, funny. Second person.",
 };
-const CAP = { A: 25, A20: 20, B: 20 };
+/* PROMPT C: B's rules, plus worked examples. Every arm so far has been pure
+   instruction, and instruction-following is exactly the capability that
+   degrades at this size — in-context imitation degrades much less, which makes
+   this the standard fix and the last untried one.
+
+   The exemplar cards (The Coffee, Perseverance, The Burned Bridge) are
+   DELIBERATELY NOT in CASES. Showing the model a worked answer for a card it is
+   about to be tested on would teach the test, and the score would measure
+   recall rather than transfer.
+
+   The three lines model the behaviour that is actually missing: short, second
+   person, faithful, inventing no fact the meaning does not already contain.
+   Qwen3-0.6B errs entirely on the copying side — it scores 1/12 on D1 precisely
+   because it barely writes — so these have to demonstrate that a rewrite is
+   allowed, not that invention is. */
+const FEWSHOT = [
+  ['The Coffee', 'Wake up. Face reality. Do what needs to be done.',
+   'Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.',
+   "The Obstacle, what's in the way", 'why can I never get started',
+   'What stands in the way is knowing exactly what to do and not doing it.'],
+  ['Perseverance', "Keep going. You're closer than you think.",
+   'Late in a long project, months of job hunting, studying, wanting to quit near the finish.',
+   'The Advice, what to do about it', 'should I give up on this course',
+   'Keep going. It is nearer than it looks from where you are standing.'],
+  ['The Burned Bridge', 'Not everything is meant to be saved. Some endings are necessary.',
+   'Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.',
+   'The Outcome, where this lands if nothing changes', 'can we still be friends',
+   'This lands on an ending. Not everything was built to be saved.'],
+].map(([card, mean, sit, pos, q, line]) =>
+  `Card: ${card}\nIts meaning: ${mean}\nIn practice: ${sit}\n` +
+  `Position: ${pos}\nThey asked: ${q}\nRewrite the meaning for this position.\n-> ${line}`
+).join('\n\n');
+
+SYS.C = SYS.B + '\n\nWorked examples. Answer in exactly this form, the line and nothing else.\n\n' + FEWSHOT;
+
+const CAP = { A: 25, A20: 20, B: 20, C: 20 };
 
 /* [card name, reversed, spread mode, seat index, question] — see the header
    comment for why each one is here. */
