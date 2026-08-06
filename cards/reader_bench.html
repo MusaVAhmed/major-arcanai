@@ -850,6 +850,13 @@ const isGarbage = (t) => {
   if (s.length > 8 && nonLatin / s.length > 0.3) return true;
   // three or more distinct non-Latin scripts in one short answer is not writing
   if (SCRIPTS.filter(re => re.test(s)).length >= 3) return true;
+  /* CODE IS NOT GARBAGE. Qwen2.5-1.5B answered the echo check with a shell
+     block — ```bash echo "..."``` — which is a wrong answer and perfectly valid
+     output, and the function-word test flagged it as salad because shell has no
+     function words. That tipped a model with correct arithmetic to CORRUPT and
+     blocked its card lines. A fenced code block is the specific, narrow
+     exemption; token salad does not come fenced. */
+  if (/```/.test(s)) return false;
   // English without function words is not English
   if (toks.length >= 8) {
     const words = s.toLowerCase().match(/[a-z']+/g) || [];
