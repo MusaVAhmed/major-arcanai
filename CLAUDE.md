@@ -665,8 +665,30 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     speed cost (138 ms TTFT, 78.5 tok/s). The desktop gain is small because
     `/no_think` already worked there; **the phone is where 5 of 9 failures were
     thinking leakage**, so that is where this is worth measuring.
-  - **THE HANDSET'S CEILING UNDER WEBLLM sits between 1403 MB and 2037 MB
-    declared VRAM.** Four data points, two families, one failure mode:
+  - **CORRECTED: the handset's WebLLM ceiling is the BINDING CAP on the 4-bit
+    PACKED embedding, not VRAM and not prompt complexity.** MLC keeps weights
+    packed at 4 bits and dequantizes in-shader, so the tensor that must fit one
+    128 MiB binding is `vocab x hidden x 0.5 bytes`. Over it, the binding does
+    not error — it silently produces **token salad**.
+    | model | vocab x hidden | emb @ 4-bit | adreno-7xx |
+    |---|---|---|---|
+    | Qwen3-0.6B | 151936 x 1024 | 74.2 MB | runs |
+    | Llama-3.2-1B | 128256 x 2048 | **125.2 MB** | runs (3 MB under!) |
+    | Qwen3-1.7B | 151936 x 2048 | 148.4 MB | corrupt |
+    | Llama-3.2-3B | 128256 x 3072 | 187.9 MB | corrupt |
+    4/4, with Llama-3.2-1B sitting 3 MB under the line. Ruled out along the way:
+    prompt complexity (web-llm#485) — the ~10-token sanity prompts corrupt too;
+    prefill/context (ctx 2048 + prefill_chunk 256 changed nothing); and VRAM,
+    which only correlated by accident.
+  - **THIS SELECTS BY VOCABULARY, NOT PARAMETER COUNT, and that inverts the
+    candidate list.** `vocab x hidden < 268M` is the test. **Phi-3.5-mini is
+    3.8B parameters with a 32064 vocab — a 47 MB embedding, smaller than
+    Qwen3-0.6B's** — and should run on this phone where Qwen3-1.7B cannot.
+    Also predicted to run: SmolLM2-1.7B (48 MB, which ORT could not load),
+    Qwen2.5-1.5B (111 MB), stablelm-2-1.6b (98 MB). Do not rank mobile
+    candidates by size; rank them by `vocab x hidden`.
+  - ~~**THE HANDSET'S CEILING UNDER WEBLLM sits between 1403 MB and 2037 MB
+    declared VRAM.**~~ (superseded — the VRAM figures happened to correlate) Four data points, two families, one failure mode:
     | model | VRAM | adreno-7xx |
     |---|---|---|
     | Llama-3.2-1B | 879 MB | runs |
