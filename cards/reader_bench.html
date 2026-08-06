@@ -106,6 +106,10 @@
     <option value="off">logit_bias: off</option>
     <option value="nofirst">logit_bias: ban first person</option>
   </select>
+  <select id="safe">
+    <option value="off">chatOpts: engine defaults</option>
+    <option value="mobile">chatOpts: mobile-safe (ctx 2048, prefill 256)</option>
+  </select>
   <select id="think">
     <option value="off">thinking: suppressed (80 tok)</option>
     <option value="on">thinking: ON (1024 tok, block stripped)</option>
@@ -261,7 +265,7 @@ const SCHEMAS = {
 function makeWebLLMEngine(onProgress, cdn) {
   let worker = null, engine = null, webllm = null, loadedModel = null;
   return {
-    load: async (model) => {
+    load: async (model, _dtype, _device, chatOpts) => {
       webllm = await import(cdn);
       loadedModel = model;
       const url = URL.createObjectURL(new Blob([WEBLLM_WORKER_SRC(cdn)], { type: 'text/javascript' }));
@@ -287,7 +291,7 @@ function makeWebLLMEngine(onProgress, cdn) {
         },
       }, chatOpts);
       try {
-        engine = await mkEngine(undefined);
+        engine = await mkEngine(chatOpts);
       } catch (e) {
         if (!/WindowSizeConfiguration/i.test(String(e && e.message || e))) throw e;
         /* context_window_size:-1 means "use the sliding window", and MLC then
@@ -295,7 +299,7 @@ function makeWebLLMEngine(onProgress, cdn) {
            WindowSizeConfigurationError for AttentionSinkSizeError. 4 is MLC's
            conventional sink. */
         onProgress({ status: 'window-size collision — retrying with sliding window + attention sink', pct: 0, bytes });
-        engine = await mkEngine({ context_window_size: -1, attention_sink_size: 4 });
+        engine = await mkEngine(Object.assign({ context_window_size: -1, attention_sink_size: 4 }, chatOpts || {}));
       }
       const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === model);
       return { loadMs: Math.round(performance.now() - t0), bytes,
@@ -875,6 +879,7 @@ $('engine').addEventListener('change', async () => {
   $('outfmt').disabled = !na;   // response_format is a WebLLM feature
   $('bias').disabled = !na;     // so is logit_bias
   $('think').disabled = !na;
+  $('safe').disabled = !na;
   if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
   fillModels([['', 'loading WebLLM model list…']]);
   try {
@@ -1091,7 +1096,7 @@ async function run(sanityOnly) {
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
   const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
-  const biasArm = $('bias').value, thinkVal = $('think').value;
+  const biasArm = $('bias').value, thinkVal = $('think').value, safeArm = $('safe').value;
   const thinkArm = thinkVal === 'on';
   const status = m => { $('status').textContent = m; };
   const out = $('out');
@@ -1101,6 +1106,7 @@ async function run(sanityOnly) {
     (engine === 'webllm' && outfmt !== 'free' ? ' · ' + esc(outfmt) : '') +
     (engine === 'webllm' && biasArm !== 'off' ? ' · bias:' + esc(biasArm) : '') +
     (engine === 'webllm' && thinkVal !== 'off' ? ' · think:' + esc(thinkVal) : '') +
+    (engine === 'webllm' && safeArm !== 'off' ? ' · mobile-safe' : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
@@ -1133,7 +1139,23 @@ async function run(sanityOnly) {
                                  : spawnWorker(onProg, LIBS[lib]);
 
     status('loading model…');
-    const { loadMs, bytes, vram, tmpl } = await worker.load(model, dtype, device);
+    /* MOBILE-SAFE chatOpts. web-llm#485 reports coherent output on desktop and
+       gibberish on mobile for the SAME model and prompt, and reports it for
+       small models too (Phi-1.5/2/3, TinyLlama) once the prompt gets complex —
+       so the trigger is prompt/prefill work, not parameter count, and the
+       "1.4-2 GB ceiling" measured here may be a symptom rather than the cause.
+       mlc-llm#3379 is specifically Qwen3-1.7B prefill on Android. Native MLC
+       runs Llama-3.2-3B at 18-25 tok/s on this same silicon, so the hardware is
+       not the limit.
+
+       This arm shrinks the two things that make prefill allocate: the context
+       window and the prefill chunk. If a model that produced token salad at
+       defaults produces text at ctx 2048 / chunk 256, the ceiling is a
+       configuration problem and the bigger models are back on the table. */
+    const chatOpts = safeArm === 'mobile'
+      ? { context_window_size: 2048, prefill_chunk_size: 256 }
+      : undefined;
+    const { loadMs, bytes, vram, tmpl } = await worker.load(model, dtype, device, chatOpts);
     const sizeTxt = bytes ? `download ${fmtMB(bytes)}`
                   : vram ? `${vram} MB VRAM (declared; WebLLM reports no byte count)`
                   : 'size unknown';
