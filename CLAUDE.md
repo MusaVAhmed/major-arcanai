@@ -670,6 +670,21 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     generation diverges. **Every pneumatic number in this file is indicative,
     not predictive, of the handset.** The bench's own header always said desktop
     numbers do not transfer; this is what that means in practice.
+  - **Thinking ON is rejected on the handset, decisively.** Qwen3-0.6B,
+    1024-token budget, on the adreno: **79.8 avg words, 0/12 clean, 11-54
+    SECONDS per case**. The failure is bimodal, which is worse than uniformly
+    bad. When a block closed, the conclusions were reasonable — "Being in a
+    situation where you feel sorry, but it's not an apology, it's an exit"
+    (sim 0.83/0.12). When it did not, you get `"Position: The Obstacle"` (3
+    words) or an **821-word loop**: "Wait, that's the same. But maybe the user
+    wants it in the position's context. Wait, maybe I need to take the original
+    meaning and assign it to the position…" ten times over, 54 seconds, then the
+    cap. A 0.6B does not have the capacity to reason productively; the block is
+    a liability, not an asset. Latency disqualifies it independently — a seeker
+    taps a card and waits the better part of a minute.
+  - **So the on-device answer is: suppress thinking, keep the stripper, accept
+    that `/no_think` only half-works on this adapter.** Fighting it costs
+    something; letting it run costs far more.
   - **Measured on the phone (the numbers that actually count for WP4):**
     Qwen3-0.6B q4f16, WebLLM worker engine, prompt B, seat lens — loads (320 MB
     download), runs all 12, **TTFT 1208 ms** (criterion 4 missed by 3x, against
