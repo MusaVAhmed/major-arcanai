@@ -795,6 +795,86 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     `/no_think` failing on that adapter. Best on-device configuration is now
     **Qwen3-0.6B q4f16 · WebLLM worker engine · prompt B · seat lens · thinking
     PREFILLED**.
+  - **THE CLEAN RATE WAS INFLATED, AND EVERY FIGURE ABOVE THIS LINE IS
+    GENEROUS. Corrected baseline is 3/12, not 7/12.** `NEAR-COPY` only ever
+    compared the produced line against the card's MEANING. The prompt also
+    contains the SITUATIONAL EXPANSION, and that is what the model was actually
+    copying — three of the baseline's seven "clean" rows were expansions
+    reproduced almost word for word and flagged `ok`:
+    | line | source |
+    |---|---|
+    | "Caring loudly about not caring, spite, and energy spent proving you have moved on." | `last_flying_fuck` expansion + one inserted "and" |
+    | "You're drifting apart in the same bed, a relationship gone quiet, roommates who used to be in love." | `lovers` expansion + "You're" |
+    | "You're in a non-apology, being pressured to forgive too fast, apologising to end the conversation." | `apology` expansion, prefix reworded |
+    - **Substring containment was the wrong test** and let two of those three
+      through even after the expansion was added as a source: the model inserts
+      a word or rewrites the opening, which breaks `includes()` entirely while
+      leaving a line that is unmistakably the source. Replaced with **word-bag
+      containment at 0.70** — what share of the output's words appear anywhere
+      in the source. Measured on eight real outputs: copies 0.70-0.94, genuine
+      rewrites 0.00-0.55, with the bake-off's best line ("The outcome is quiet,
+      the roommates are back to being roommates.") at 0.55 against the very
+      expansion it echoes. Lines under 8 words are not judged. `COPY-EXPANSION`
+      is a separate flag from `NEAR-COPY` because they mean different things:
+      one is failing to rewrite, the other is answering with the prompt's own
+      examples.
+    - **The three rows that survive at 3/12 are still not good lines**: one
+      inverts the meaning ("stuck in something meaningful" for "Don't stay
+      stuck in something meaningless"), one is "The outcome of the outcome.",
+      and one leaks the seat in lowercase ("You're in the vibe"), which the
+      capitalisation rule misses by design. The honest read is nearer 0/12.
+    - **Consequence for every arm measured before this**: they were all scored
+      against a metric blind to the commonest failure. The relative ordering
+      may well survive — the blindness applied equally — but that is an
+      assumption, not a measurement, and no arm above should be quoted as a
+      clean rate without a re-run.
+    - **The methodological error worth not repeating: four arms were run to
+      stop the model copying, and not one of them removed the text it was
+      copying.** Decoder penalties, token bans, sampling and delimiters are all
+      "tell it not to"; the prompt still handed it the meaning AND the
+      expansion AND the question AND the seat label. The untried class of lever
+      is subtraction, and it is the obvious one.
+  - **THE SUBTRACTION ARMS (F/G/H/I), and they settle what the ceiling IS.**
+    Each deletes one thing the model was measured reusing. All greedy, so they
+    compare directly against the corrected 3/12 baseline. F and H are
+    user-message-only changes (`SYS.F`/`SYS.H` are `SYS.B` by identity); G and
+    I must also drop prompt B's "The question is context for tone only. NEVER
+    answer it." — leaving a rule about absent content is the harness fault that
+    made gemma3 look incompetent, so `SYS.G` rewrites that one sentence.
+    | arm | removed | clean | words | D1 |
+    |---|---|---|---|---|
+    | B | — | 3/12 | 11.9 | 1/12 |
+    | F | the expansion | 4/12 | 9.8 | 3/12 |
+    | G | the question | 4/12 | 14.6 | 1/12 |
+    | H | the seat's label, lens kept | 4/12 | 10.8 | 4/12 |
+    | **I** | all three | **5/12** | **7.9** | **0/12** |
+    - **Every subtraction did exactly what it was designed to do, and it did
+      not help.** F zeroes `COPY-EXPANSION` outright — and `NEAR-COPY` rises to
+      4, because the model still copies, it simply copies the only source left.
+      **Subtraction redirects the copying; it does not create the capability to
+      rewrite.** That is the ceiling stated precisely, and it is now measured
+      rather than inferred.
+    - **The expansion was SUPPRESSING question-answering.** Removing it tripled
+      D1 (1 → 3): stripped of concrete situational text, the model reached for
+      the only other concrete thing in the prompt, which was the question —
+      "You should text him back." The expansion was doing useful work nobody
+      had credited it with.
+    - **H is the counter-example that proves the mechanism.** Removing the
+      seat's proper noun did stop "You're in the Obstacle" — and produced
+      "You're in a dead end job. Position: what's in the way." It echoes
+      whatever occupies the position slot. The leak was never about the label.
+    - **I leaks the SYSTEM PROMPT**: "You're still carrying. Under 20 words."
+      and "Position: what to do about it." With the user message thin enough,
+      the instructions become the most salient copyable text in context. New
+      failure mode, and the cleanest possible confirmation of the model's
+      actual strategy — **repeat the most salient text available**, whatever
+      that happens to be.
+    - **The one real gain: prompt I is 0/12 on D1, the first zero of the
+      bake-off**, at the shortest lines measured (7.9 words). Its failures are
+      all `NEAR-COPY`, which is the *least harmful* failure available — a line
+      that hugs its own card's meaning is boring, never wrong. If the reader
+      ever ships at 0.6B, I is the prompt: maximally faithful, minimally
+      interesting. That is the honest trade at this size.
   - **What remains at 0.6B is a size ceiling, and it has one shape: copying.**
     All six residual failures are `NEAR-COPY`, prompt echo, or seat leak —
     "You're in the Obstacle. Don't stay stuck in something meaningless.", and a
@@ -803,6 +883,256 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     rather than writing. Qwen3-1.7B is the obvious next lever and **has never
     been run on the handset** (2037 MB, between the 0.6B that works and the 3B
     that produced salad).
+  - **THE COPYING WAS THEN ATTACKED FROM FOUR DIRECTIONS AND HELD. It is the
+    size ceiling, not a tuning failure — stop trying to prompt or decode
+    around it.** All arms Qwen3-0.6B q4f16 / WebLLM worker / prompt B / seat
+    lens / prefilled, on the RTX. Baseline greedy is 7/12 clean, D1 1/12,
+    3 `NEAR-COPY` rows.
+    | arm | clean (per run) | mean | D1 | NEAR-COPY |
+    |---|---|---|---|---|
+    | **greedy (baseline)** | 7 | **7.0** | **1.0** | 3 |
+    | repetition_penalty 1.1 | 7 | 7.0 | 1.0 | 3, byte-identical |
+    | repetition_penalty 1.2 | 6 | 6.0 | 2.0 | 3, byte-identical |
+    | presence 0.6 / frequency 0.3 | 7 | 7.0 | 1.0 | 3, byte-identical |
+    | temp 0.4 / top_p 0.9 | 6, 6, 5 | 5.7 | 1.0 | 0 |
+    | temp 0.7 / top_p 0.9 | 6, **10**, 6, 6 | 7.0 | 3.0 | 0 |
+    | prompt E (tagged fields) | 2 | 2.0 | 4.0 | — |
+    - **MLC's `repetition_penalty` / `frequency_penalty` do NOT see the
+      prompt.** The three `NEAR-COPY` lines come back byte-identical across
+      greedy, 1.1, 1.2 and the presence/frequency pair — "You should not be
+      stuck in something meaningful." every time. The penalties act on
+      within-generation repetition only, so they cannot touch copying *from*
+      the prompt, which is the only copying this task has. They do lengthen
+      later clauses, and 1.2 pushes far enough off-distribution to invent
+      ("and it's not cheating on me", D1 1→2). A dead end, cheaply.
+    - **`logit_bias` cannot reach the seat leak, for a tokenizer reason.** The
+      arm builds correctly and bans 12 capitalised seat tokens — and reports
+      `skipped as multi-token " Obstacle" " Vibe"`, which are *precisely* the
+      two seats that leak. Output is byte-identical to baseline. The
+      single-token rule inherited from the first-person arm is right (banning a
+      shared prefix would take innocent vocabulary down with it) and it
+      excludes exactly the targets. The tool works; the target is not
+      addressable by it.
+    - **Sampling kills the copying and buys nothing.** `NEAR-COPY` goes to zero
+      the moment temperature is non-zero — greedy really was the copy-maximising
+      decoder, so the diagnosis was right — but no temperature beats greedy on
+      clean rate, and every one of them costs D1. **The whole curve, 3-4 runs a
+      stop, so the noise is visible rather than assumed:**
+      | temp / top_p | runs | mean clean | D1 | avg words |
+      |---|---|---|---|---|
+      | **0 (greedy)** | 7 | **7.0** | **1.0** | **11.9** |
+      | 0.4 / 0.9 | 6, 6, 5 | 5.7 | 1.0 | 14.0 |
+      | 0.7 / 0.9 | 6, **10**, 6, 6 | 7.0 | 3.0 | 12.7 |
+      | 0.9 / 0.95 | 5, 6, 5 | 5.3 | 2.0 | 14.6 |
+      | 1.1 / 0.95 | 4, 7, 8 | 6.3 | 2.3 | 14.8 |
+      | 1.4 / 0.95 | 2, 1, 1 | 1.3 | 2.3 | 24.7 |
+      - **From 0 to 1.1 the variance swamps the signal.** t07 spans 6-10, t11
+        spans 4-8; means of 5.3 to 7.0 are not distinguishable at n=3. There is
+        no peak to find in that range — do not go looking for one again.
+      - **Word count is the one monotone signal**, 11.9 → 24.7. Temperature
+        buys length, not quality, and length is against the cap.
+      - **1.4 is where it actually breaks, and it breaks twice over**: rambling
+        past the 20-word cap (25.3 avg, `OVER20` on most rows) *and* genuine
+        incoherence — "Every past fulfilled limbs babyondo Izan仆(script
+        placeholder for wielder's name intended)". Note the CJK fragment slips
+        under `CHARSET-GARBAGE`'s 10% threshold in a long line; the flag is
+        tuned for wholesale salad, not a stray token.
+      - So the clean-rate ceiling at 0.6B is ~7/12 **whatever the decoder
+        does**. Trading a mechanical flag for an invention is a bad trade for
+        this deck, and that is the entire result of the sweep.
+    - **THE ±2 VARIANCE RULE, and it nearly produced a false record.** One t07
+      run scored **10/12, the highest of the entire bake-off**; three more of
+      the identical configuration scored 6, 6, 6. Clean rate on 12 cases has a
+      sampling spread of roughly ±2, so **a sampled arm needs repeats and a
+      single sampled run must never be compared against a greedy number.**
+      Reporting that 10 would have been a fabricated result reached honestly.
+    - **Tagged fields (`<meaning>…</meaning>`) are catastrophic at this size:
+      2/12, D1 4/12.** Prompt E is prompt B's rules by identity — `SYS.E =
+      SYS.B` — so the only variable is the user message's delimiters. The model
+      stopped doing the task and started answering the question verbatim
+      ("Should I quit my job?"), echoing seat labels and looping. Same lesson
+      as the `response_format` arm: changing the *shape* of the input changes
+      what task a small model thinks it is doing. `Label: value` scaffolding
+      earns its place.
+    - Two real bugs fell out of building these arms, both silent: **the prefill
+      path never passed `logit_bias` at all** (it builds its own request and
+      discards the chat one), so every bias run on the shipping Qwen3 config
+      had been a no-op; and the seat arm read `SEATS`, which is a local inside
+      `buildCases`, and failed to a bias-free run that was byte-identical to
+      baseline. Both were caught only because two runs matched exactly — **on
+      this bench, an arm that changes nothing is the signature of an arm that
+      did not run.**
+    - A third bug, in the path that matters most: **`resultsText()` (the Copy
+      button) took the first `span.bad` in a section as the run's fatal error,
+      and the sim column marks every `q > m` row with that same class.** So
+      every result copied off the phone carried a stray similarity score —
+      "0.36 / 0.37" — at the top of the section, in the slot reserved for the
+      reason a run died. The failure line now wears `class="bad fatal"` and the
+      lookup keys on `.fatal`, which nothing else wears.
+    - New flags earning their place: `SEAT-NAME-IN-LINE` catches "You're in the
+      Obstacle" mid-sentence, which the old line-start-only rule missed on 2 of
+      12 rows every run, and `SCAFFOLD-ECHO` catches the prompt's own labels or
+      tags coming back. Both are **capitalisation-sensitive on purpose** —
+      "the outcome is quiet" is one of the best lines the bake-off produced and
+      "in the Outcome" is a leak, and case is what separates them. Regression-
+      tested against 10 real outputs including that line.
+  - **PLACEMENT: the model cannot CHOOSE either, and the gate is the reusable
+    part.** If it cannot write, can it decide which of three cards belongs in
+    which of three seats given the question? That is a closed-set assignment —
+    no voice, no invention possible, ~10 output tokens, one call per reading
+    rather than one per card — so every property that sank the reader is
+    absent. The bench has a `task: placement` mode for it (`PLACEMENT_CASES`,
+    `buildPlacement`, `scorePlacement`).
+    - **The incumbent is not nothing.** attune.js already seats by cosine
+      against each position's `prose` at a third of selection temperature,
+      measured at ~20% affinity lift and best-seat about twice chance. Anything
+      here has to beat *that*, not beat random.
+    - **THE GATE IS PERMUTATION INVARIANCE, AND IT MUST RUN BEFORE ANY QUALITY
+      SCORE.** Small models have a documented selection bias on multiple
+      choice — they favour option positions regardless of content. So each case
+      is asked in `PERMS` (4) presentation orders and the answer is mapped
+      back: **agreement** is pairwise, the share of seats given the same card
+      once the shuffle is undone (chance 1/n, 33% at three cards); **identity**
+      is how often the model answered slot-for-seat *before* the shuffle is
+      undone, which names position bias when agreement is low. Unit-tested on
+      synthetic assignments: an order-invariant classifier scores agree 1.00 /
+      identity 0.25, a pure position-picker scores agree 0.17 / identity 1.00.
+    - **Result, Qwen3-0.6B, two independent schema encodings: agreement 26%
+      and 29% against 33% chance, 100% valid answers, identity 0%.** Not
+      position bias — pure noise. On "should I quit my job" four orders give
+      four different assignments. **It cannot do this task.**
+    - **WHY THE GATE MATTERS MORE THAN THE RESULT: every individual assignment
+      looks plausible.** "Waiting Room / Tower / Perseverance" for *will the
+      grief ever ease off* reads like a real spread. Score one order per case
+      against cosine affinity and you get a number and report it. Only
+      shuffling the input reveals there is no signal. Any future model tried on
+      this task goes through the gate first.
+    - Note also that scoring placement by cosine affinity grades the challenger
+      on the incumbent's own exam — affinity is exactly what attune.js
+      optimises. A win there would be decisive; a loss is ambiguous. That is
+      why the gate is order-invariance and not affinity.
+    - **A schema is the right tool HERE, which is the exact inverse of the
+      rewrite finding.** `response_format` damaged the line because it
+      constrained prose whose voice mattered; placement has no voice, and the
+      grammar makes the dominant failure *structurally impossible* — neither a
+      prompt echo nor a `<think>` block is in the grammar, so neither can be
+      emitted. Valid answers went 0% → 100% on that change alone.
+    - **`response_format` is a CHAT-completions field. WebLLM's raw completions
+      API — which the thinking-prefill path uses — ignores it silently.** The
+      first placement run was 0% valid with the model echoing the prompt's card
+      and seat lists. Placement therefore forces `think: false` regardless of
+      the think selector, and loses nothing by it, since the grammar suppresses
+      thinking better than prefill does.
+    - ~~**UNRESOLVED: Qwen3-1.7B returns a bare `{` and stops.**~~ **SOLVED
+      2026-08-06, and it was a HARNESS BUG, not a model or a Qwen3 quirk.**
+      Llama-3.2-3B does it too, which is what finally gave it away. Under
+      constrained decoding the JSON grammar permits **unbounded whitespace**
+      between tokens, so a model inclined to pretty-print emits `{` and then
+      indents until the budget runs out. Raising 64 → 160 → 512 never fixed it
+      because the loop simply fills whatever it is given.
+      - **The fix is `repetition_penalty: 1.1`**, and it is the one place that
+        knob has ever earned its keep here. The earlier finding that MLC's
+        penalties "do not see the prompt" is intact and is exactly why this
+        works: a whitespace loop is *within-generation* repetition, which is
+        the only thing they can see. Valid answers **42% → 100%** on 3B, with
+        the model and prompt otherwise untouched.
+      - **The diagnostic lied twice and both lessons generalise.** The raw text
+        measured `1 char, 0 whitespace` because `.trim()` had already eaten the
+        evidence — length must be taken *before* trimming — and the token count
+        said `511`, which is what proved generation had run to the cap rather
+        than stopping. **An empty-looking answer and a runaway one are the same
+        string after trim; only the token count separates them.**
+      - Consequence: the earlier "1.7B is 4% valid on placement" was measuring
+        the harness. It says nothing about that model's placement ability.
+    - **CONTROLS AND CEILING, 2026-08-06 — and the verdict moves off the model
+      onto the CASES.** The invariance gate has a hole: it asks whether the
+      model is CONSISTENT, and cannot ask whether the question has an ANSWER.
+      A genuinely undetermined case scores chance under a perfectly competent
+      model, which is indistinguishable from guessing. So: two control tiers
+      that carry a known-correct assignment (`PLACEMENT_CTRL_A` synthetic,
+      `PLACEMENT_CTRL_B` real cards picked for the strongest temporal reading),
+      scored by per-seat **accuracy** alongside agreement.
+      | | ctrlA synthetic | ctrlB real cards | real cases |
+      |---|---|---|---|
+      | Qwen3-0.6B | acc 47% · agree 30% | acc 36% · agree 24% | agree 26-29% |
+      | Llama-3.2-3B | **acc 67% · agree 52%** | acc 42% · agree 50% | agree 30% |
+
+      Chance is 33% throughout. Every cell is 3 cases x 4 orders x 3 seats = 36
+      seat-judgments, so **only the 3B/ctrlA cell is statistically solid**
+      (24/36, +4.2 sd); ctrlB at 15/36 is +1.1 sd and 0.6B/ctrlA at 17/36 is
+      +1.8 sd. Do not read the middle of this table as precise.
+      - **The gradient is the finding, and it runs the wrong way for a
+        capability story.** Task shape, seat count, spread and prompt are
+        identical across all three columns. The only thing that changes is how
+        abstract the card text is, and the score falls with it: blatant 67%,
+        real-cards-chosen-to-be-temporal 42%, real cases chance. A combinatorial
+        or instruction-following limit would not care what the cards say.
+      - **So the model CAN do closed-set assignment** — 3B clears chance
+        decisively when an answer exists — **and mode 3's seats have no answer
+        for this deck.** Past / Present / Future is a temporal spread and not
+        one of the 46 meanings carries temporal content; filling ctrlB was hard
+        enough that **The Receipts is the only unambiguously past-tense card in
+        the deck**, which is itself the result.
+      - Corollary worth sitting with: if the real cases have no determinate
+        answer, **the incumbent cosine seating is not "correct" either**. It
+        produces a consistent, plausible arrangement, which for tarot may be
+        the entire specification. Nothing here says attune.js is beatable.
+      - **A 92% first result was survivorship bias**, the same shape as the
+        inflated NEAR-COPY rate. 3B scored acc 92% on ctrlA while only 42% of
+        its answers parsed — the cases it found easy emitted compact JSON and
+        survived, the hard ones ran away into whitespace and were dropped from
+        the denominator. Accuracy over a subset selected by success is not
+        accuracy. It fell to 67% once every answer parsed.
+      - **Controls must scramble their card order.** `permsFor` puts identity
+        first, so a control listing cards in seat order has {A:1,B:2,C:3} as its
+        correct answer under presentation 1 — the answer a position-picker gives
+        for free. `buildPlacement` throws on an identity truth rather than
+        trusting this to survive an edit.
+      - The accuracy term is unit-tested offline alongside the invariance gate
+        (`scorePlacement`): a perfect classifier scores agree 1.00 / acc 1.00,
+        a position-picker 0.17 / 0.33, and **a consistent-but-wrong rule 1.00 /
+        0.00** — that last case is precisely what invariance alone cannot see,
+        and it is why accuracy outranks agreement wherever a truth exists.
+    - **MODE 5 SETTLES IT, and the answer is the DECK.** Mode 5's first three
+      seats are The Situation / The Obstacle / The Advice — semantic where mode
+      3's are temporal. Three cards, not five, so `buildPlacement` slices to the
+      first three seats and n stays 3: chance stays 33% and the two modes are
+      directly comparable. Accuracy / agreement, chance 33% throughout:
+      | | 3 ctrlA | 3 ctrlB | 3 real | **5 ctrl5A** | 5 ctrl5B | 5 real |
+      |---|---|---|---|---|---|---|
+      | Qwen3-0.6B | 47/30 | 36/24 | —/26-29 | 36/24 | 44/37 | —/32 |
+      | Llama-3.2-3B | 67/52 | 42/50 | —/30 | **89/78** | 42/35 | —/34 |
+      - **Llama-3.2-3B scores 89% accuracy / 78% agreement on the synthetic
+        semantic control** (32/36 seat-judgments). The task is not hard, the
+        prompt is not broken, the schema is not the problem, and the invariance
+        gate is satisfiable. Placement is doable.
+      - **Qwen3-0.6B is at CHANCE on that same case set** (36% acc, 24% agree)
+        — below its own mode-3 score. So the original verdict on 0.6B stands
+        and is now properly demonstrated instead of confounded with an
+        unanswerable exam: **the phone-viable model cannot do this task**, and
+        it is not the exam's fault, because a bigger model aces it.
+      - **Semantic seats are easier than temporal ones for a model that can do
+        the task at all** (3B, synthetic: 67% → 89%) and make no difference
+        whatever to one that cannot (0.6B: 47% → 36%). Seats were a real but
+        secondary factor.
+      - **Every REAL-CARD cell in that table is at chance, in both modes, for
+        both models.** With 3B at 89% on synthetic cards against the identical
+        seats, prompt and n, the remaining variable is the only one left: the
+        card text. The deck's meanings do not carry seat-discriminating signal.
+      - **And that is a property of the deck, not a defect.** "Keep going.
+        You're closer than you think." is simultaneously a situation, an
+        obstacle and a piece of advice; "Rest is productive. Lie down." reads as
+        advice and as the plain facts at once. Aphorisms that land in one line
+        are supposed to be readable from any seat — it is why `lens` works at
+        all. The corollary from the mode-3 controls therefore hardens: **there
+        is nothing here for a placement model to be right about, so cosine
+        seating cannot be beaten on correctness.** It can only be beaten on
+        consistency, which it already has for free and at no download.
+      - Practical close: **WP4 placement is finished.** Not "no viable model on
+        this handset" — no viable *task*. Do not re-open it by trying another
+        model; re-open it only if the deck ever gains cards written to be
+        seat-specific, and check `PLACEMENT_CTRL_5B` first, since that is the
+        cell that would have to move.
   - **THE CRASH IS FIXED, confirmed on the device that had it.**
     `CreateWebWorkerMLCEngine` completed all 12 cases on the S24 Ultra. Every
     previous WebLLM run there died on the first long generation with

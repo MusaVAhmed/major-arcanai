@@ -87,12 +87,30 @@
     <option value="webgpu">webgpu</option>
     <option value="wasm">wasm (correctness only — NOT a perf number)</option>
   </select>
+  <select id="task">
+    <option value="rewrite">task: rewrite the line</option>
+    <option value="placement">task: place cards in seats</option>
+  </select>
+  <select id="pcases">
+    <option value="real">cases: real (no known answer)</option>
+    <option value="ctrlA">cases: control A — synthetic, blatant</option>
+    <option value="ctrlArev">cases: control A REVERSED (position diagnostic)</option>
+    <option value="ctrlB">cases: control B — real cards, temporal</option>
+    <option value="ctrl5A">cases: mode 5 control A — synthetic, semantic</option>
+    <option value="ctrl5B">cases: mode 5 control B — real cards, semantic</option>
+    <option value="real5">cases: mode 5 real (no known answer)</option>
+  </select>
   <select id="prompt">
     <option value="A">prompt A — handoff verbatim (25w)</option>
     <option value="A20">prompt A20 — A at B's word cap (20w)</option>
     <option value="B">prompt B — anti-invention (20w)</option>
     <option value="C">prompt C — B + 3 worked examples (20w)</option>
     <option value="D">prompt D — compact, no expansion (memory test)</option>
+    <option value="E">prompt E — B, tagged fields (anti-scaffold-echo)</option>
+    <option value="F">prompt F — B minus the expansion</option>
+    <option value="G">prompt G — B minus the question</option>
+    <option value="H">prompt H — B, seat lens only (no label)</option>
+    <option value="I">prompt I — minimal: meaning + lens, nothing else</option>
   </select>
   <select id="seattext">
     <option value="prose">seat: prose (embedding text)</option>
@@ -106,6 +124,19 @@
   <select id="bias">
     <option value="off">logit_bias: off</option>
     <option value="nofirst">logit_bias: ban first person</option>
+    <option value="noseat">logit_bias: ban seat names (capitalised)</option>
+    <option value="both">logit_bias: ban first person + seat names</option>
+  </select>
+  <select id="decode">
+    <option value="greedy">decode: greedy (temp 0) — deterministic</option>
+    <option value="rep11">decode: greedy + repetition_penalty 1.1</option>
+    <option value="rep12">decode: greedy + repetition_penalty 1.2</option>
+    <option value="freq">decode: greedy + presence 0.6 / frequency 0.3</option>
+    <option value="t04">decode: temp 0.4 / top_p 0.9 — NOT reproducible</option>
+    <option value="t07">decode: temp 0.7 / top_p 0.9 — NOT reproducible</option>
+    <option value="t09">decode: temp 0.9 / top_p 0.95 — NOT reproducible</option>
+    <option value="t11">decode: temp 1.1 / top_p 0.95 — NOT reproducible</option>
+    <option value="t14">decode: temp 1.4 / top_p 0.95 — NOT reproducible</option>
   </select>
   <select id="safe">
     <option value="off">chatOpts: engine defaults</option>
@@ -199,7 +230,8 @@ const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
    phone. This arm is what tells the two apart.
 
    Deliberately kept identical where it matters: same cases, same prompts, same
-   flags, same D1 screen, same sanity gate, greedy decoding (temperature 0), and
+   flags, same D1 screen, same sanity gate, the same decode arm (greedy by
+   default, so every figure taken before the arm existed still stands), and
    TTFT/tok-s measured over the streamed chunks so the numbers mean what they
    mean in the other engine. */
 /* ---- WebLLM (MLC), on MLC's OWN worker engine -----------------------------
@@ -337,12 +369,22 @@ function makeWebLLMEngine(onProgress, cdn) {
            its authors intended; top_k has no place in the OpenAI-shaped request
            so only temperature and top_p are sent. */
         if (noSystemRole) { req.temperature = 1.0; req.top_p = 0.95; }
+        /* Decode arm last, so an explicitly chosen decoder beats the family
+           default. `greedy` is an empty object, so the untouched arm assigns
+           nothing and every previously measured configuration is bit-identical
+           to what it was — including gemma's off-spec 1.0/0.95. */
+        Object.assign(req, DECODE[opts.decode] || {});
         let jsonKey = null;
         if (opts.json) {
           const spec = (SCHEMAS[opts.json] || SCHEMAS.json)(opts.maxChars || 120);
           jsonKey = spec.key;
           req.response_format = { type: 'json_object', schema: JSON.stringify(spec.schema) };
         }
+        /* Placement passes its schema directly and parses the object itself —
+           the rewrite path unwraps one string field, which is not the shape
+           here. Kept as a separate option so the rewrite path is untouched. */
+        if (opts.jsonRaw)
+          req.response_format = { type: 'json_object', schema: JSON.stringify(opts.jsonRaw) };
         if (opts.logitBias) req.logit_bias = opts.logitBias;
         /* Qwen3 is a hybrid reasoning model and thinks by default, which would
            blow the word cap with a <think> block before the line ever starts.
@@ -389,9 +431,15 @@ function makeWebLLMEngine(onProgress, cdn) {
                          `<|im_start|>user\n${user}<|im_end|>\n` +
                          `<|im_start|>assistant\n<think>\n\n</think>\n\n`;
           const t0p = performance.now();
-          const cr = await engine.completions.create({
+          /* The prefill path is the SHIPPING configuration, so it has to carry
+             the decode arm too. Measuring a decoder only on the chat path would
+             be measuring the arm on the one route Qwen3 does not take. */
+          const cr = await engine.completions.create(Object.assign({
             prompt, max_tokens: maxTok, temperature: 0, stop: ['<|im_end|>'],
-          });
+            logit_bias: opts.logitBias || undefined,
+            response_format: opts.jsonRaw
+              ? { type: 'json_object', schema: JSON.stringify(opts.jsonRaw) } : undefined,
+          }, DECODE[opts.decode] || {}));
           const t1p = performance.now();
           const ct = (cr && cr.choices && cr.choices[0] && (cr.choices[0].text ?? cr.choices[0].message?.content)) || '';
           const cu = (cr && cr.usage) || {}, cx = cu.extra || {};
@@ -425,6 +473,11 @@ function makeWebLLMEngine(onProgress, cdn) {
         const done = performance.now();
         const msg0 = (reply && reply.choices && reply.choices[0] && reply.choices[0].message) || {};
         let txt = msg0.content || '';
+        /* Length BEFORE trim. Measuring it after cost a diagnostic round trip:
+           a constrained answer that had burned 511 tokens on newlines reported
+           "1 char, 0 whitespace" because trim() had already eaten the evidence,
+           which read as the model emitting one token and stopping. */
+        const rawLen = txt.length;
         /* Some builds hand the reasoning back in its own field, in which case
            content is already the conclusion and there is nothing to strip. */
         const reasonedSeparately = typeof msg0.reasoning_content === 'string' && msg0.reasoning_content.length > 0;
@@ -458,7 +511,7 @@ function makeWebLLMEngine(onProgress, cdn) {
         const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
         const total = done - s;
         const genMs = ttft != null ? Math.max(1, total - ttft) : total;
-        return { txt: txt.trim(), think, jsonFail,
+        return { txt: txt.trim(), think, jsonFail, rawLen,
                  truncated: nTok > 0 && nTok >= maxTok, counted: nTok > 0, tokens: nTok || 1,
                  ttft, totalMs: Math.round(total), genMs: Math.round(genMs),
                  tps: decodeTps != null ? +decodeTps.toFixed(1)
@@ -715,6 +768,48 @@ const aText = (n) =>
   "meanings. You are given the card's meaning and you rewrite it to speak to " +
   "one specific position in the spread and one specific question. Under " + n + " " +
   "words. No preamble. No quotes. Dry, blunt, funny. Second person.";
+/* ---- DECODE ARMS -----------------------------------------------------------
+   EVERY NUMBER IN THIS BAKE-OFF UNTIL NOW WAS TAKEN AT temperature 0, and that
+   is not a neutral choice for this task. Greedy decoding takes the single most
+   probable continuation, and when the meaning is sitting in the prompt a few
+   hundred tokens back, the most probable continuation IS the meaning. The one
+   residual failure shape at 0.6B — NEAR-COPY, prompt echo, seat leak — is
+   exactly what a copy-maximising decoder produces. So the decoder is an arm.
+
+   The stops are ordered by what they cost:
+   - repetition_penalty and the presence/frequency pair stay DETERMINISTIC under
+     greedy: they shift logits, and argmax of a shifted vector is still a fixed
+     answer. Run-to-run comparison survives, which is why they come first.
+   - temperature 0.7 does not. WebLLM has NO `seed` field (checked against the
+     API reference — temperature, top_p, frequency_penalty, presence_penalty,
+     logit_bias and repetition_penalty are all there; seed is not), so a
+     sampled arm cannot be reproduced and its clean rate carries sampling noise
+     on a 12-case run. It is worth measuring and it is NOT worth comparing to a
+     greedy arm without repeats. The header says so on the row itself.
+
+   Whether repetition_penalty even sees the PROMPT is the open question and the
+   reason this is measured rather than assumed: if MLC applies it over
+   prompt+generated it is precisely the anti-copy lever, and if it applies only
+   to generated tokens it will do nothing here and that is a finding too. */
+const DECODE = {
+  greedy: {},
+  rep11:  { repetition_penalty: 1.1 },
+  rep12:  { repetition_penalty: 1.2 },
+  freq:   { presence_penalty: 0.6, frequency_penalty: 0.3 },
+  t04:    { temperature: 0.4, top_p: 0.9 },
+  t07:    { temperature: 0.7, top_p: 0.9 },
+  /* ABOVE 0.7 the nucleus widens to 0.95: at high temperature a tight top_p is
+     doing most of the actual limiting, so holding it at 0.9 while raising
+     temperature measures the interaction rather than the temperature. These
+     three exist to find where the model stops being able to hold the task at
+     all — the useful answer may well be "it already had". */
+  t09:    { temperature: 0.9, top_p: 0.95 },
+  t11:    { temperature: 1.1, top_p: 0.95 },
+  t14:    { temperature: 1.4, top_p: 0.95 },
+};
+const DECODE_REPRO = { greedy: 1, rep11: 1, rep12: 1, freq: 1,
+                       t04: 0, t07: 0, t09: 0, t11: 0, t14: 0 };
+
 const SYS = {
   A: aText(25),
   A20: aText(20),
@@ -789,7 +884,231 @@ SYS.D = 'Rewrite one line of a sarcastic oracle deck so it speaks to one positio
         'Never answer the question. Add no fact the meaning does not contain. ' +
         'Under 20 words. Second person. Dry and blunt. No preamble, no quotes.';
 
-const CAP = { A: 25, A20: 20, B: 20, C: 20, D: 20 };
+/* Set by buildCases, read by the seat-name logit_bias arm, which runs later
+   and in a different scope. */
+let SEATS_ALL = null;
+
+const CAP = { A: 25, A20: 20, B: 20, C: 20, D: 20, E: 20,
+              F: 20, G: 20, H: 20, I: 20 };
+
+/* ---- THE SUBTRACTION ARMS --------------------------------------------------
+   Four arms were run to stop the model copying — decoder penalties, token
+   bans, sampling, delimiters — and not one of them removed the text it was
+   copying. Every one was "tell it not to". These are the other kind: each
+   DELETES a specific thing the model was measured reusing, so the failure is
+   not argued with, it is made unavailable.
+
+     F  drops the situational expansion  -> targets COPY-EXPANSION (3/12)
+     G  drops the question               -> targets ANSWERS-QUESTION? (D1)
+     H  drops the seat's proper-noun label, keeping only the lens
+                                         -> targets SEAT-NAME-IN-LINE (2/12)
+     I  drops all three at once, leaving meaning + lens
+
+   The expansion is the one worth saying out loud: it exists so attune.js can
+   embed it, it is deliberately kept out of the caption and the guidebook, and
+   the reader never needed it. It was in this prompt because it was available,
+   not because it was wanted.
+
+   F and H change the USER MESSAGE ONLY — SYS.F and SYS.H are SYS.B by
+   identity, one variable each. G and I cannot be: prompt B contains "The
+   question is context for tone only. NEVER answer it.", and leaving a rule
+   about content that is no longer present is a harness fault of exactly the
+   kind that made gemma3 look incompetent. SYS.G rewrites that one sentence and
+   nothing else, and I reuses it. */
+/* ---- PLACEMENT: a different job for the same model -------------------------
+   Nine arms established that Qwen3-0.6B cannot WRITE at this size — its only
+   strategy is to repeat the most salient text in context. Placement asks
+   whether it can CHOOSE: given a question, three cards and three seats, which
+   card belongs in which seat. That is a closed-set assignment, not generation.
+   No voice, no invention possible, ~10 output tokens, and one call per reading
+   instead of one per card. Every property that sank the reader is absent, and
+   `response_format` is finally the right tool — this is machine-consumed data,
+   which is exactly the case CLAUDE.md carves out for it.
+
+   THE INCUMBENT IS NOT NOTHING. attune.js already seats by cosine against each
+   position's `prose`, soft-roulette at a third of the selection temperature,
+   measured at ~20% affinity lift and a card in its best seat about twice as
+   often as chance. Anything here has to beat that, not beat random.
+
+   THE GATE COMES FIRST, AND IT IS NOT "IS IT BETTER". Small models have a
+   documented selection bias on multiple choice: they favour particular option
+   positions regardless of content. A model that always assigns card 1 to seat
+   A produces a confident-looking assignment that is pure position bias, and
+   scoring it against affinity would never reveal that. So the first
+   measurement is PERMUTATION INVARIANCE — shuffle the presentation order,
+   map the answer back, and see whether the same card lands in the same seat.
+   A real classifier is order-invariant. A guesser is not. Cheap, decisive,
+   and it runs before anything is claimed.
+
+   Also deliberate: scoring by cosine affinity grades the challenger on the
+   incumbent's own exam, because affinity IS what attune.js optimises. A win
+   there is decisive; a loss is ambiguous, and the lines have to be read. Both
+   numbers are reported, neither is called the answer. */
+/* THE GATE ABOVE HAS A HOLE, AND THESE CONTROLS ARE IT. Order-invariance asks
+   whether the model is CONSISTENT. It cannot ask whether the question has an
+   answer — and if a case is genuinely undetermined, a perfectly competent model
+   also scores chance, which is indistinguishable from a guesser. Every real
+   case below is scored `agree` only, because none of them has a known correct
+   assignment; that is not an oversight, it is the thing being tested.
+
+   Mode 3's seats are PAST / PRESENT / FUTURE, and not one card in this deck
+   carries temporal content — the meanings are aphorisms about states. So the
+   real cases may have no answer at all, and the controls exist to tell that
+   apart from a model that cannot do assignment.
+
+   Two tiers, because they answer different questions:
+     ctrlA — SYNTHETIC cards, invented so the seat is unmistakable and lexically
+             aligned with it. Purely a capability floor: a model that fails this
+             cannot do closed-set assignment, whatever the deck looks like.
+             Independent of model size in a way the real cases are not.
+     ctrlB — REAL deck cards chosen for the strongest temporal reading available.
+             Tests whether abstract card text is what breaks it. Its `truth` is
+             author-judged and defensible rather than definitive — The Receipts
+             ("what was done gets weighed") into Past is a strong call, Death
+             ("let the old version of you go") into Past is a weaker one. Read
+             its accuracy as a signal, not a score.
+
+   Each entry is [question, mode, cards, truth]. A card is a deck name, or an
+   inline [name, meaning] pair for the synthetic tier. `truth[seat] = index into
+   this case's own card list`, or null where no correct answer is known.
+
+   CARDS ARE LISTED IN A SCRAMBLED ORDER ON PURPOSE. `permsFor` puts identity
+   first, so if a control listed its cards in seat order the correct answer under
+   presentation 1 would be exactly {A:1, B:2, C:3} — the answer a pure
+   position-picker gives for free. Each control uses a different scramble and
+   none of them is identity. */
+const PLACEMENT_CASES = [
+  ['should I quit my job',                       3, ['The Dead End Job', 'The Cheese Fries', 'The Nap']],
+  ['is he cheating on me',                       3, ['The Lovers', 'The Moon', 'The Apology']],
+  ['will the grief ever ease off',               3, ['The Waiting Room', 'The Tower', 'Perseverance']],
+  ['am I the problem',                           3, ['The Audacity', 'The Apology', 'The Receipts']],
+  ['should I move to another city',              3, ['The Tower', 'The Dead End Job', 'The Burned Bridge']],
+  ['how do I say no to my sister without a row', 3, ['The Last Flying Fuck', 'The Apology', 'The Audacity']],
+];
+
+/* Synthetic. The seat is in the card's own words. If this scores at chance the
+   verdict is capability and nothing else needs running. */
+const PLACEMENT_CTRL_A = [
+  ['should I quit my job', 3, [
+    ['The Road Ahead',    'What has not happened yet. What is still to come, later on.'],
+    ['The Old Photograph','What already happened, long ago, before any of this began.'],
+    ['The Doorstep',      'Where you are standing right now, today, at this exact moment.'],
+  ], [1, 2, 0]],
+  ['is he cheating on me', 3, [
+    ['The Current Address','Your situation exactly as it stands today, the present state of it.'],
+    ['The Forecast',       'Next year. What lies ahead of you, not yet arrived.'],
+    ['The Childhood',      'Your history. The years behind you, over and done with.'],
+  ], [2, 0, 1]],
+  ['will the grief ever ease off', 3, [
+    ['The Ash',            'What burned down before now. Already finished, in the past.'],
+    ['The Sealed Envelope','What is coming. Still unopened, waiting ahead of you.'],
+    ['The Cold Cup',       'How things sit at this moment, as they are today.'],
+  ], [0, 2, 1]],
+];
+
+/* Real cards, strongest temporal reading the deck offers. Note how hard this
+   was to fill: The Receipts is the only unambiguously PAST card in 46, which is
+   itself part of the answer about whether the real cases are answerable. */
+const PLACEMENT_CTRL_B = [
+  ['should I quit my job',         3, ['The Star', 'The Receipts', 'The Waiting Room'], [1, 2, 0]],
+  ['is he cheating on me',         3, ['The Last Straw', 'The Sun', 'Death'],           [2, 0, 1]],
+  ['will the grief ever ease off', 3, ['The Burned Bridge', 'The Slow Cooker', 'The Iced Coffee'], [0, 2, 1]],
+];
+
+/* MODE 5, AND IT CHANGES EXACTLY ONE THING. Mode 3's seats are Past / Present /
+   Future and the deck has no temporal content to match them with — which is
+   what the mode-3 controls established. Mode 5's first three seats are The
+   Situation / The Obstacle / The Advice: semantic, not temporal, and the deck's
+   meanings are full of situations, blocks and imperatives.
+
+   THREE CARDS AT MODE 5, NOT FIVE, ON PURPOSE. `buildPlacement` slices the seat
+   list to the card count, so these take the first three seats and n stays 3 —
+   chance stays 33% and every number is directly comparable to the mode-3 table.
+   Five cards would move the task's difficulty and the seats' meaning at once,
+   and neither result would be attributable. */
+const PLACEMENT_CTRL_5A = [
+  ['should I quit my job', 5, [
+    ['The Locked Door','The thing standing in your way, blocking you, working against you.'],
+    ['The Plain Facts', 'Where you actually are right now. The simple state of things, no more.'],
+    ['The Instruction', 'What to do about it. The practical step to take, the move to make.'],
+  ], [1, 0, 2]],
+  ['is he cheating on me', 5, [
+    ['The Next Step','The counsel. What you should actually do, the action to take now.'],
+    ['The Headwind', 'The friction working against you. What blocks the way forward.'],
+    ['The Ledger',   'The plain facts of where things stand. The situation exactly as it is.'],
+  ], [2, 1, 0]],
+  ['will the grief ever ease off', 5, [
+    ['The Snapshot',    'The heart of the matter as it stands. The current facts, plainly.'],
+    ['The Prescription','The move to make. What you should do about all of it.'],
+    ['The Wall',        'What stands in the way. The block, the thing stopping you.'],
+  ], [0, 2, 1]],
+];
+
+/* Real cards against the semantic seats. Note how much easier this was to fill
+   than the temporal ctrlB: the deck is largely imperatives and predicaments,
+   which is precisely what Situation / Obstacle / Advice ask for. */
+const PLACEMENT_CTRL_5B = [
+  ['should I quit my job', 5,
+   ['The Nap', 'The Dead End Job', 'The Moon'], [1, 2, 0]],
+  ['is he cheating on me', 5,
+   ['The Bottle', 'The Apology', 'The Lovers'], [2, 0, 1]],
+  ['how do I say no to my sister without a row', 5,
+   ['The Last Straw', 'The Audacity', 'The Drama Queen'], [0, 2, 1]],
+];
+
+/* The mode-3 real cases, re-seated. Same questions, same cards, semantic seats
+   — so a difference against the mode-3 run is the seats and nothing else. */
+const PLACEMENT_REAL_5 = PLACEMENT_CASES.map(([q, , names]) => [q, 5, names]);
+
+/* ctrlArev is ctrlA's cases in reverse, and it is a DIAGNOSTIC, not an arm.
+   Llama-3.2-3B parsed 4/4 answers on case 1, 1/4 on case 2 and 0/4 on case 3 —
+   a clean monotone decline that content alone does not explain, and the same
+   bare `{` that had been filed as a Qwen3-1.7B quirk. Reversing the order
+   separates the two readings: if the failures follow the POSITION the fault is
+   in the harness or the engine's per-request state, and every placement number
+   measured so far is wrong; if they follow the CASES it is the model. */
+const PLACEMENT_SETS = {
+  real:     { cases: PLACEMENT_CASES,  label: 'real cases (no known answer)' },
+  ctrlA:    { cases: PLACEMENT_CTRL_A, label: 'control A — synthetic, blatant' },
+  ctrlArev: { cases: [...PLACEMENT_CTRL_A].reverse(),
+              label: 'control A REVERSED — position-vs-content diagnostic' },
+  ctrlB:    { cases: PLACEMENT_CTRL_B, label: 'control B — real cards, temporal' },
+  ctrl5A:   { cases: PLACEMENT_CTRL_5A, label: 'mode 5 control A — synthetic, semantic seats' },
+  ctrl5B:   { cases: PLACEMENT_CTRL_5B, label: 'mode 5 control B — real cards, semantic seats' },
+  real5:    { cases: PLACEMENT_REAL_5,  label: 'mode 5 real cases (no known answer)' },
+};
+/* How many presentation orders each case is asked in. 4 is enough to catch a
+   model that answers by position: with three cards, a pure position-picker
+   agrees with itself on 1/3 of remapped pairs by chance, and an order-invariant
+   one agrees on all of them. */
+const PERMS = 4;
+
+/* Which case field each prompt sends. A lookup rather than a ternary chain:
+   the chain was already three deep at prompt E and every new arm added another
+   place to forget. */
+const USER_FIELD = { D: 'userCompact', E: 'userTagged', F: 'userNoSit',
+                     G: 'userNoQ', H: 'userLensOnly', I: 'userMinimal' };
+
+SYS.F = SYS.B;
+SYS.H = SYS.B;
+SYS.G = SYS.B.replace(
+  "The question is context for tone only. NEVER answer it. ",
+  "Never answer a question. ");
+SYS.I = SYS.G;
+
+/* PROMPT E: prompt B's rules verbatim, with the USER message re-fielded.
+   Deliberately ONE variable — SYS.E is SYS.B by identity, not by copy, so
+   anything E scores against B is attributable to the field format and nothing
+   else. Changing the rules and the format together is how the A-vs-B
+   confound happened, and that cost an arm to untangle.
+
+   The failure it targets: a row that came back reproducing the prompt's own
+   scaffolding — "In practice: … Position: The Advice, what to do?". `Label:
+   value` lines are a form, and a small model handed a half-filled form fills
+   in more of the form. Tagged fields are not a form: chat models are trained
+   to read them as structure, and an echoed `<meaning>` is both less likely and
+   trivially detectable when it happens, which `Position:` never was. */
+SYS.E = SYS.B;
 
 /* [card name, reversed, spread mode, seat index, question] — see the header
    comment for why each one is here. */
@@ -929,6 +1248,7 @@ $('engine').addEventListener('change', async () => {
   $('bias').disabled = !na;     // so is logit_bias
   $('think').disabled = !na;
   $('safe').disabled = !na;
+  $('decode').disabled = !na;   // repetition/presence/frequency penalties too
   if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
   fillModels([['', 'loading WebLLM model list…']]);
   try {
@@ -943,6 +1263,12 @@ $('engine').addEventListener('change', async () => {
     fillModels([['', 'model list failed: ' + (e.message || e)]]);
   }
 });
+
+/* The case set only means anything to the placement task; leaving it live on
+   the rewrite task invites a run configured against a control that never ran. */
+const syncTask = () => { $('pcases').disabled = $('task').value !== 'placement'; };
+$('task').addEventListener('change', syncTask);
+syncTask();
 
 /* ---- environment, reported up front because it is half the result ---- */
 let BENCH_BUILD = 'unknown';
@@ -1001,13 +1327,22 @@ let BENCH_BUILD = 'unknown';
    is the display text and carries the deck's register. Feeding a model prose
    optimised to embed is a plausible contributor to output that reads flat, so
    it is an arm here rather than an assumption. */
-function buildCases(seatField) {
+/* ONE accessor for the draw page, because there are two builders now and the
+   second one guessed the iframe's id wrong ('deck' for 'f') and died after the
+   model had loaded. The page's top-level bindings are const, so DECK is
+   invisible as a property and has to come through contentWindow.eval. */
+function drawPage() {
   const w = $('f').contentWindow;
   let DECK, SEATS;
-  try { DECK = w.eval('DECK'); SEATS = w.ARCANAI_SEATS; }
+  try { DECK = w.eval('DECK'); SEATS = w.ARCANAI_SEATS; SEATS_ALL = SEATS; }
   catch (e) { throw new Error('could not read DECK from the draw page — is release/major-arcanai/index.html built? ' + e.message); }
   if (!SEATS) throw new Error('seats.js did not load in the draw page');
   const byName = {}; DECK.forEach(c => { byName[c.name] = c; });
+  return { DECK, SEATS, byName };
+}
+
+function buildCases(seatField) {
+  const { SEATS, byName } = drawPage();
   return CASES.map(([name, rev, mode, si, q]) => {
     const c = byName[name];
     if (!c) throw new Error('unknown card in CASES: ' + name);
@@ -1018,11 +1353,49 @@ function buildCases(seatField) {
     return {
       name, rev: !!rev, seat: seat.label || seat.name, q,
       meaning: rev ? c.r : c.meaning,
+      /* The expansion is in the prompt too, so it is copyable too — and it was
+         the thing actually being copied. Carried on the case so flags() can
+         see it. */
+      sit: rev ? c.sitr : c.sit,
       user: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
             `Its meaning: ${rev ? c.r : c.meaning}\n` +
             `In practice: ${rev ? c.sitr : c.sit}\n` +
             `Position: ${seat.label || seat.name}, ${seatTxt}\n` +
             `They asked: ${q}\n` +
+            `Rewrite the meaning for this position.`,
+      /* F — the expansion removed, everything else byte-identical to `user`. */
+      userNoSit: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
+            `Its meaning: ${rev ? c.r : c.meaning}\n` +
+            `Position: ${seat.label || seat.name}, ${seatTxt}\n` +
+            `They asked: ${q}\n` +
+            `Rewrite the meaning for this position.`,
+      /* G — the question removed. */
+      userNoQ: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
+            `Its meaning: ${rev ? c.r : c.meaning}\n` +
+            `In practice: ${rev ? c.sitr : c.sit}\n` +
+            `Position: ${seat.label || seat.name}, ${seatTxt}\n` +
+            `Rewrite the meaning for this position.`,
+      /* H — the seat's proper-noun label removed, the lens kept. "The
+         Obstacle, what's in the way" -> "what's in the way". */
+      userLensOnly: `Card: ${c.name}${rev ? ', reversed' : ''}\n` +
+            `Its meaning: ${rev ? c.r : c.meaning}\n` +
+            `In practice: ${rev ? c.sitr : c.sit}\n` +
+            `Position: ${seatTxt}\n` +
+            `They asked: ${q}\n` +
+            `Rewrite the meaning for this position.`,
+      /* I — all three subtractions at once. Distinct from D (`userCompact`),
+         which keeps the question and was built to shrink prefill memory rather
+         than to remove copy sources. */
+      userMinimal: `${rev ? c.r : c.meaning}\n` +
+            `Position: ${seatTxt}\n` +
+            `Rewrite it for this position.`,
+      /* the same case as tagged fields — prompt E's anti-scaffold-echo test.
+         Same content, same order, same words: only the delimiters change. */
+      userTagged: `<card>${c.name}${rev ? ', reversed' : ''}</card>\n` +
+            `<meaning>${rev ? c.r : c.meaning}</meaning>\n` +
+            `<in_practice>${rev ? c.sitr : c.sit}</in_practice>\n` +
+            `<position>${seat.label || seat.name}, ${seatTxt}</position>\n` +
+            `<question>${q}</question>\n` +
             `Rewrite the meaning for this position.`,
       /* the same case with the expansion dropped — prompt D's memory test */
       userCompact: `${rev ? c.r : c.meaning}\n` +
@@ -1031,6 +1404,93 @@ function buildCases(seatField) {
             `Rewrite it for this position.`,
     };
   });
+}
+
+/* ---- placement cases, built from the same live DECK and seats.js as the
+   rewrite cases, so neither can drift from what ships. ---- */
+const PLACE_SYS =
+  "You assign tarot cards to positions in a spread.\n" +
+  "You are given a question, some cards with their meanings, and the same number of positions.\n" +
+  "Decide which card belongs in which position. Every card is used exactly once.\n" +
+  "Answer only with the assignment. No explanation.";
+
+function placementPrompt(kase, order) {
+  /* `order` is the presentation order of the cards for this permutation. The
+     LETTERS the model answers with are always A/B/C in seat order, so only the
+     card side is permuted — permuting both at once would make a disagreement
+     impossible to attribute. */
+  const cards = order.map((ci, n) =>
+    `${n + 1}. ${kase.cards[ci].name} — ${kase.cards[ci].meaning}`).join('\n');
+  const seats = kase.seats.map((s, n) =>
+    `${String.fromCharCode(65 + n)}. ${s.lens}`).join('\n');
+  return `Question: ${kase.q}\n\nCards:\n${cards}\n\nPositions:\n${seats}\n\n` +
+         `Assign each card number to one position letter.`;
+}
+
+/* The schema names the seat letters as keys and takes a card NUMBER, so a
+   malformed answer is impossible rather than merely discouraged. Placement is
+   machine-consumed data; this is the case structured output is actually for. */
+/* STRING ENUMS, NOT AN INTEGER RANGE. `{type:'integer', minimum:1, maximum:n}`
+   is not something a context-free grammar expresses naturally — a range has to
+   become an explicit alternation before it can constrain decoding — and
+   Qwen3-1.7B returned a bare `{` and stopped on 23 of 24 answers under it,
+   with a 160-token budget, so it was not truncation. An enum is a literal
+   alternation and needs no compilation cleverness. `parseAssign` already
+   coerces with parseInt, so both shapes read back identically. */
+function placementSchema(n) {
+  const vals = [...Array(n).keys()].map(i => String(i + 1));
+  const props = {}, req = [];
+  for (let i = 0; i < n; i++) {
+    const k = String.fromCharCode(65 + i);
+    props[k] = { type: 'string', enum: vals };
+    req.push(k);
+  }
+  return { type: 'object', properties: props, required: req, additionalProperties: false };
+}
+
+function buildPlacement(seatField, setName) {
+  const set = PLACEMENT_SETS[setName] || PLACEMENT_SETS.real;
+  const { SEATS, byName } = drawPage();
+  return set.cases.map(([q, mode, names, truth]) => {
+    /* A card is a deck name, or an inline [name, meaning] pair. The inline form
+       is only used by the synthetic control; everything else must resolve
+       against the built deck so a renamed card fails loudly rather than
+       silently benchmarking a card that no longer exists. */
+    const cards = names.map(n => {
+      if (Array.isArray(n)) return { name: n[0], meaning: n[1] };
+      const c = byName[n];
+      if (!c) throw new Error('unknown card in ' + setName + ': ' + n);
+      return { name: n, meaning: c.meaning };
+    });
+    const seats = (SEATS.seats[mode] || []).slice(0, cards.length).map(s => ({
+      label: s.label || s.name,
+      lens: String(s[seatField] || s.prose || '').replace(/:\s*$/, ''),
+      prose: s.prose || '',
+    }));
+    if (seats.length !== cards.length)
+      throw new Error(`mode ${mode} has ${seats.length} seats for ${cards.length} cards`);
+    if (truth) {
+      if (truth.length !== cards.length || new Set(truth).size !== cards.length)
+        throw new Error(`truth for “${q}” is not a permutation of ${cards.length} cards`);
+      /* Guard the scramble rule rather than trusting it to survive an edit: a
+         control whose answer IS the identity presentation cannot distinguish a
+         model that did the task from one that answered by slot. */
+      if (truth.every((c, s) => c === s))
+        throw new Error(`control “${q}” has an identity truth — scramble the card order`);
+    }
+    return { q, mode, cards, seats, truth: truth || null };
+  });
+}
+
+/* Presentation orders. Identity first so run 1 is the plain case, then rotations
+   and a reversal — fixed, not random, so two runs of the same build ask the same
+   questions in the same orders. */
+function permsFor(n) {
+  const base = [...Array(n).keys()];
+  const out = [base];
+  for (let r = 1; r < n && out.length < PERMS; r++) out.push(base.map((_, i) => (i + r) % n));
+  if (out.length < PERMS) out.push([...base].reverse());
+  return out.slice(0, PERMS);
 }
 
 /* ---- automatic flags. These do NOT judge the reading; they catch the
@@ -1057,8 +1517,64 @@ function flags(text, kase, cap) {
     if (a && b && (a === b || a.includes(b) || (a.length > 12 && b.includes(a)))) { f.push('EXEMPLAR-ECHO'); break; }
   }
   if (new RegExp('^' + kase.seat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:', 'i').test(text.trim())) f.push('SEAT-LABEL-LEAK');
-  const a = norm(text), b = norm(kase.meaning);
-  if (a && b && (a === b || (b.length > 12 && a.includes(b)) || (a.length > 12 && b.includes(a)))) f.push('NEAR-COPY');
+  /* The leak that the line-start rule missed, and it was half the residual
+     failures: "You're in the Obstacle." — the seat named mid-sentence as a
+     place. Capitalised only, for the same reason the logit_bias arm bans
+     capitalised only: "the outcome is quiet" is a good line and "in the
+     Outcome" is a leak, and the case is what separates them. Sentence-initial
+     is excluded for the same reason the logit_bias arm excludes it: a capital
+     after a full stop is grammar, not a proper noun, and "Hopes are cheap."
+     is a line this deck would be glad to have written. */
+  else {
+    const distinct = kase.seat.split(/[^A-Za-z']+/).filter(w => w && !SEAT_STOP.has(w.toLowerCase()) && /^[A-Z]/.test(w));
+    if (distinct.length && new RegExp('(?<![.!?]\\s)(?<!^)\\b(' + distinct.join('|') + ')\\b', 'm').test(text.trim())) f.push('SEAT-NAME-IN-LINE');
+  }
+  /* The prompt's own field labels coming back as output — "In practice: …
+     Position: The Advice, what to do?". Both scaffolds are checked on every
+     arm, so prompt E cannot score well merely by making its own echo
+     invisible: if it echoes tags instead of labels, that is caught too. */
+  if (/^\s*(card|its meaning|meaning|in practice|position|they asked|question)\s*:/im.test(text)
+      || /<\/?(card|meaning|in_practice|position|question)>/i.test(text)) f.push('SCAFFOLD-ECHO');
+  /* COPYING IS CHECKED AGAINST BOTH TEXTS IN THE PROMPT, and for a long time
+     it was only checked against one. `NEAR-COPY` compared the line to the
+     MEANING alone, so a row that reproduced the SITUATIONAL EXPANSION word for
+     word scored a clean `ok` — and three of the baseline's seven clean rows
+     were doing exactly that ("Caring loudly about not caring, spite, and
+     energy spent proving you have moved on." is `last_flying_fuck`'s
+     expansion with one "and" added). The metric was blind to the commonest
+     failure in the run, which means every arm scored before this was scored
+     generously and by the same amount.
+
+     The two are separate flags because they mean different things: copying the
+     meaning is failing to rewrite, copying the expansion is answering with the
+     prompt's own examples. */
+  /* SUBSTRING CONTAINMENT WAS TOO BRITTLE and let the real copies through. The
+     model does not copy cleanly — it inserts a word ("spite, AND energy") or
+     rewrites the opening ("A non apology" -> "You're in a non-apology"), and
+     either one breaks `a.includes(b)` completely while leaving a line that is
+     unmistakably the source text. Two of the three expansion copies escaped
+     that way.
+
+     Word-bag containment instead: what share of the OUTPUT's words appear
+     anywhere in the source. Order-insensitive, so an inserted conjunction or a
+     changed prefix costs a little rather than everything. Measured on eight
+     real outputs, copies land 0.70-0.94 and genuine rewrites 0.00-0.55 — the
+     bake-off's best line ("The outcome is quiet, the roommates are back to
+     being roommates.") sits at 0.55 against the very expansion it echoes, so
+     0.70 has real daylight on both sides. Lines under 8 words are not judged;
+     a short line shares function words with everything. */
+  const a = norm(text);
+  const aw = a.split(' ').filter(Boolean);
+  const near = (src) => {
+    const b = norm(src || '');
+    if (!a || !b) return false;
+    if (a === b || (b.length > 12 && a.includes(b)) || (a.length > 12 && b.includes(a))) return true;
+    if (aw.length < 8) return false;
+    const bw = new Set(b.split(' ').filter(Boolean));
+    return aw.filter(w => bw.has(w)).length / aw.length >= 0.70;
+  };
+  if (near(kase.meaning)) f.push('NEAR-COPY');
+  if (near(kase.sit)) f.push('COPY-EXPANSION');
   // a 4-gram repeated three times is a degenerate loop, not a sentence
   const t = a.split(' ');
   for (let i = 0; i + 4 <= t.length; i++) {
@@ -1156,6 +1672,143 @@ async function firstPersonBias(modelId, note) {
   return bias;
 }
 
+/* ---- logit_bias: ban the seat names, CAPITALISED ONLY ----------------------
+   The 0.6B leaks the position into the line — "You're in the Obstacle.",
+   "You're in the Vibe." — which is the same class of failure as the first
+   person and yields to the same tool: it is a small, closed, enumerable set of
+   tokens, and the set is not a guess because seats.js defines it.
+
+   CAPITALISATION IS THE WHOLE TRICK, and without it this arm would be a net
+   loss. The seat words are ordinary English — outcome, advice, present, future
+   — and one of the best lines the bake-off ever produced was Qwen3-1.7B's "The
+   outcome is quiet, the roommates are back to being roommates." Banning
+   "outcome" outright would have killed it. But the leak always arrives as the
+   proper noun ("in the Obstacle") and the legitimate use is always common
+   ("the outcome is quiet"), and tokenizers give those two different ids. So
+   only the capitalised forms are banned and the vocabulary survives.
+
+   Function words are excluded explicitly: every seat label starts with "The",
+   and banning " The" would take the model's grammar down with the leak. */
+const SEAT_STOP = new Set(['the', 'a', 'an', 'of', 'and', 'or', 'in', 'on', 'to',
+                           'what', 'why', 'how', 'is', 'it', 'its', 'you', 'your']);
+function seatWords() {
+  const out = new Set();
+  /* SEATS_ALL, not SEATS: the seats are a local inside buildCases, and reading
+     them from here threw "SEATS is not defined" — which the arm reported
+     honestly and then ran without any bias at all, producing a row identical
+     to baseline. Caught only because the two runs matched byte for byte. */
+  const modes = (SEATS_ALL && SEATS_ALL.seats) || {};
+  for (const mode of Object.keys(modes)) {
+    for (const s of modes[mode] || []) {
+      String(s.label || s.name || '').split(/[^A-Za-z']+/).forEach(w => {
+        if (w && !SEAT_STOP.has(w.toLowerCase()) && /^[A-Z]/.test(w)) out.add(w);
+      });
+    }
+  }
+  return [...out];
+}
+
+async function seatNameBias(modelId, note) {
+  const famKey = Object.keys(TOKENIZER_FOR).find(k => modelId.includes(k));
+  if (!famKey) { note('logit_bias: no tokenizer mapped for ' + modelId + ' — seat arm disabled'); return null; }
+  const words = seatWords();
+  if (!words.length) { note('logit_bias: seats.js gave no seat words — seat arm disabled'); return null; }
+  const { AutoTokenizer } = await import(SCREEN_CDN);
+  const tok = await AutoTokenizer.from_pretrained(TOKENIZER_FOR[famKey]);
+  const ids = new Set(); const kept = [], dropped = [];
+  for (const w of words) {
+    /* THE LEADING-SPACE FORM ONLY — the bare form is deliberately left alone.
+       The 17 words seats.js yields are Past, Present, Future, Obstacle,
+       Advice, Outcome, Hopes, Fears, Near, Root, Crown, Self, House and
+       friends, and this deck writes blunt second-person imperatives: "Hopes
+       are cheap." and "Past the point of caring." are lines it might
+       legitimately produce, and banning the sentence-initial token would
+       forbid them. Capitalisation mid-sentence is a proper noun and therefore
+       the leak; capitalisation after a full stop is just grammar. Only the
+       first is a signal.
+
+       Single-token encodings only, as in the first-person arm: a multi-token
+       encoding means the pieces are shared with innocent words. */
+    const s = ' ' + w;
+    try {
+      const enc = tok.encode(s, { add_special_tokens: false });
+      if (enc.length === 1) { ids.add(enc[0]); kept.push(s); }
+      else dropped.push(s);
+    } catch (_) {}
+  }
+  if (!ids.size) { note('logit_bias: no single-token capitalised seat words — seat arm disabled'); return null; }
+  const bias = {};
+  ids.forEach(id => { bias[String(id)] = -100; });
+  note(`logit_bias: banning ${ids.size} capitalised seat token(s) — kept ${kept.map(s => JSON.stringify(s)).join(' ')}` +
+       (dropped.length ? ` · skipped as multi-token ${dropped.map(s => JSON.stringify(s)).join(' ')}` : ''));
+  return bias;
+}
+
+/* ---- placement scoring -----------------------------------------------------
+   Three numbers, and the first two are the gate.
+
+   AGREEMENT is pairwise: over every pair of presentation orders, the share of
+   seats given the same card once the permutation is undone. Random assignment
+   scores 1/n (0.33 at three cards); an order-invariant classifier scores 1.0.
+   This is the measurement that says whether the model is deciding at all.
+
+   IDENTITY RATE is the same answers before the permutation is undone: how
+   often seat A got whatever was shown in slot 1, B slot 2, C slot 3. A model
+   answering by position scores 1.0 here no matter how the cards are shuffled,
+   and would look perfectly consistent on any metric that did not separate
+   these two. High identity with high agreement is impossible unless the
+   permutations are degenerate; high identity with LOW agreement is the
+   signature of pure position bias.
+
+   VALIDITY is whether the answer is a permutation at all. The schema bounds
+   each value to 1..n but cannot express "all different", so a model can
+   legally return the same card for two seats. */
+function scorePlacement(assigns, n, truth) {
+  const ok = assigns.filter(a => a && a.valid);
+  let pairs = 0, same = 0;
+  for (let i = 0; i < ok.length; i++)
+    for (let j = i + 1; j < ok.length; j++) {
+      for (let s = 0; s < n; s++) { pairs++; if (ok[i].canon[s] === ok[j].canon[s]) same++; }
+    }
+  const ident = assigns.filter(a => a && a.valid && a.raw.every((v, s) => v === s)).length;
+  /* Accuracy is per SEAT, not per whole assignment, and only where a truth
+     exists. Per-seat shares chance with `agree` (1/n), so the two sit in the
+     same units and can be read side by side; all-or-nothing scoring would put
+     chance at 1/n! and make three cards look far more impressive than they are.
+     A control that scores at chance HERE is the capability verdict — order
+     invariance cannot say that, which is why the controls exist. */
+  let acc = null;
+  if (truth && ok.length) {
+    let hits = 0;
+    for (const a of ok) for (let s = 0; s < n; s++) if (a.canon[s] === truth[s]) hits++;
+    acc = hits / (ok.length * n);
+  }
+  return {
+    agree: pairs ? same / pairs : null,
+    identity: ok.length ? ident / ok.length : null,
+    valid: assigns.length ? ok.length / assigns.length : 0,
+    acc,
+  };
+}
+
+/* Parse one answer. Returns raw (seat -> presentation slot) and canon (seat ->
+   card index in the case's own order), or null if it is not a permutation. */
+function parseAssign(txt, order, n) {
+  let o;
+  try { o = JSON.parse(String(txt).trim()); } catch (_) { return null; }
+  if (!o || typeof o !== 'object') return null;
+  const raw = [], canon = [];
+  for (let s = 0; s < n; s++) {
+    const v = o[String.fromCharCode(65 + s)];
+    const slot = (typeof v === 'number' ? v : parseInt(v, 10)) - 1;
+    if (!(slot >= 0 && slot < n)) return null;
+    raw.push(slot);
+    canon.push(order[slot]);          // undo the permutation
+  }
+  const valid = new Set(canon).size === n;
+  return { raw, canon, valid };
+}
+
 let running = false;
 async function run(sanityOnly) {
   if (running) return;
@@ -1165,6 +1818,8 @@ async function run(sanityOnly) {
   const seatField = $('seattext').value, doScreen = $('screen').checked;
   const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
   const biasArm = $('bias').value, thinkVal = $('think').value, safeArm = $('safe').value;
+  const decodeArm = $('decode').value, taskArm = $('task').value;
+  const caseSet = $('pcases').value;
   const thinkArm = thinkVal === 'on';
   const status = m => { $('status').textContent = m; };
   const out = $('out');
@@ -1175,6 +1830,9 @@ async function run(sanityOnly) {
     (engine === 'webllm' && biasArm !== 'off' ? ' · bias:' + esc(biasArm) : '') +
     (engine === 'webllm' && thinkVal !== 'off' ? ' · think:' + esc(thinkVal) : '') +
     (engine === 'webllm' && safeArm !== 'off' ? ' · mobile-safe' : '') +
+    (taskArm !== 'rewrite' ? ' · <b>task:' + esc(taskArm) + '</b>' : '') +
+    (decodeArm !== 'greedy' ? ' · decode:' + esc(decodeArm) : '') +
+    (DECODE_REPRO[decodeArm] ? '' : ' <span class="warn">· SAMPLED, not reproducible</span>') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     ` <span class="dim">· build ${esc(BENCH_BUILD)}</span>` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
@@ -1186,7 +1844,9 @@ async function run(sanityOnly) {
     /* Cases are built BEFORE the model loads. They are read out of the iframe,
        and if the draw page has not been built this throws — discovering that
        after downloading up to 1.3 GB, on a phone, is not a thing to do twice. */
-    const cases = sanityOnly ? [] : buildCases(seatField);
+    const cases = sanityOnly ? []
+                : taskArm === 'placement' ? buildPlacement(seatField, caseSet)
+                : buildCases(seatField);
 
     status('spawning worker…');
     /* Second half of the throttle: coalesce to one DOM write per frame. Even
@@ -1245,8 +1905,14 @@ async function run(sanityOnly) {
          never reaches the answer, which reads as failure when it is truncation.
          A sanity check that a verbose model cannot physically pass is measuring
          the budget. */
+      /* The decode arm goes to the gate as well, for the reason the think arm
+         does: a gate that does not match the run is not a gate. If a
+         repetition penalty breaks the counting check, that is a real cost of
+         the arm and it should be visible rather than hidden behind a greedy
+         gate the run never used. The run-level verdict makes this safe — one
+         coherent output anywhere still means the numerics are sound. */
       const r = await call('You answer in as few words as possible.', s.prompt, 64,
-        { think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
+        { think: thinkVal === 'prefill' ? 'prefill' : thinkArm, decode: decodeArm });
       sane.push({ id: s.id, pass: s.test(r.txt), cls: classifyOutput(r.txt),
                   why: s.why, got: r.txt });
     }
@@ -1280,12 +1946,134 @@ async function run(sanityOnly) {
             + `at arithmetic. None of that is disqualifying — read the card lines.</p>`;
     }
 
-    if (!sanityOnly && numericsOk) {
+    if (!sanityOnly && numericsOk && taskArm === 'placement') {
+      const per = [];
+      for (let i = 0; i < cases.length; i++) {
+        const k = cases[i], n = k.cards.length, orders = permsFor(n);
+        const assigns = [], texts = [];
+        for (let p = 0; p < orders.length; p++) {
+          status(`case ${i + 1}/${cases.length}, order ${p + 1}/${orders.length}…`);
+          live.textContent = `case ${i + 1}/${cases.length} · order ${p + 1}/${orders.length}`;
+          /* think:false ON PURPOSE, whatever the think selector says.
+             `response_format` is a CHAT-completions field; WebLLM's raw
+             completions API — which the prefill path uses — ignores it, and the
+             first placement run came back 0% valid with the model echoing the
+             prompt's own card and seat lists, exactly as it does on the rewrite
+             task.
+
+             Losing prefill costs nothing here, because the schema does the same
+             job better: `<think>` is not in the grammar, so it cannot be
+             emitted, and neither can an echo of the prompt. This is the
+             inverse of the rewrite finding — a schema hurt the line because it
+             constrained prose whose voice mattered; placement has no voice to
+             damage, and the failure the schema forbids is the dominant one. */
+          /* 512, and the history of this number is the finding. 64 truncated
+             Qwen3-1.7B to a bare `{`; 160 was assumed to fix it and did not —
+             Llama-3.2-3B came back 42% valid with the SAME bare `{`, which had
+             been written off as a Qwen3 quirk. It is not model-specific and it
+             is not the model failing the task: under constrained decoding the
+             grammar permits unbounded whitespace between tokens, so a model
+             inclined to pretty-print spends its whole budget on newlines and
+             indentation before reaching a key. 0.6B fitting in 64 was never
+             evidence that 64 was enough — it just does not pretty-print.
+
+             THE FAILURE LOOKS EXACTLY LIKE INCAPACITY, which is why it survived
+             two runs: an empty object is what a model that cannot answer would
+             also produce. `rawlen` below exists so the two can be told apart
+             without another run. */
+          const r = await call(PLACE_SYS, placementPrompt(k, orders[p]), 512,
+            { jsonRaw: placementSchema(n), decode: decodeArm, think: false });
+          if (r.error) { assigns.push(null); texts.push('ERR ' + r.error); continue; }
+          const a = parseAssign(r.txt, orders[p], n);
+          assigns.push(a);
+          /* The raw fallback is flattened to one line: it shares a cell with
+             the parsed answers, which are one per line, and a multi-line
+             failure was indistinguishable from four separate ones. */
+          /* An unparsed answer reports its RAW LENGTH and its whitespace, because
+             collapsing `\s+` to a space is what disguised the budget bug as a
+             model failure: `{` followed by 400 characters of indentation and
+             `{` on its own print identically once whitespace is normalised. */
+          const raw = String(r.txt == null ? '' : r.txt);
+          texts.push(a ? a.canon.map(ci => k.cards[ci].name.replace(/^The /, '')).join(' / ')
+                       : `[unparsed, ${raw.length} chars trimmed / ${r.rawLen} raw, ` +
+                         `${r.tokens} tok${r.truncated ? ' TRUNCATED' : ''}] ` +
+                         raw.replace(/\n/g, '\\n').replace(/ /g, '·').slice(0, 60));
+        }
+        per.push({ k, assigns, texts, s: scorePlacement(assigns, n, k.truth) });
+      }
+      const mean = (f) => {
+        const xs = per.map(f).filter(x => x != null);
+        return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+      };
+      const pct = (x) => x == null ? '—' : (x * 100).toFixed(0) + '%';
+      const nCards = cases[0] ? cases[0].cards.length : 3;
+      const chance = 1 / nCards;
+      const agree = mean(x => x.s.agree), ident = mean(x => x.s.identity);
+      const acc = mean(x => x.s.acc), hasTruth = acc != null;
+      /* The verdict is about the GATE, not about quality. Agreement at chance
+         means the assignment carries no information and nothing downstream is
+         worth measuring; high identity alongside it names the reason. */
+      const decides = agree != null && agree > chance + 0.15;
+      /* WHERE A TRUTH EXISTS, ACCURACY OUTRANKS AGREEMENT, and the four-way
+         split is the entire reason the controls were built:
+           accurate            -> it can do the task; the real cases are the problem
+           consistent, wrong   -> it has a rule, and the rule is wrong
+           accurate, unstable  -> impossible; a bug in the scoring, not a finding
+           neither             -> capability, and no prompt is going to fix it */
+      const accGood = hasTruth && acc > chance + 0.15;
+      html += `<p>case set <b>${esc((PLACEMENT_SETS[caseSet] || {}).label || caseSet)}</b> · ` +
+        `orders per case <b>${PERMS}</b> · valid answers <b>${pct(mean(x => x.s.valid))}</b> · ` +
+        `<b>agreement ${pct(agree)}</b> (chance ${pct(chance)}) · ` +
+        (hasTruth ? `<b>accuracy ${pct(acc)}</b> (chance ${pct(chance)}, per seat) · ` : '') +
+        `identity ${pct(ident)} <span class="dim">(share answering slot-for-seat before the shuffle is undone)</span></p>`;
+      if (hasTruth) {
+        html += `<p class="${accGood ? 'ok' : 'bad'}">${accGood
+          ? 'CONTROL PASSED — the model can do closed-set assignment when the answer exists. ' +
+            'A chance score on the real cases therefore indicts the CASES, not the model: ' +
+            'those seats may have no determinate answer for this deck.'
+          : 'CONTROL FAILED — it cannot place cards even where the seat is stated in the ' +
+            'card\'s own words. This is a capability limit, and no amount of prompt work on ' +
+            'the real cases is going to reach past it.'}</p>` +
+          `<p class="dim">Agreement is reported beside it and is diagnostic, not the verdict: ` +
+          `consistent-but-wrong (${pct(agree)} agree, ${pct(acc)} accurate) means the model has a ` +
+          `rule and the rule is wrong, which is a different problem from guessing.</p>`;
+      } else {
+        html += `<p class="${decides ? 'ok' : 'bad'}">${decides
+          ? 'Order-invariant enough to be deciding something. Worth scoring against the cosine seating.'
+          : 'AGREEMENT AT OR NEAR CHANCE — the model is not classifying, it is guessing. ' +
+            'A high identity rate beside this means it is answering by position, not by content. ' +
+            'Do not report placement quality from this run.'}</p>` +
+          `<p class="dim">These cases carry no known answer, so this is a consistency result only. ` +
+          `Chance here is ambiguous between a model that cannot choose and cases that cannot be ` +
+          `chosen between — run the controls to tell those apart.</p>`;
+      }
+      html += `<table><tr><th>question</th><th>seats</th><th>assignment per order (undone)</th>` +
+        (hasTruth ? `<th>correct</th>` : '') + `<th>agree</th>` +
+        (hasTruth ? `<th>acc</th>` : '') + `<th>ident</th></tr>` +
+        per.map(({ k, texts, s }) => `<tr>` +
+          `<td>“${esc(k.q)}”</td>` +
+          `<td class="dim">${k.seats.map(x => esc(x.label)).join('<br>')}</td>` +
+          `<td>${texts.map(t => `<span class="gold">${esc(t)}</span>`).join('<br>')}</td>` +
+          (hasTruth ? `<td class="dim">${k.truth.map(ci =>
+              esc(k.cards[ci].name.replace(/^The /, ''))).join('<br>')}</td>` : '') +
+          `<td class="${s.agree > chance + 0.15 ? 'ok' : 'warn'}">${pct(s.agree)}</td>` +
+          (hasTruth ? `<td class="${s.acc > chance + 0.15 ? 'ok' : 'bad'}">${pct(s.acc)}</td>` : '') +
+          `<td>${pct(s.identity)}</td></tr>`).join('') +
+        `</table>`;
+      live.innerHTML = html;
+    } else if (!sanityOnly && numericsOk) {
       const cap = CAP[which];
       let logitBias = null;
-      if (engine === 'webllm' && biasArm === 'nofirst') {
+      if (engine === 'webllm' && biasArm !== 'off') {
         status('building logit_bias…');
-        try { logitBias = await firstPersonBias(model, (m) => { html += `<p class="dim">${esc(m)}</p>`; }); }
+        const note = (m) => { html += `<p class="dim">${esc(m)}</p>`; };
+        try {
+          const parts = [];
+          if (biasArm === 'nofirst' || biasArm === 'both') parts.push(await firstPersonBias(model, note));
+          if (biasArm === 'noseat'  || biasArm === 'both') parts.push(await seatNameBias(model, note));
+          const merged = Object.assign({}, ...parts.filter(Boolean));
+          logitBias = Object.keys(merged).length ? merged : null;
+        }
         catch (e) { html += `<p class="warn">logit_bias unavailable: ${esc(e.message || e)}</p>`; }
       }
       const rows = [];
@@ -1299,9 +2087,10 @@ async function run(sanityOnly) {
            headroom, so a model that ran long was cut mid-sentence and read as
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
-        const r = await call(SYS[which], which === 'D' ? k.userCompact : k.user, thinkArm ? 1024 : 80,
+        const userMsg = k[USER_FIELD[which] || 'user'];
+        const r = await call(SYS[which], userMsg, thinkArm ? 1024 : 80,
           { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias,
-            fewshot: which === 'C' ? FEWSHOT_TURNS : null,
+            fewshot: which === 'C' ? FEWSHOT_TURNS : null, decode: decodeArm,
             think: thinkVal === 'prefill' ? 'prefill' : thinkArm });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
@@ -1384,7 +2173,13 @@ async function run(sanityOnly) {
              `library version disagree about the graph. Try the other lib version — it is a ` +
              `model/runtime pairing problem, not a device or dtype problem.</p>`;
     }
-    live.innerHTML = `<span class="bad">FAILED: ${esc(msg)}</span>` + hint;
+    /* class "fatal" as well as "bad", and resultsText keys on "fatal". `bad`
+       is also the sim column's highlight for a q>m row, so a plain
+       `span.bad` lookup matched the FIRST such row and copied a similarity
+       score out as though it were the run's error line. Every result pasted
+       from the phone carried a stray "0.36 / 0.37" at the top of the section.
+       The failure line needs a class nothing else wears. */
+    live.innerHTML = `<span class="bad fatal">FAILED: ${esc(msg)}</span>` + hint;
     status('failed');
   } finally {
     /* Dispose BEFORE terminating, and do not let a wedged worker hang teardown:
@@ -1416,13 +2211,13 @@ function resultsText() {
   for (const sec of document.getElementById('out').children) {
     const h = sec.querySelector('h2');
     if (h) out.push('=== ' + h.innerText.trim() + ' ===');
-    /* The error line is a <span class="bad">, and it is emitted FIRST and
+    /* The error line is a <span class="fatal">, and it is emitted FIRST and
        unconditionally. Twice now the copy has swallowed it: once because only
        p's and tables were extracted, and again because the remediation hint
        added beside it is a <p>, which made the section look like it had
        reported properly. The message is the whole result of a failed run --
        "it failed" without the reason costs a round trip every time. */
-    const err = sec.querySelector('span.bad');
+    const err = sec.querySelector('span.fatal');
     if (err) {
       const t = err.innerText.replace(/\s+/g, ' ').trim();
       if (t) out.push(t);
