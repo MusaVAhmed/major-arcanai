@@ -651,6 +651,25 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     enjoyment*; "The outcome is quiet, the roommates are back to being
     roommates." for The Lovers reversed on *is he cheating on me* — the case
     every other model answered by adjudicating him.
+  - **Few-shot does not help, and the way it fails twice is the lesson.**
+    - **Attempt 1, examples in the system prompt as prose with a `-> ` marker:
+      Qwen3-0.6B scored 10/12 clean — the highest of the bake-off — by copying
+      the third exemplar verbatim onto NINE of twelve cards.** A copied exemplar
+      is mechanically perfect, so every flag passed it. Qwen3-1.7B emitted the
+      literal `-> ` on three lines. Hence the `EXEMPLAR-ECHO` flag: nothing else
+      catches "right shape, wrong provenance".
+    - **Attempt 2, examples as proper alternating user/assistant turns** (which
+      is the correct way to few-shot a chat API — the message list *is* the
+      structure): 0.6B **1/12**, 1.7B **5/12**, against 6/12 and 7/12 zero-shot.
+      Worse, both times.
+    - **Few-shot turns break `/no_think` on Qwen3.** With assistant turns in the
+      history, 0.6B resumed emitting `<think>` on 11/12 rows and never closed
+      the block inside the token budget. The two features do not compose.
+    - 1.7B stopped echoing verbatim but absorbed the exemplars' *cadence* —
+      "Not everything was meant to be saved" turned up on the grief card. Small
+      models take the wording, not the method.
+    - **So the best configuration stays zero-shot: prompt B, seat `lens`,
+      `/no_think`.**
   - **Qwen3-0.6B is the phone-shaped candidate, and it trades voice for
     fidelity.** 1403 MB, **141 ms TTFT** (criterion 4 met outright), 78.9 tok/s,
     **1/12 D1 suspicions** — the most faithful arm measured — 6/12 clean, sanity
