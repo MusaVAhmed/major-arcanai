@@ -316,9 +316,10 @@ function makeWebLLMEngine(onProgress, cdn) {
            judging it before fixing this would have been unfair. Merge into a
            single user turn for those families. */
         const noSystemRole = /gemma/i.test(opts.model || '');
+        const shots = opts.fewshot || [];
         const messages = noSystemRole
           ? [{ role: 'user', content: system + '\n\n' + user }]
-          : [{ role: 'system', content: system }, { role: 'user', content: user }];
+          : [{ role: 'system', content: system }, ...shots, { role: 'user', content: user }];
         const req = { messages, max_tokens: maxTok, temperature: 0 };
         /* Gemma 3's documented inference config is temperature 1.0 / top_p 0.95
            / top_k 64, and this bench runs everything greedy at temperature 0 for
@@ -686,7 +687,7 @@ const SYS = {
    Qwen3-0.6B errs entirely on the copying side — it scores 1/12 on D1 precisely
    because it barely writes — so these have to demonstrate that a rewrite is
    allowed, not that invention is. */
-const FEWSHOT = [
+const FEWSHOT_CASES = [
   ['The Coffee', 'Wake up. Face reality. Do what needs to be done.',
    'Getting through the morning, facing the thing you have avoided, deadlines, the errand you keep rescheduling.',
    "The Obstacle, what's in the way", 'why can I never get started',
@@ -699,12 +700,20 @@ const FEWSHOT = [
    'Cutting someone off for good, leaving a job badly, blocking a number, a friendship past repair.',
    'The Outcome, where this lands if nothing changes', 'can we still be friends',
    'This lands on an ending. Not everything was built to be saved.'],
-].map(([card, mean, sit, pos, q, line]) =>
-  `Card: ${card}\nIts meaning: ${mean}\nIn practice: ${sit}\n` +
-  `Position: ${pos}\nThey asked: ${q}\nRewrite the meaning for this position.\n-> ${line}`
-).join('\n\n');
+];
 
-SYS.C = SYS.B + '\n\nWorked examples. Answer in exactly this form, the line and nothing else.\n\n' + FEWSHOT;
+/* FEW-SHOT BELONGS IN THE MESSAGE LIST, NOT IN THE SYSTEM PROMPT. Stuffed in
+   as text with a "-> " marker before each answer, Qwen3-1.7B emitted "-> " as
+   literal output on three lines, and Qwen3-0.6B copied the last exemplar
+   verbatim onto NINE of twelve cards. A chat model reading examples as prose
+   has no signal about where the example ends and its own turn begins; the same
+   examples as alternating user/assistant turns say it structurally. */
+const FEWSHOT_TURNS = FEWSHOT_CASES.flatMap(([card, mean, sit, pos, q, line]) => ([
+  { role: 'user', content: `Card: ${card}\nIts meaning: ${mean}\nIn practice: ${sit}\n` +
+                           `Position: ${pos}\nThey asked: ${q}\nRewrite the meaning for this position.` },
+  { role: 'assistant', content: line },
+]));
+SYS.C = SYS.B;
 
 const CAP = { A: 25, A20: 20, B: 20, C: 20 };
 
@@ -923,6 +932,13 @@ function flags(text, kase, cap) {
   if (/[*_]{1,2}\w/.test(text)) f.push('MARKDOWN');
   if (/\.\.\.|…/.test(text)) f.push('ellipsis');
   if (/\n/.test(text.trim())) f.push('MULTILINE');
+  /* A verbatim exemplar scores as clean: right length, no markdown, no quotes.
+     Qwen3-0.6B returned the same exemplar for nine of twelve cards and scored
+     10/12 clean on it. Copying the demonstration is not doing the task. */
+  for (const [, , , , , line] of FEWSHOT_CASES) {
+    const a = norm(text), b = norm(line);
+    if (a && b && (a === b || a.includes(b) || (a.length > 12 && b.includes(a)))) { f.push('EXEMPLAR-ECHO'); break; }
+  }
   if (new RegExp('^' + kase.seat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:', 'i').test(text.trim())) f.push('SEAT-LABEL-LEAK');
   const a = norm(text), b = norm(kase.meaning);
   if (a && b && (a === b || (b.length > 12 && a.includes(b)) || (a.length > 12 && b.includes(a)))) f.push('NEAR-COPY');
@@ -1131,7 +1147,8 @@ async function run(sanityOnly) {
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
         const r = await call(SYS[which], k.user, thinkArm ? 512 : 80,
-          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias, think: thinkArm });
+          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias, think: thinkArm,
+            fewshot: which === 'C' ? FEWSHOT_TURNS : null });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
