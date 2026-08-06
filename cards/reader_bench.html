@@ -105,6 +105,10 @@
     <option value="off">logit_bias: off</option>
     <option value="nofirst">logit_bias: ban first person</option>
   </select>
+  <select id="think">
+    <option value="off">thinking: suppressed (80 tok)</option>
+    <option value="on">thinking: ON (512 tok, block stripped)</option>
+  </select>
   <label><input type="checkbox" id="screen" checked> D1 pre-screen</label>
   <button id="go">Run</button>
   <button id="sanity">Sanity only</button>
@@ -319,7 +323,15 @@ function makeWebLLMEngine(onProgress, cdn) {
            has to be applied by hand — it can simply be passed. Sent only to
            Qwen3, because an unknown field is a validation risk on engines that
            check. The <think> stripper stays as a backstop either way. */
-        if (/Qwen3/i.test(opts.model || '')) {
+        /* THINKING IS AN ARM. Qwen3-1.7B is the only model here to pass all
+           three sanity checks, and it did it WITH thinking on — so for this
+           model the competence lives in the reasoning block, and suppressing it
+           to fit a 20-word cap may be throwing away the reason to use it. With
+           the arm on, thinking is left alone and the token budget is raised to
+           fit a block plus a line; the block is then stripped and only the
+           conclusion is judged, against the same word cap as every other arm. */
+        if (opts.think) { /* leave Qwen3 to think */ }
+        else if (/Qwen3/i.test(opts.model || '')) {
           req.enable_thinking = false;
           /* enable_thinking alone DOES NOT WORK here — measured: WebLLM accepts
              the field, Qwen3-1.7B ignores it, and all twelve rows came back as
@@ -335,7 +347,11 @@ function makeWebLLMEngine(onProgress, cdn) {
         const s = performance.now();
         const reply = await engine.chat.completions.create(req);
         const done = performance.now();
-        let txt = (reply && reply.choices && reply.choices[0] && reply.choices[0].message.content) || '';
+        const msg0 = (reply && reply.choices && reply.choices[0] && reply.choices[0].message) || {};
+        let txt = msg0.content || '';
+        /* Some builds hand the reasoning back in its own field, in which case
+           content is already the conclusion and there is nothing to strip. */
+        const reasonedSeparately = typeof msg0.reasoning_content === 'string' && msg0.reasoning_content.length > 0;
         let jsonFail = false;
         if (opts.json) {
           try {
@@ -348,8 +364,8 @@ function makeWebLLMEngine(onProgress, cdn) {
         const nTok = u.completion_tokens || 0;
         const ttftS = x.time_to_first_token_s;
         const decodeTps = x.decode_tokens_per_s;
-        const think = /<think>/i.test(txt);
-        if (think) { const i = txt.search(/<\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
+        let think = reasonedSeparately || /<think>/i.test(txt);
+        if (/<think>/i.test(txt)) { const i = txt.search(/<\/think>/i); if (i !== -1) txt = txt.slice(i + 8); }
         const ttft = ttftS != null ? Math.round(ttftS * 1000) : null;
         const total = done - s;
         const genMs = ttft != null ? Math.max(1, total - ttft) : total;
@@ -736,6 +752,7 @@ $('engine').addEventListener('change', async () => {
   $('dtype').disabled = na; $('lib').disabled = na; $('device').disabled = na;
   $('outfmt').disabled = !na;   // response_format is a WebLLM feature
   $('bias').disabled = !na;     // so is logit_bias
+  $('think').disabled = !na;
   if (!na) { fillModels(MODELS.map(m => [m, m])); return; }
   fillModels([['', 'loading WebLLM model list…']]);
   try {
@@ -945,7 +962,7 @@ async function run(sanityOnly) {
   const which = $('prompt').value;
   const seatField = $('seattext').value, doScreen = $('screen').checked;
   const lib = $('lib').value, engine = $('engine').value, outfmt = $('outfmt').value;
-  const biasArm = $('bias').value;
+  const biasArm = $('bias').value, thinkArm = $('think').value === 'on';
   const status = m => { $('status').textContent = m; };
   const out = $('out');
   const head = document.createElement('div');
@@ -953,6 +970,7 @@ async function run(sanityOnly) {
     (engine === 'webllm' ? 'WebLLM/MLC · webgpu' : `${esc(dtype)} · ${esc(device)} · lib ${esc(lib)}`) +
     (engine === 'webllm' && outfmt !== 'free' ? ' · ' + esc(outfmt) : '') +
     (engine === 'webllm' && biasArm !== 'off' ? ' · bias:' + esc(biasArm) : '') +
+    (engine === 'webllm' && thinkArm ? ' · thinking' : '') +
     ` · prompt ${esc(which)} · seat ${esc(seatField)}` +
     (sanityOnly ? ' · SANITY ONLY' : '') + `</h2><div id="live" class="dim">loading…</div>`;
   out.prepend(head);
@@ -1043,8 +1061,8 @@ async function run(sanityOnly) {
            headroom, so a model that ran long was cut mid-sentence and read as
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
-        const r = await call(SYS[which], k.user, 80,
-          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias });
+        const r = await call(SYS[which], k.user, thinkArm ? 512 : 80,
+          { json: outfmt === 'free' ? null : outfmt, maxChars: cap * 6, logitBias, think: thinkArm });
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
