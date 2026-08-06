@@ -379,7 +379,12 @@ function makeWebLLMEngine(onProgress, cdn) {
            That needs the raw prompt, so this uses WebLLM's non-chat completions
            API and builds Qwen3's ChatML by hand. resetChat() above matters more
            than usual here: text completion requires an empty KV cache. */
-        if (opts.think === 'prefill') {
+        /* Prefill is a QWEN3 mechanism. Applied to Qwen2.5 — which has no think
+           mode — it injects tags the model does not know, and it duly echoed a
+           stray "</think>" into a card line. It also spends prompt tokens on a
+           model that is already running out of them. Non-Qwen3 models take the
+           normal chat path; the arm becomes a no-op rather than a hazard. */
+        if (opts.think === 'prefill' && /Qwen3/i.test(opts.model || '')) {
           const prompt = `<|im_start|>system\n${system}<|im_end|>\n` +
                          `<|im_start|>user\n${user}<|im_end|>\n` +
                          `<|im_start|>assistant\n<think>\n\n</think>\n\n`;
