@@ -208,9 +208,22 @@ self.onmessage = (msg) => { handler.onmessage(msg); };
    schema, which constrains the DECODER rather than asking the model nicely.
    Every mechanical flag this bench counts — OVER20, WRAPPED-QUOTES, MULTILINE,
    MARKDOWN, PREAMBLE — is a shape failure, and shape is what a schema can make
-   impossible rather than merely discouraged. maxLength bounds characters, not
-   words, so it is set from the arm's word cap at ~8 chars a word: a soft
-   ceiling in the right place, with the word flag still counting properly.
+   impossible rather than merely discouraged. Measured: quotes, wrapping quotes,
+   markdown and multiline all went to zero.
+
+   maxLength bounds CHARACTERS, so the conversion matters and the first attempt
+   got it wrong. At 8 chars a word a 20-word cap became 160 characters — about
+   26 words — and the model filled the room it was given, so OVER20 went from 1
+   to 4. English runs ~6 characters a word including the space, so that is the
+   factor. A schema does not just forbid; it also licenses, and it will be
+   taken up to whatever it licenses.
+
+   The other cost is not obvious in advance: constraining into a JSON string
+   field SHIFTED THE REGISTER. The free arm wrote oracle lines; the schema arm
+   wrote dialogue — "I'm not sure I'm ready to forgive you yet", first person,
+   roleplaying the seeker. Completing a string value is not the same task, to
+   the model, as writing a line. Throughput was unaffected (92 vs 90 tok/s), so
+   constrained sampling is close to free here.
 
    It cannot help faithfulness. "You'll find your new home" is perfectly well
    formed. That is the point of doing it — it clears the shape noise so the
@@ -918,7 +931,7 @@ async function run(sanityOnly) {
            terse — indistinguishable, with no flag, from a model that ended
            cleanly. Now it has room, and hitting the ceiling is reported. */
         const r = await call(SYS[which], k.user, 80,
-          { json: outfmt === 'json', maxChars: cap * 8 });
+          { json: outfmt === 'json', maxChars: cap * 6 });   // ~6 chars/word, incl. the space
         if (r.error) {
           /* Keep going. A run that dies on case 7 still knows something about
              cases 1-6, and the failures are worth counting in their own right. */
