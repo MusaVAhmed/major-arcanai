@@ -284,8 +284,12 @@ function makeWebLLMEngine(onProgress, cdn) {
         engine = await mkEngine(undefined);
       } catch (e) {
         if (!/WindowSizeConfiguration/i.test(String(e && e.message || e))) throw e;
-        onProgress({ status: 'window-size collision — retrying with context_window_size:-1', pct: 0, bytes });
-        engine = await mkEngine({ context_window_size: -1 });
+        /* context_window_size:-1 means "use the sliding window", and MLC then
+           requires an attention sink size as well — leaving it out just trades
+           WindowSizeConfigurationError for AttentionSinkSizeError. 4 is MLC's
+           conventional sink. */
+        onProgress({ status: 'window-size collision — retrying with sliding window + attention sink', pct: 0, bytes });
+        engine = await mkEngine({ context_window_size: -1, attention_sink_size: 4 });
       }
       const rec = (webllm.prebuiltAppConfig?.model_list || []).find(x => x.model_id === model);
       return { loadMs: Math.round(performance.now() - t0), bytes,
@@ -315,7 +319,19 @@ function makeWebLLMEngine(onProgress, cdn) {
            has to be applied by hand — it can simply be passed. Sent only to
            Qwen3, because an unknown field is a validation risk on engines that
            check. The <think> stripper stays as a backstop either way. */
-        if (/Qwen3/i.test(opts.model || '')) req.enable_thinking = false;
+        if (/Qwen3/i.test(opts.model || '')) {
+          req.enable_thinking = false;
+          /* enable_thinking alone DOES NOT WORK here — measured: WebLLM accepts
+             the field, Qwen3-1.7B ignores it, and all twelve rows came back as
+             <think> blocks at 63 words average. Qwen3 also honours a soft
+             switch in the message itself, which is model-level and therefore
+             cannot be ignored by the plumbing. Belt, braces, and the <think>
+             stripper behind both. */
+          req.messages[req.messages.length - 1] = {
+            role: 'user',
+            content: req.messages[req.messages.length - 1].content + ' /no_think',
+          };
+        }
         const s = performance.now();
         const reply = await engine.chat.completions.create(req);
         const done = performance.now();
