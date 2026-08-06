@@ -643,6 +643,34 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt A's 20.7 purely because B's lines are shorter; corrected, the arms
     are close. It would have been read as a speed difference when comparing
     models. `genMs` is reported alongside `totalMs` now.
+  - **Structured output (`response_format` + json_object schema) is the wrong
+    tool for voice-sensitive prose, measured.** Llama-3.2-1B, prompt B, seat
+    lens, against the identical free-text arm:
+    | | free | schema@160ch | schema@120ch |
+    |---|---|---|---|
+    | clean | **6/12** | 5/12 | 5/12 |
+    | avg words | **9.3** | 14.0 | 12.6 |
+    | tok/s | 90.2 | 92 | 90.8 |
+    - **It does do its job on shape**: wrapping quotes, stray quotes, markdown
+      and multiline all went to zero. Those are shapes a schema makes
+      impossible rather than merely discourages.
+    - **And it is free** — 92 vs 90 tok/s. Constrained sampling costs nothing
+      measurable here, contrary to the usual warnings.
+    - **But a schema licenses as much as it forbids.** `maxLength` is in
+      CHARACTERS. At 8 chars/word a 20-word cap became 160 characters and the
+      model filled it (OVER20 1→4). At 6 chars/word it still produced 25-26
+      word lines, because this model's words average ~4.8 characters. Word caps
+      do not map cleanly onto character bounds; either bound characters
+      honestly or leave length to the prompt.
+    - **The register shifts, and this is the finding worth keeping.** Asked for
+      `{"line": "..."}` instead of a bare line, the model stopped writing
+      oracle lines and started writing *titles* ("The Shadow", "The Weight of
+      Waiting"), *first-person dialogue* ("I'm not sure I'm ready to forgive
+      you yet"), and duplicate text across different seats. Completing a JSON
+      string value is not the same task, to the model, as writing a line — the
+      field name and schema shape prime what belongs there. Use structured
+      output for machine-consumed data; do not use it for text whose voice
+      matters, at least not without testing the field naming.
   - **The decisive run, 2026-08-05: Llama-3.2-1B q4f16 under WebLLM/MLC on an
     RTX 500 Ada, four arms, `resetChat` on, D1 screen on.**
     | arm | clean | avg words | D1 susp | TTFT | tok/s |
