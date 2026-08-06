@@ -643,6 +643,49 @@ deploys automatically to https://musavahmed.github.io/major-arcanai/ via
     prompt A's 20.7 purely because B's lines are shorter; corrected, the arms
     are close. It would have been read as a speed difference when comparing
     models. `genMs` is reported alongside `totalMs` now.
+  - **Best configuration found: Qwen3-1.7B-q4f16_1-MLC under WebLLM, prompt B,
+    seat `lens`, `/no_think`.** 7/12 mechanically clean, 12.2 avg words, **2/12
+    D1 suspicions**, 406 ms TTFT, 56.6 tok/s, sanity 3/3. Beats every
+    Llama-3.2-1B arm (best 6/12 clean, 5/12 suspicions) and writes the first
+    lines with actual voice: "Enjoyment is allowed." for *You deserve
+    enjoyment*; "The outcome is quiet, the roommates are back to being
+    roommates." for The Lovers reversed on *is he cheating on me* — the case
+    every other model answered by adjudicating him.
+  - **Newer is not the axis; size and instruction-tuning style are.**
+    `gemma3-1b-it` is newer than Llama-3.2-1B and far worse: ten of twelve lines
+    open "Okay, here's a rewrite of the meaning for…", explaining the task
+    instead of doing it, 52 avg words, 8/12 suspicions. Qwen3-1.7B won by being
+    bigger and better tuned, not by being new.
+  - **Thinking ON is worse for this task, measured.** Qwen3 with reasoning
+    enabled and a 512-token budget: 269.8 avg words, 0/12 clean, and **D1
+    unchanged at 2/12**. The reasoning does not finish inside 512 tokens on
+    these prompts, so most rows never close `</think>` and the block survives as
+    output. More budget buys latency, not faithfulness. Qwen3's advantage here
+    is base competence, not reasoning.
+  - **Qwen3's thinking switch: `enable_thinking: false` is accepted by WebLLM
+    and ignored by the model.** `/no_think` appended to the user message does
+    work — and its documented behaviour is to emit an **empty** `<think></think>`
+    then answer. A THINK-BLOCK flag that fires on the tag rather than on its
+    contents therefore marks every row and zeroes the clean count on the best
+    model in the bake-off, which is exactly what happened here. The evidence was
+    in the numbers all along: avg words fell 63.1 → 12.2 when `/no_think` was
+    added. Flag content, never tags.
+  - **`logit_bias` is the one prompt-adjacent intervention that worked.**
+    Banning six first-person tokens took first-person lines from ~4 to 1 with
+    clean rate, word count, D1 suspicion and throughput all unmoved. Token-level
+    bans fix token-level problems; nothing about them helps with "don't invent
+    facts", which is not expressible as a token set.
+  - **Two newer models failed on configuration, not capability, and both would
+    have been recorded as model failures.** `gemma3-1b` throws
+    `WindowSizeConfigurationError` (WebLLM's default chat config vs the model's
+    own record), and fixing that with `context_window_size: -1` then throws
+    `AttentionSinkSizeError` — it needs `attention_sink_size` too. Always read
+    the error before concluding a model does not work.
+  - **"The grief will never ease off" is a robust attractor, not a model
+    defect.** SmolLM2-360M produced it and so did Qwen3-1.7B — different family,
+    5x the parameters, best-scoring configuration, still that line for *will the
+    grief ever ease off*. No model tested has avoided it. Treat it as a property
+    of the question-plus-card combination.
   - **Structured output (`response_format` + json_object schema) is the wrong
     tool for voice-sensitive prose, measured.** Llama-3.2-1B, prompt B, seat
     lens, against the identical free-text arm:
