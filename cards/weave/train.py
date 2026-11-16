@@ -89,7 +89,13 @@ def adam(model):
 
 
 def sample(model, tok, hdr_ids, max_new=220, temp=0.0, rng=None):
+    text, _ = _gen(model, tok, hdr_ids, max_new, temp, rng, gaps=False)
+    return text
+
+
+def _gen(model, tok, hdr_ids, max_new=220, temp=0.0, rng=None, gaps=True):
     ids = list(hdr_ids)
+    gs = []
     for _ in range(max_new):
         if len(ids) >= model.ctx:
             break
@@ -101,6 +107,9 @@ def sample(model, tok, hdr_ids, max_new=220, temp=0.0, rng=None):
         l[tok.n_bytes:tok.eos] = -1e30  # specials: only bytes and eos survive
         if temp <= 0:
             nxt = int(np.argmax(l))
+            if gaps:
+                o = np.partition(l, -2)
+                gs.append(float(l[nxt] - o[-2]))
         else:
             head = l[: tok.eos + 1] / temp
             p = np.exp(head - head.max())
@@ -109,7 +118,7 @@ def sample(model, tok, hdr_ids, max_new=220, temp=0.0, rng=None):
         if nxt == tok.eos:
             break
         ids.append(nxt)
-    return tok.decode_text(ids[len(hdr_ids):] + [tok.eos])
+    return tok.decode_text(ids[len(hdr_ids):] + [tok.eos]), gs
 
 
 def quantize_rows(arr):
@@ -206,11 +215,14 @@ def main():
 
     export(model, tok, dict(tier=a.tier), a.out)
 
-    # A greedy parity case, saved for weave.js to check itself against.
+    # A greedy parity case, saved for weave.js to check itself against,
+    # with the python top-2 margin per emitted byte — the near-tie
+    # evidence parity.js needs to grade a divergence honestly.
     ex, eh = train_rows[0]
     ids = ex[:eh]
+    greedy, gaps = _gen(model, tok, ids)
     with open(os.path.join(a.out, "parity.json"), "w") as f:
-        json.dump(dict(header=ids, greedy=sample(model, tok, ids),
+        json.dump(dict(header=ids, greedy=greedy, gaps=gaps,
                        text=tok.decode_text(ex[eh:]),
                        config=dict(d=model.d, n_layer=model.L, n_head=model.H,
                                    ctx=a.ctx)), f)

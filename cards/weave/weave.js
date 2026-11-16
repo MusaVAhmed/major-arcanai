@@ -102,6 +102,16 @@
       for (let m = 0; m < rows; m++) s += a[m] * w[m * cols + j];
       out[j] = s;
     }
+    return out;
+  }
+
+  function matvecT(a, w, rows, cols, out) { /* w stored (cols,rows): out[j] = Σ_m a[m]·w[j·rows+m] — the tied head reads wte (V,d) this way */
+    for (let j = 0; j < cols; j++) {
+      let s = 0;
+      for (let m = 0; m < rows; m++) s += a[m] * w[j * rows + m];
+      out[j] = s;
+    }
+    return out;
   }
 
   function newState(cfg) {
@@ -158,7 +168,7 @@
     }
     st.pos += 1;
     ln(x, P.lnfg, P.lnfb, x1);
-    matvec(x1, P.wte, d, M.meta.tok.vocab_size, tmp.logits); // tied head
+    matvecT(x1, P.wte, d, M.meta.tok.vocab_size, tmp.logits); // tied head, wte is (V,d)
     return tmp.logits;
   }
 
@@ -206,4 +216,19 @@
     if (!W.ready) return Promise.resolve(null);
     try { return Promise.resolve(reading(deal)); } catch (e) { return Promise.resolve(null); }
   }
+
+  /* dev hook: logits after feeding an exact token sequence (parity.js) */
+  W.__M = () => M;
+  W.__logitsAfter = function (ids) {
+    const cfg = M.meta.config, P = M.P, V = M.meta.tok.vocab_size;
+    const tmp = {
+      x: new Float32Array(cfg.d), x1: new Float32Array(cfg.d),
+      qkv: new Float32Array(4 * cfg.d), ao: new Float32Array(cfg.d),
+      sc: new Float32Array(cfg.ctx), ff: new Float32Array(4 * cfg.d),
+      logits: new Float32Array(V),
+    };
+    const st = newState(cfg);
+    for (const id of ids) step(id, st, P, cfg, tmp);
+    return Array.from(tmp.logits);
+  };
 })();

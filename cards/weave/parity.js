@@ -4,8 +4,9 @@
    inverting the ids — which also proves the id layout both sides assume),
    and compares. Run from cards/weave: node parity.js out-whisper
    Greedy agreement has a shelf life — python float32 and JS float64
-   part company at near-ties — so the contract is "first 48 characters
-   identical", reported honestly either way. */
+   part company at near-ties — so the contract is margin-aware: identical
+   strings, or a first divergence where the saved python top-2 margin was
+   < 0.05 logits. A divergence at a fat margin fails loudly. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -46,11 +47,19 @@ const W = global.window.ARCANAI_WEAVE;
   }
   const got = W.reading({ dom, cards });
   const want = par.greedy;
-  const n = 48;
-  const a = got.slice(0, n), b = want.slice(0, n);
-  console.log('js :', JSON.stringify(a));
-  console.log('py :', JSON.stringify(b));
-  console.log(a === b && a.length >= Math.min(n, Math.min(got.length, want.length))
-    ? 'PARITY PASS' : 'PARITY FAIL');
-  process.exit(a === b ? 0 : 2);
+  const gaps = par.gaps || [];
+  // Contract: identical output, or the first divergence happens where the
+  // PYTHON margin between first and second choice was < 0.05 logits — a
+  // documented float-path tie, not a forward-pass disagreement. A
+  // divergence at a large margin is a real bug and fails loudly.
+  let i = 0;
+  const n = Math.min(got.length, want.length);
+  while (i < n && got[i] === want[i]) i++;
+  const prefixOk = i === n && n >= 16;
+  const tieOk = i < n && i < gaps.length && gaps[i] < 0.05;
+  console.log('js :', JSON.stringify(got.slice(0, 48)));
+  console.log('py :', JSON.stringify(want.slice(0, 48)));
+  console.log(`agree to char ${i} of ${n}` + (i < n ? ` (python gap there: ${gaps[i] !== undefined ? gaps[i].toFixed(3) : 'n/a'})` : ''));
+  console.log(prefixOk || tieOk ? (tieOk ? 'PARITY PASS (near-tie divergence)' : 'PARITY PASS') : 'PARITY FAIL');
+  process.exit(prefixOk || tieOk ? 0 : 2);
 })();

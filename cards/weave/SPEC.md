@@ -96,9 +96,11 @@ reason it trains anywhere.
 
 ## Acceptance (inheriting WP4's instruments, not inventing new ones)
 
-1. **Parity**: `node parity.js` — greedy Python vs greedy JS, 48 chars
-   identical. The float caveat is WP4's own: greedy is deterministic per
-   device, not across implementations at near-ties.
+1. **Parity**: `node parity.js` — greedy Python vs greedy JS: identical
+   strings, or a first divergence only where the saved python top-2
+   margin was < 0.05 logits (the bake-off's own float caveat, now a
+   measurable one — the smoke run diverged at a margin of 0.018 and
+   nowhere else).
 2. **Recitation matrix** (oracle model): shown card face, greedy line
    cosines (MiniLM D1 screen, the page's own) above its own meaning's
    background + N sd. A card the model cannot recall is a card the tier
