@@ -1,0 +1,43 @@
+# domain-tab-question — one per line, `#` comments allowed.
+# The first ten per-domain lines include every question the WP4 bake-off
+# asks (reader_bench.html CASES), so weave and the bake-off share one
+# question bank. Domains are attune.js's six anchors; `none` is the
+# no-question deal.
+work	should I quit my job
+work	am I wasting my career
+work	will the boss back off
+work	should I ask for a raise
+work	is this job going anywhere
+work	will the new job be any better
+work	should I go freelance
+love	is he cheating on me
+love	should I text him back
+love	does he still think about me
+love	is she the one
+love	will he come back
+love	should I open up to her
+love	am I love bombing myself
+love	dating is exhausting, help
+kin	how do I say no to my sister without a row
+kin	will mum ever approve
+kin	should I forgive my brother
+kin	are these friends worth it
+kin	my family is too much right now
+kin	should I call my father
+loss	will the grief ever ease off
+loss	did it mean anything
+loss	am I over him already
+loss	why do I miss someone I never had
+loss	what am I actually mourning
+change	should I move to another city
+change	is leaving the right call
+change	should I go back to uni
+change	am I running away again
+change	what if I regret staying
+self	why do I feel stuck all the time
+self	am I the problem
+self	am I looking after myself
+self	what do I actually want
+self	am I doing this for the attention
+self	why am I so tired of everything
+self	am I becoming my mother

@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- weave_demo.html — dev page: draws a few fixed spreads through the
+     real weave.js and prints what the small voice says. Not shipped; the
+     shipped integration is the same call behind the verdict slot. -->
+<html>
+<head><meta charset="utf-8"><title>weave — the small voice</title>
+<style>
+  body { font: 15px Georgia, serif; background: #141311; color: #e9e3d3;
+         max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+  .r { border-top: 1px solid #3b372c; padding: .8rem 0; font-style: italic; }
+  .h { color: #9a927f; font-style: normal; font-size: .8rem; }
+  .t { color: #9a927f; }
+</style></head>
+<body>
+<h3>weave — the small voice <span class="t" id="st">booting…</span></h3>
+<div id="out"></div>
+<script src="weave.js"></script>
+<script>
+const DEALS = [
+  { dom: 'work', cards: [{ i: 31, seat: 'The Situation', rev: false },
+                         { i: 39, seat: 'The Advice', rev: false }] },
+  { dom: 'love', cards: [{ i: 3, seat: 'Present', rev: true }] },
+  { dom: 'loss', cards: [{ i: 43, seat: 'Past', rev: false },
+                         { i: 33, seat: 'Present', rev: false },
+                         { i: 25, seat: 'Future', rev: true }] },
+  { dom: 'none', cards: [{ i: 0, seat: '<noseat>', rev: false }] },
+];
+const out = document.getElementById('out');
+(async () => {
+  const t0 = performance.now();
+  const ok = await ARCANAI_WEAVE.boot((new URLSearchParams(location.search).get('model') || 'out-whisper') + '/');
+  document.getElementById('st').textContent = ok ? `ready in ${(performance.now() - t0) | 0} ms` : 'unavailable';
+  if (!ok) return;
+  const names = null; // names arrive with the page integration
+  for (const deal of DEALS) {
+    const t1 = performance.now();
+    const line = ARCANAI_WEAVE.reading(deal);
+    const ms = (performance.now() - t1) | 0;
+    const div = document.createElement('div');
+    div.className = 'r';
+    div.textContent = line || '(null)';
+    const h = document.createElement('div');
+    h.className = 'h';
+    h.textContent = `${deal.dom} · ${deal.cards.length} card(s) · ${ms} ms`;
+    out.append(div, h);
+  }
+})();
+</script>
+</body></html>
