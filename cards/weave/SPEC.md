@@ -138,7 +138,29 @@ reason it trains anywhere.
 | `train.py` | Adam, cosine, sample-eval, int8-row export, parity case |
 | `weave.js` | the runtime: boot/reading/readingAsync, null on any failure |
 | `parity.js` | node harness: JS greedy vs python greedy |
+| `recite.py` | the recitation matrix over the export (word-bag instrument) |
 | `weave_demo.html` | four fixed spreads, one script tag, no build step |
+
+## Result, phase A (whisper tier, 8,000 steps, 1.35M params, 1.38 MB)
+
+- **Parity: PASS** — python and JS greedy agree to the whole string, no
+  tie divergence at all (the underfit model had diverged at a 0.018
+  margin; a converged model's margins are fat, as it should be).
+- **Recitation: 91/92.** The memorisation floor exists and 1.4 million
+  parameters clear it with room. The single miss — The Slice rev
+  bleeding "Stop asking for signs" from High Priestess rev mid-line —
+  is exactly the per-card smear the SPEC risk list predicted, and the
+  word-bag instrument names the culprit.
+- **Speed**: 20 ms boot; a full 5-card Cross read in 479 ms on
+  single-threaded node, no GPU, no runtime — and that is the **whole
+  line**, which the bake-off never achieved at any latency (their 400 ms
+  criterion was first-byte; a phone's were 1.2–3.5 s and still typing).
+  Per emitted byte the voice costs ~4 ms.
+- The oracle model also **mixes pools between a card's own faces**
+  (Hermit rev emitting Hermit up's first line) — a phase-B corpus
+  note, not a capacity finding: the fact is in there, it said the
+  wrong one of its own two.
+
 
 Shipped integration, when it happens, is the CLAUDE.md three-edit rule:
 `weave.js` + exported weights beside `attune.js`, one `<script>` tag,
