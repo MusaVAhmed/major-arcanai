@@ -104,34 +104,95 @@ def main():
     ap.add_argument("--out", default=os.path.join(HERE, "weave.jsonl"))
     ap.add_argument("--n", type=int, default=8000)
     ap.add_argument("--seed", type=int, default=20261115)
+    ap.add_argument("--voicings", default=None,
+                    help="gate-approved voicings.json: build the phase-B mix "
+                         "instead of the pure recitation oracle")
+    ap.add_argument("--recites", type=int, default=1500,
+                    help="phase-B mode: how many phase-A recites to keep in "
+                         "the mix — the recitation floor stays load-bearing "
+                         "but must not drown the voice")
     a = ap.parse_args()
 
     deck = load_deck()
     seats = load_seats()
     questions = load_questions()
     rng = random.Random(a.seed)
-    n_q = sum(1 for _ in questions)
-    assert n_q > 0
+    assert questions
 
-    written = 0
+    def sample_dom(r):
+        return "none" if r.random() < 0.3 else r.choice(
+            ["work", "love", "kin", "loss", "change", "self"])
+
+    written = skip = 0
     with open(a.out, "w") as f:
-        for _ in range(a.n):
-            r = rng.random()
-            n_cards = 1 if r < 0.2 else 3 if r < 0.5 else 5 if r < 0.9 else 10
-            dom = "none" if rng.random() < 0.3 else rng.choice(
-                ["work", "love", "kin", "loss", "change", "self"])
-            hand = make_hand(rng, deck, seats, n_cards)
-            text = oracle_text(rng, hand)
-            if len(text.encode("utf-8")) > 480:
-                continue  # would not fit the ctx with its header
-            rec = {
-                "dom": dom,
-                "cards": [[c["name"], s, fv] for c, s, fv in hand],
-                "text": text,
-            }
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-            written += 1
-    print(f"wrote {written} hands -> {a.out}", file=sys.stderr)
+        if a.voicings:
+            voicings = json.load(open(a.voicings))
+            V = {(int(i), face): lines
+                 for i, d in voicings.items() for face, lines in d.items()}
+
+            def emit(hand, dom, text, recite=False):
+                nonlocal written, skip
+                if len(text.encode("utf-8")) > 480:
+                    skip += 1
+                    return
+                rec = {"dom": dom,
+                       "cards": [[c["name"], s, fv] for c, s, fv in hand],
+                       "text": text}
+                if recite:
+                    rec["recite"] = True
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                written += 1
+
+            # 1. voice lines: one face, its approved re-voicings, dom sampled
+            for (i, face), lines in sorted(V.items()):
+                for t in lines:
+                    emit([(deck[i], "<noseat>", face)], sample_dom(rng), t)
+
+            # 2. deal lines: real hands, text = the dealt faces' re-voicings
+            #    concatenated IN SEAT ORDER — phase A concatenated in draw
+            #    order and got away with it because facts are order-free;
+            #    phase B teaches the order the page displays.
+            for _ in range(a.n):
+                r = rng.random()
+                n_cards = 1 if r < 0.12 else 3 if r < 0.5 else 5 if r < 0.9 else 10
+                hand = make_hand(rng, deck, seats, n_cards)
+                mode = str(n_cards) if str(n_cards) in seats else "5"
+                # seats are already assigned inside hand (make_hand shuffled
+                # them); re-shuffling here invents a second, disagreeing
+                # permutation — read them, do not re-derive them
+                by_seat = {c[1]: c for c in hand}
+                parts = [rng.choice(V[(card["index"], face)])
+                         for sname in [s["name"] for s in seats[mode]]
+                         if sname in by_seat
+                         for card, _s, face in [by_seat[sname]]]
+                if not parts:  # 1-card hands seat as <noseat>
+                    card, _s, face = hand[0]
+                    parts = [rng.choice(V[(card["index"], face)])]
+                emit(hand, sample_dom(rng), " ".join(parts).strip())
+
+            # 3. the recitation floor, kept, down-weighted
+            oracle_rng = random.Random(a.seed + 1)
+            made = 0
+            while made < a.recites:
+                r = oracle_rng.random()
+                n_cards = 1 if r < 0.2 else 3 if r < 0.5 else 5 if r < 0.9 else 10
+                hand = make_hand(oracle_rng, deck, seats, n_cards)
+                text = oracle_text(oracle_rng, hand)
+                if len(text.encode("utf-8")) > 480:
+                    continue
+                emit(hand, sample_dom(oracle_rng), text, recite=True)
+                made += 1
+        else:
+            for _ in range(a.n):
+                r = rng.random()
+                n_cards = 1 if r < 0.2 else 3 if r < 0.5 else 5 if r < 0.9 else 10
+                hand = make_hand(rng, deck, seats, n_cards)
+                text = oracle_text(rng, hand)
+                if len(text.encode("utf-8")) > 480:
+                    continue  # would not fit the ctx with its header
+                emit(hand, sample_dom(rng), text)
+    extra = f", {skip} too long skipped" if skip else ""
+    print(f"wrote {written} hands -> {a.out}{extra}", file=sys.stderr)
 
 
 if __name__ == "__main__":
