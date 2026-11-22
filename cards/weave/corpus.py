@@ -111,6 +111,12 @@ def main():
                     help="phase-B mode: how many phase-A recites to keep in "
                          "the mix — the recitation floor stays load-bearing "
                          "but must not drown the voice")
+    ap.add_argument("--weave", default=None,
+                    help="gate-approved weavings.json: add connected "
+                         "multi-card readings to the mix (phase C)")
+    ap.add_argument("--weave-repeat", type=int, default=8,
+                    help="how many copies of each weaving — these are the "
+                         "scarcest, most deliberate rows in the mix")
     a = ap.parse_args()
 
     deck = load_deck()
@@ -182,6 +188,20 @@ def main():
                     continue
                 emit(hand, sample_dom(oracle_rng), text, recite=True)
                 made += 1
+
+            # 4. phase C: the weavings — connected prose, hand-built, gated;
+            #    the only rows that teach a sentence to END a card rather
+            #    than merely contain it
+            if a.weave:
+                ws = json.load(open(a.weave))
+                for rec in ws:
+                    n_cards = len(rec["hand"])
+                    mode = str(n_cards)
+                    seat_names = [s["name"] for s in seats[mode]]
+                    for _ in range(a.weave_repeat):
+                        hand = [(deck[i], seat_names[k], f)
+                                for k, (i, f) in enumerate(rec["hand"])]
+                        emit(hand, rec.get("dom", "none"), rec["text"])
         else:
             for _ in range(a.n):
                 r = rng.random()
