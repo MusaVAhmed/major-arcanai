@@ -199,13 +199,23 @@
     for (const id of ids) step(id, st, P, cfg, tmp);
     const start = ids.length;
     const cap = Math.min(cfg.ctx - 1, start + W.config.maxNew);
-    while (st.pos <= cap) {
+    // Stopping rule, phase B: the model knows one voicing per dealt card and
+    // voicings run 1–3 sentences (measured: ~2 per card in the corpus), so
+    // stop at the first whitespace after 2×cards sentences — past that edge
+    // greedy overruns into babble the model cannot eos its way out of.
+    const stopSent = Math.max(2, 2 * (deal.cards ? deal.cards.length : 1));
+    let sentc = 0, stopNow = false;
+    while (st.pos <= cap && !stopNow) {
       const lg = tmp.logits;
       let best = -Infinity, bi = -1;
       for (let j = 32; j < 127; j++) if (lg[j] > best) { best = lg[j]; bi = j; }
       if (lg[eos] > best || bi < 0) break;
       step(bi, st, P, cfg, tmp);
       ids.push(bi);
+      const ch = String.fromCharCode(bi);
+      if (ch === '.' || ch === '!' || ch === '?') sentc++;
+      else if ((ch === ' ' || bi === 10) && sentc >= stopSent &&
+               ".!?".includes(String.fromCharCode(ids[ids.length - 2]))) stopNow = true;
     }
     const bytes = new Uint8Array(ids.slice(start));
     try { return new TextDecoder('utf-8', { fatal: false }).decode(bytes); }

@@ -167,3 +167,35 @@ Shipped integration, when it happens, is the CLAUDE.md three-edit rule:
 and `#verdict` prefers `ARCANAI_WEAVE.reading(deal)` over the template
 line when it is non-null — the same null-fallback contract every
 sibling script already lives by.
+
+## Result, phase B (voice mix, both tiers, Nov 22)
+
+Both tiers trained on the 4,488-row voice mix: 736 gate-approved
+voicings + 2,252 seat-ordered deal lines + 1,500 down-weighted recites
+(~1:3 voice:recite — the floor kept, not allowed to drown the voice).
+Parity PASS on both tiers, and the JS stop rule (stop at sentence
+boundary once 2×cards sentences are out — the measured sentences-per-
+voicing in the corpus) keeps greedy from overrunning the memorised edge.
+
+**Rewrite matrix over all 92 faces** (`eval_b.py`, bake-off instruments):
+
+| tier | flagged faces | COPY | OFF-drift | exact known strings |
+|---|---|---|---|---|
+| whisper-b (1.35M) | 40 | 8 | 6 | 17 |
+| voice-b (4.94M, 5.00 MB) | 30 | 29 | **1** | **81** |
+
+How to read voice-b's 29 COPYs: they are not source recitations — every
+flagged output is a known approved string; the 0.70 word-bag instrument
+cannot tell recite from authored paraphrase, only distance to the
+source. The honest summary of greedy voice-b: **it picks among the eight
+voicings per face and delivers them flawlessly** — 81/92 exact known
+strings, one off-card drift in 92, zero malformed prose, zero invented
+facts. That is the rewrite tier doing exactly what phase B asked: the
+paraphrase lives in the corpus (mine, gated); the model's contribution
+is selection, seat-ordered delivery, and 2.7 s/line on a single thread
+beside a 23 MB embedder that takes longer to boot.
+
+The unfinished case is **multi-card weaving**: fresh 5-card hands
+sometimes enter a neighbouring memorised trajectory (a Receipts line
+wandering into a Tower hand, recovered by the next seat). The answer is
+phase C — hand-written weavings of real triples — not more parameters.

@@ -23,9 +23,8 @@ import sys
 import numpy as np
 
 import corpus as C
-from model import GPT
 from tok import Tok
-from train import load_model, sample
+from train import load_export, sample
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORDS = re.compile(r"[a-z']+")
@@ -41,9 +40,9 @@ def main():
     ap.add_argument("--cap", type=int, default=120)
     a = ap.parse_args()
 
-    tok = Tok()
+    tok = Tok([c["name"] for c in C.load_deck()])
     rng = np.random.default_rng(0)
-    model, cfg = load_model(a.out_dir, rng, tok.vocab_size)
+    model = load_export(a.out_dir, tok, rng)
     deck = C.load_deck()
     all_voicings = json.load(open(os.path.join(HERE, "voicings.json")))
     shipped = {f"{i}|{f}": set(C.pool_for(c, f)) for i, c in enumerate(deck)
@@ -59,8 +58,8 @@ def main():
     heads = {}
     for i, c in enumerate(deck):
         for face in ("up", "rev"):
-            heads[f"{i}|{face}"] = tok.header("work", [
-                (tok.card_ids[c["name"]], tok.seat_ids["The Situation"], face)])
+            heads[f"{i}|{face}"] = tok.header(
+                "work", [(c["name"], "The Situation", face)])
 
     results, fails = {}, []
     for i, c in enumerate(deck):
@@ -105,7 +104,9 @@ def main():
         for face in ("up", "rev"):
             r = results[f"{i}|{face}"]
             mark = "X " if r["flags"] else "  "
-            print(f"{mark}{c['name']:>20}  {face}  {r['cov']:.2f}  {r['line'][:88]}")
+            flags = (" [" + ",".join(r["flags"]) + "]") if r["flags"] else ""
+            print(f"{mark}{c['name']:>20}  {face}  {r['cov']:.2f}  "
+                  f"{r['line'][:80]}{flags}")
     copy_f = sum(1 for r in results.values() if any(x.startswith('COPY') for x in r['flags']))
     off_f = sum(1 for r in results.values() if any(x.startswith('OFF') for x in r['flags']))
     parrots = sum(1 for k, r in results.items() if r['line'] in

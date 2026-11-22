@@ -1,0 +1,95 @@
+                  card  face  cov   line
+X    The Zero of Fucks  up  0.12  Your planted is a choice, what a clearrger and. The  light a spinning is yours.  [OVER20]
+     The Zero of Fucks  rev  0.24  Your indifference has a refresh button on it. That is not intuition, that is the
+     The Burned Bridge  up  0.17  Not every connection deserves rescuing, least of all the guilty one. Some things
+X    The Burned Bridge  rev  0.74  You lit this one too soon. Some bridges deserve an apology and a rebuild. Burnou [COPY(0.74),OVER20]
+X      The Two of Deez  up  0.16  Stabbor costs a fast conviing is on every a pprovacte. Caring the drafte. The br [OVER20]
+X      The Two of Deez  rev  1.00  Fishing for validation again. Deez are not for external approval. [COPY(1.00)]
+            The Lovers  up  0.20  This one goes deep enough to survive an honest audit.
+            The Lovers  rev  0.22  Clean up the blowup before you schedule the next suppression.
+       The Iced Coffee  up  0.11  B. auken ean in the soil army the spirism is.
+       The Iced Coffee  rev  0.33  Yhe camel one thing that stops and calling it a plan. Tuesday.
+                 Death  up  0.63  Transformation through endings. Let the old version of you go. Pleasure is not a
+                 Death  rev  0.16  Cling metreal onths exratived attachmeent. ship ending. for the meeting habit sl
+X             The Moon  up  1.00  Things are unclear. Trust your intuition and wait. [COPY(1.00)]
+              The Moon  rev  0.10  That was the eruption. The village needs honesty now, not cork.
+X             Strength  up  1.00  Inner calm and patience will carry you through. [COPY(1.00)]
+              Strength  rev  0.13  The lights are up and you are mid-conversation with the cleaner. You started bel
+          Perseverance  up  0.22  Living for a life you would not actually attend.
+X         Perseverance  rev  0.06  You keep polishing a habit and calling it a plan. The momeany gresn's dielt. . Y [OVER20]
+               The Tea  up  0.20  The reliting before too of you. The . Salreading the afternoon. The int good lay
+X              The Tea  rev  0.05  The cup overflowed and everyone nearby got a taste. Tend the tender, and be one  [OVER20]
+X       The Last Straw  up  0.29  The exit exists. You've just memorized the wallpaper. [OFF->The Dead End Job (rev)(0.35)]
+X       The Last Straw  rev  0.26  The limit moved again, quietly, like it has been trained. The vote is in and you [OVER20]
+          The Audacity  up  0.09  Be both begin and before you are hyader, one it is.
+          The Audacity  rev  0.22  Nerve billed as strategy; the invoice arrives shortly. A door nobody toe thughts
+X      The Breast Pump  up  1.00  You're overgiving. Rest and refill yourself. [COPY(1.00)]
+X      The Breast Pump  rev  0.24  Refuse one of elate the merans on the makes not as arrivals a before. Sacrifice  [OVER20]
+            The Bottle  up  0.08  The unsaid has been fermenting. Taste test it before it chooses a night.
+X           The Bottle  rev  0.14  Taking the weather personally. The wheel was never aimed at you. The fog is self [OFF->The Algorithm (rev)(0.37)]
+              The Taco  up  0.62  Find joy in small pleasures. The up op.
+X             The Taco  rev  0.16  The comfow is of doing a job inempressed compasince you to. The cocoon business  [OVER20]
+X    The Gold Shoulder  up  0.24  The shine is expensive and it never once helps carry anything. You are doing the [OVER20]
+X    The Gold Shoulder  rev  0.16  The shine is expensive and it never once helps carry anything. You keep resettin [OVER20]
+X            The Child  up  0.23  Your inner child is running the meeting. p inftorce. Sleep first. Spiral second. [NAME]
+X            The Child  rev  0.48  Your inner child is running the meeting. Adult supervision required. Forced beh  [NAME,OVER20]
+            The Mother  up  0.10  The easy fair weathers, the real ones stay for the bad venue.
+X           The Mother  rev  0.11  The saint is furious and the halo is crooked. ere and tending has ben to reormat [OVER20]
+          The Mom Boss  up  0.69  You're doing too much. Let go of control. You're overgiving. Rest and refill you
+          The Mom Boss  rev  0.21  Help declined, burnout accepted, terms not negotiated. Tactual hodist is going t
+X           The Hermit  up  0.10  Decaf energy. You're running on fumes and calling it fine. [OFF->The Iced Coffee (rev)(0.48)]
+            The Hermit  rev  0.11  Hiding has been wearing solitude's coat and it fits badly. Some things deserved 
+          The Gardener  up  0.00  You drowned it in attention. Starve it slightly and try again.
+          The Gardener  rev  0.11  Tend your inner wisgning. The happening a bad drafine.
+      The Cheese Fries  up  0.16  You deserve enough, not thegerown arverded, the same more than thing door. Perfo
+X     The Cheese Fries  rev  0.05  Enverything is a treat now, which is how the treats stopped working. Some people [OVER20]
+             The Slice  up  0.22  Release is a skill and this is your practised week.
+             The Slice  rev  0.26  You cut the wrong thread and you have free mintage. o is a soutdachmenting. You 
+X          The Empress  up  0.05  You keep signing every draft out of the five you made. The quiet knowing is the  [OVER20]
+           The Empress  rev  0.20  Nothing feels finished and everything feels borrowed. Both are the block.
+    The Chicken Nugget  up  0.42  On bad days, low effort is a form of love. Take the low effort.
+    The Chicken Nugget  rev  0.22  Vary the became a strategy that only avoids. Make something deliberately ugly th
+               The Sun  up  0.27  Feeling like yourself again counts as news. complaing  the whole prescription.
+X              The Sun  rev  0.14  The smile is load bearing and the weather underneath is yours. The spill is not  [OVER20]
+    The High Priestess  up  0.29  The answer arrived before the question finished forming.
+    The High Priestess  rev  0.68  Ignoring what you already know, outsourcing the decision, a secret kept too long
+X     The Zoom Meeting  up  1.00  Disconnect from the fake, reconnect with real life. [COPY(1.00)]
+      The Zoom Meeting  rev  0.31  Hiding in the gallery view of your own life. Four apps, zero contacts.
+X       The Influencer  up  0.11  The photo is one of the hande is choice revently. the p. ton, be one mires. That [OVER20]
+        The Influencer  rev  0.12  The performance has excellent reviews and no audience present. The measure is fu
+  The Life of the Party  up  0.31  Outward, glittering, and one glass deep in private. Open the other oweher things
+X The Life of the Party  rev  0.10  The taking the weather personally. The wheel was never aimed at you. [OFF->The Algorithm (rev)(0.43)]
+       The Last Hurrah  up  0.64  A final celebration before an ending. The number was called twice.
+X      The Last Hurrah  rev  0.21  The ending happened. The queue at the door is denial. You said whatever. Tho is  [OVER20]
+      The Dead End Job  up  0.12  You know every crack in the ceiling and none of the future. The map is fog, the 
+X     The Dead End Job  rev  0.14  Sleping to avoid it, oversleeping, tired no matter how long you stay lying down. [OFF->The Nap (rev)(0.42),OVER20]
+X  The Fiddle-Leaf Fig  up  0.06  The to-do list is a poor physician. Look away once. The invoice is real, the soi [OVER20]
+   The Fiddle-Leaf Fig  rev  0.10  You keep ending it on Thursdays and unending it by Friday.
+              The Star  up  0.30  Recovery looks like an ordinary Tuesday with hope in it.
+X             The Star  rev  0.05  Help declined, burnout accepted, terms not negotiated. The rules exist, the rent [OVER20]
+             The Devil  up  0.09  You did not relapse by accident, you scheduled it and blamed Tuesday.
+             The Devil  rev  0.22  The cuffs are on, voluntarily, and you kept the only key. Depleted devotion is g
+  The Fair Weather Friend  up  0.09  Count the arrivals, not the replies. Ask nobody whether you are enough.
+X The Fair Weather Friend  rev  0.16  You cancelled on the hard week too, once or twice, allegedly never. Forward, sai [OVER20]
+X            The Tower  up  1.00  Breakdown leads to breakthrough. [COPY(1.00)]
+             The Tower  rev  0.14  You cold resping the corectly and you think. Depleted devotion is generous-looki
+X      The Drama Queen  up  0.41  You have told this one often enough for it to have a fan club. The dark stretch  [OVER20]
+X      The Drama Queen  rev  0.15  An authority that never bends is just a wobble with denial. Seasooning for the g [OVER20]
+X The Last Flying Fuck  up  0.27  Watch it go with genuine interest, the way you watch weather leave a day early.  [OVER20]
+X The Last Flying Fuck  rev  0.06  You dropped the right bag and kept the receipt. : You keep pouring from a dry we [OVER20]
+               The Nap  up  0.22  Your body filed the request weeks ago. Approve it.
+               The Nap  rev  0.00  The tow Chelebit loud and wats eat of aut a eut alonity a holding a frt.
+         The Algorithm  up  0.18  Tings and the weather you, the p writate cermanntes. Step it collapse is secondu
+         The Algorithm  rev  0.25  That was randomness doing random things, and you filed it as feedback.
+          The Receipts  up  0.08  You want to be correct more than you want the evening. Check the exchange rate.
+X         The Receipts  rev  0.70  Keeping score for a war you claim not to be fighting. Screenshots aren't intimac [COPY(0.70)]
+          The Landlord  up  0.53  There are terms, and they apply to you too. m. anyway, saland one who for this o
+X         The Landlord  rev  0.15  The regret and it life is a work and the let that stays up. Fress start, and thi [OVER20]
+X     The Waiting Room  up  0.06  The cycle spins whether you feed it or not. Step off anyway. You claim you don't [OFF->The Zero of Fucks (rev)(0.28),OVER20]
+      The Waiting Room  rev  0.33  The permission was never coming. The paperwork was you. The door is open. You ar
+       The Slow Cooker  up  0.00  The slow version is the version that stays done. refling All price tag, no roots
+       The Slow Cooker  rev  0.17  You wanted Tuesday's result by Friday and the pot is not negotiable.
+X          The Apology  up  0.11  rile coked and the life it life sortled time. the truth suderfars, rand this one [OVER20]
+           The Apology  rev  0.22  Being forgiven too early is its own small pressure.
+
+flags: 40  (COPY 8, OFF 6) of 92; exact-known-string outputs (parrots): 17

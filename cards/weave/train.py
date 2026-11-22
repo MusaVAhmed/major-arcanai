@@ -164,6 +164,24 @@ def export(model, tok, cfg, out_dir):
     print(f"export: {n_params/1e6:.2f}M params, weights.bin {size/1e6:.2f} MB")
 
 
+def load_export(out_dir, tok, rng=None):
+    """Mirror of export(): rebuild a GPT from meta.json + dequantize."""
+    meta = json.load(open(os.path.join(out_dir, "meta.json")))
+    c = meta["config"]
+    model = GPT(rng or np.random.default_rng(0), tok.vocab_size, ctx=c["ctx"],
+                d=c["d"], n_layer=c["n_layer"], n_head=c["n_head"])
+    with open(os.path.join(out_dir, "weights.bin"), "rb") as f:
+        b = f.read()
+    for e in meta["entries"]:
+        raw = b[e["off"]:e["off"] + e["nbytes"]]
+        if e["dtype"] == "f32":
+            model.p[e["name"]] = np.frombuffer(raw, np.float32).reshape(e["shape"]).copy()
+        else:
+            q = np.frombuffer(raw, np.int8).reshape(e["shape"])
+            model.p[e["name"]] = q * np.array(e["scale"], np.float32)[:, None]
+    return model
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", default=os.path.join(HERE, "weave.jsonl"))
