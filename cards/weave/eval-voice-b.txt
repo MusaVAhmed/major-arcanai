@@ -1,0 +1,96 @@
+                  card  face  cov   line
+     The Zero of Fucks  up  0.00  Nothing to mover started which honesty it, not fine, the kfor it is smore.
+     The Zero of Fucks  rev  0.00  Fine. Everything is fine. Say fine one more time, slower.
+     The Burned Bridge  up  0.00  Cut the cord. The bridge was leaning anyway.
+X    The Burned Bridge  rev  1.00  You lit this one too soon. Some bridges deserve an apology and a rebuild.
+X      The Two of Deez  up  1.00  Stand confidently on your own. You don't need validation.
+X      The Two of Deez  rev  1.00  Fishing for validation again. Deez are not for external approval.
+            The Lovers  up  0.20  This one goes deep enough to survive an honest audit.
+            The Lovers  rev  0.14  Close in metres, distant in every other unit.
+       The Iced Coffee  up  0.44  Get up, open the laptop, do the dread thing first.
+       The Iced Coffee  rev  0.36  The third coffee is treating a symptom and calling it a cure.
+X                Death  up  1.00  Transformation through endings. Let the old version of you go.
+                 Death  rev  0.18  The cocoon business is less scenic than the funeral, but it is that.
+X             The Moon  up  1.00  Things are unclear. Trust your intuition and wait.
+X             The Moon  rev  1.00  The fog is self-made. Stop mistaking anxiety for intuition.
+              Strength  up  0.12  Endure by softness. Brute force is for doors.
+              Strength  rev  0.25  The lion is uniture everyone on a drivenwer.
+X         Perseverance  up  1.00  Late in a long project, months of job hunting, studying, wanting to quit near the finish
+          Perseverance  rev  0.00  You keep polishing a habit and calling it a plan.
+X              The Tea  up  1.00  Truth is being revealed. Stay grounded.
+               The Tea  rev  0.11  The cup overflowed and everyone nearby got a taste.
+        The Last Straw  up  0.36  Your limit has a door in it now, and it opens outward.
+        The Last Straw  rev  0.22  Almost gone is a room you have furniture in.
+          The Audacity  up  0.30  Say the expensive thing first. The bill is smaller than the fear.
+          The Audacity  rev  0.29  Forward, said the compass, pointing at the wall.
+X      The Breast Pump  up  1.00  You're overgiving. Rest and refill yourself.
+       The Breast Pump  rev  0.33  Some people you help are actually bills you keep paying.
+            The Bottle  up  0.00  Emotion leaves a trail, and yours is heading for the kitchen at 2am.
+            The Bottle  rev  0.17  The unsually arrived the decision was made.
+              The Taco  up  0.20  The good thing costs a few pounds and eleven minutes.
+              The Taco  rev  0.12  Soothing has quietly become stalling with better seasoning.
+X    The Gold Shoulder  up  1.00  Beware of ego and image obsession.
+X    The Gold Shoulder  rev  0.00  Burnout, sleeping badly, too much caffeine and no rest, calling exhaustion a personality
+X            The Child  up  1.00  Nurture your inner child.
+             The Child  rev  0.10  The good thing costs a few pounds and eleven minutes.
+            The Mother  up  0.29  Tend the tender, and be one tonight.
+            The Mother  rev  0.00  Depleted devotion is generous-looking and useless-tasting.
+          The Mom Boss  up  0.57  You're doing too much. Let go of control. Nore tey have been as lid.
+X         The Mom Boss  rev  1.00  Delegation refused, burnout accepted. Put three of the six arms down.
+            The Hermit  up  0.11  Disappear for a proper evening. Return with the answer.
+            The Hermit  rev  0.14  The retreat became the residence, rent-free, light rent-free.
+          The Gardener  up  0.10  You planted in season. That is the whole good news.
+          The Gardener  rev  0.10  Tending now out of guilt is a second watering. Stop.
+      The Cheese Fries  up  0.22  Permission granted, retroactively, by you, for the indulgent thing.
+      The Cheese Fries  rev  0.09  Everything is a treat now, which is how the treats stopped working.
+             The Slice  up  0.22  Release is a skill and this is your practised week.
+             The Slice  rev  0.55  You cut the wrong thread be thing and with the letter fter.
+           The Empress  up  0.14  Make the thing. The thing makes more of you.
+           The Empress  rev  0.00  Comparing drafts again, are we, and losing to the imagination.
+    The Chicken Nugget  up  0.22  Comfort, correctly portioned, is medicine with a short name.
+    The Chicken Nugget  rev  0.25  The routine soothes and shrinks in the same motion.
+               The Sun  up  0.20  The good part is surfacing, and it is not another rumour.
+               The Sun  rev  0.11  The smile is load bearing and the weather underneath is yours.
+    The High Priestess  up  0.22  The instinct is yours, unsourced, correct, and currently underrated.
+X   The High Priestess  rev  1.00  Ignoring what you already know, outsourcing the decision, a secret kept too long.
+X     The Zoom Meeting  up  1.00  Disconnect from the fake, reconnect with real life.
+      The Zoom Meeting  rev  0.40  Nobody in the thread has seen your face this month.
+        The Influencer  up  0.30  Image matters, lightly, the way wrapping paper matters to a gift.
+        The Influencer  rev  0.22  The performance has excellent reviews and no audience present.
+X The Life of the Party  up  1.00  Outward shine can hide inner loneliness.
+  The Life of the Party  rev  0.22  The bit landed and the drive home was not funny.
+X      The Last Hurrah  up  1.00  A final celebration before an ending.
+X      The Last Hurrah  rev  1.00  The party's over and you're still holding the glass. Go home.
+X     The Dead End Job  up  1.00  Don't stay stuck in something meaningless.
+      The Dead End Job  rev  0.00  Comfort is a slow landlord. It raises rent invisibly.
+   The Fiddle-Leaf Fig  up  0.00  Tend the real thing at least as much as the photographed thing.
+X  The Fiddle-Leaf Fig  rev  1.00  All price tag, no roots. Get real or get repotted.
+              The Star  up  0.30  Recovery looks like an ordinary Tuesday with hope in it.
+              The Star  rev  0.50  Hope deferred. Healing isn't linear ovewn loneling who your unirmoration.
+             The Devil  up  0.10  Some cages are just weather and habit sharing a room.
+             The Devil  rev  0.40  Deeper in with excellent explanations.
+  The Fair Weather Friend  up  0.10  Loyalty is a logistics question, mostly, and an attendance one.
+  The Fair Weather Friend  rev  0.25  You cancelled on the hard week too, once or twice, allegedly never.
+X            The Tower  up  1.00  Breakdown leads to breakthrough.
+             The Tower  rev  0.31  You are propping up something that wants to be rubble. Do it properly or let go.
+X      The Drama Queen  up  1.00  Not everything is a crisis. Check the story you're telling yourself.
+       The Drama Queen  rev  0.45  A real thing got waved off as a fuss once too often.
+X The Last Flying Fuck  up  1.00  Watch it go. Some things no longer deserve your energy.
+  The Last Flying Fuck  rev  0.12  You dropped the right bag and kept the receipt.
+               The Nap  up  0.22  Your body filed the request weeks ago. Approve it.
+               The Nap  rev  0.11  You are not resting, you are buffering, and nothing is loading.
+X        The Algorithm  up  1.00  Some wheels turn without you. Play your hand and let the rest spin.
+X        The Algorithm  rev  1.00  Taking the weather personally. The wheel was never aimed at you.
+          The Receipts  up  0.22  The right crowd photo outlives the right reason by almost nothing.
+X         The Receipts  rev  1.00  Keeping score, screenshotting arguments, litigating a friendship, needing to be proved r
+          The Landlord  up  0.33  An authority is anywhere the terms live. Check whose signature is on yours.
+X         The Landlord  rev  1.00  Control dressed up as order. You're the one who won't bend.
+      The Waiting Room  up  0.67  Nothing moves yet. That isn't failure 's  exithre freect.
+X     The Waiting Room  rev  1.00  You could have left the queue an hour ago. Stalling isn't waiting.
+       The Slow Cooker  up  0.18  Do the twelve minutes properly and let the months do their unimpressed work.
+X      The Slow Cooker  rev  1.00  You cranked the heat to finish sooner. It's raw in the middle.
+X          The Apology  up  1.00  Say it plainly, without conditions. Repair starts there.
+           The Apology  rev  0.22  Being forgiven too early is its own small pressure.
+
+flags: 30  (COPY 29, OFF 1) of 92; exact-known-string outputs (parrots): 81
+VOICE-MATRIX-DONE
