@@ -75,7 +75,7 @@ def make_batch(rows, rng, bs, ctx):
 
 
 def adam(model):
-    state = {k: (np.zeros_like(v), np.zeros_like(v), 0) for k, v in model.p.items()}
+    state = {k: [np.zeros_like(v), np.zeros_like(v), 0] for k, v in model.p.items()}
 
     def step_fn(t, lr_t):
         for k, p in model.p.items():
@@ -85,7 +85,28 @@ def adam(model):
             v[:] = 0.999 * v + 0.001 * g * g
             c = 1 - 0.9 ** t, 1 - 0.999 ** t
             p -= lr_t * (m / c[0]) / (np.sqrt(v / c[1]) + 1e-8)
-    return step_fn
+    return step_fn, state
+
+
+def save_ckpt(path, model, state, t, cfg):
+    """A mid-run snapshot: weights, Adam moments, step, and the config
+    it belongs to. The host we train on is a shared host; a run that
+    cannot be stopped cheaply is a run that gets killed expensively."""
+    blob = {k: v for k, v in model.p.items()}
+    for k, (m, v, _) in state.items():
+        blob[f"m.{k}"], blob[f"v.{k}"] = m, v
+    np.savez_compressed(path, step=t, cfg=json.dumps(cfg), **blob)
+
+
+def load_ckpt(path, model, state, cfg):
+    d = np.load(path, allow_pickle=False)
+    if json.loads(str(d["cfg"])) != cfg:
+        raise SystemExit("checkpoint config mismatch — wrong tier/ctx?")
+    for k in model.p:
+        model.p[k] = d[k].astype(model.p[k].dtype)
+        m, v, _ = state[k]
+        state[k] = [d[f"m.{k}"].astype(m.dtype), d[f"v.{k}"].astype(v.dtype), 0]
+    return int(d["step"])
 
 
 def sample(model, tok, hdr_ids, max_new=220, temp=0.0, rng=None):
@@ -193,6 +214,9 @@ def main():
     ap.add_argument("--lr", type=float, default=6e-4)
     ap.add_argument("--warm", type=int, default=100)
     ap.add_argument("--eval-every", type=int, default=250)
+    ap.add_argument("--checkpoint-every", type=int, default=500)
+    ap.add_argument("--resume", action="store_true",
+                    help="continue from OUT/ckpt.npz if present")
     ap.add_argument("--seed", type=int, default=20261115)
     a = ap.parse_args()
 
@@ -212,8 +236,15 @@ def main():
     val_rows.sort(key=lambda r: len(r[0]))
 
     model = GPT(rng, tok.vocab_size, ctx=a.ctx, **TIERS[a.tier])
-    step_fn = adam(model)
-    for t in range(1, a.steps + 1):
+    step_fn, astate = adam(model)
+    cfg = dict(tier=a.tier, ctx=a.ctx)
+    os.makedirs(a.out, exist_ok=True)
+    ckpt = os.path.join(a.out, "ckpt.npz")
+    start = 0
+    if a.resume and os.path.exists(ckpt):
+        start = load_ckpt(ckpt, model, astate, cfg)
+        print(f"resumed from step {start}", flush=True)
+    for t in range(start + 1, a.steps + 1):
         lr = a.lr * min(t / a.warm, 1.0) * 0.5 * (
             1 + math.cos(math.pi * (t / a.steps)))
         X, Y, M = make_batch(train_rows, rng, a.bs, a.ctx)
@@ -230,6 +261,8 @@ def main():
             line = sample(model, tok, ex[:eh])[:160].replace("\n", " ")
             print(f"step {t:5d}  train {loss:.3f}  val {vl:.3f}  | {line}",
                   flush=True)
+        if a.checkpoint_every and (t % a.checkpoint_every == 0 or t == a.steps):
+            save_ckpt(ckpt, model, astate, t, cfg)
 
     export(model, tok, dict(tier=a.tier), a.out)
 

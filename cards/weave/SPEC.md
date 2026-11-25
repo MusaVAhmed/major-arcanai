@@ -199,3 +199,20 @@ The unfinished case is **multi-card weaving**: fresh 5-card hands
 sometimes enter a neighbouring memorised trajectory (a Receipts line
 wandering into a Tower hand, recovered by the next seat). The answer is
 phase C — hand-written weavings of real triples — not more parameters.
+
+## Phase C: parked, with the instruments standing
+
+The voice-c run (weaving mix) was killed at step 2,000/8,000 — by the
+owner, for host comfort, which outranks any experiment here. Nothing
+was lost that the repo cannot rebuild: the weaving corpus is gated and
+committed, the before-baseline is recorded (trajectory 21/108, seat
+order 1/7, held-out 5/44), and `train.py` now checkpoints every 500
+steps with `--resume`, so the rerun is
+
+  OPENBLAS_NUM_THREADS=4 nice -n 10 python3 train.py --tier voice \
+    --corpus weave-c.jsonl --steps 4000 --bs 40 --ctx 448 --out out-voice-c
+
+at roughly half the host impact and half the wall clock. Phase C may
+also simply wait for a machine that is not a daily driver; the gate,
+the eval, and the baseline make the rerun one command and no
+decisions.
